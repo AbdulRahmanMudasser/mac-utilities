@@ -83,6 +83,17 @@ nonisolated enum UsageHistory {
         }
     }
 
+    // Average observed traffic over every calendar day in the selected range.
+    static func average(_ days: [UsageHistoryDay]) -> UInt64? {
+        let records = days.compactMap(\.record)
+        guard !days.isEmpty, !records.isEmpty else { return nil }
+        let count = UInt64(days.count)
+        // Divide before summing so even very large range totals cannot overflow.
+        let whole = records.reduce(UInt64(0)) { $0 + $1.combined / count }
+        let remainder = records.reduce(UInt64(0)) { $0 + $1.combined % count }
+        return whole + remainder / count
+    }
+
     static func totals(_ days: [UsageHistoryDay]) -> InterfaceByteCount {
         days.reduce(InterfaceByteCount(downloaded: 0, uploaded: 0)) { total, day in
             InterfaceByteCount(downloaded: add(total.downloaded, day.record?.downloaded ?? 0),
