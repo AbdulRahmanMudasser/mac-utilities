@@ -56,14 +56,14 @@ Use this file for product goals, user needs, feature scope, acceptance expectati
 
 ## 6. User Journeys
 
-### Journey 1: Check current activity
+### Journey 1: Check Current Activity
 
 1. The user glances at the menu bar while working.
 2. The menu bar item shows current download and upload rates, updated about once per second.
 3. The user opens the item to see total rates, today's totals, and the leading apps.
 4. The user closes the popover; collection continues in the background while monitoring remains active.
 
-### Journey 2: Investigate daily app usage
+### Journey 2: Investigate Daily App Usage
 
 1. The user opens the usage popover.
 2. The app shows today's device download, upload, and combined totals.
@@ -71,7 +71,7 @@ Use this file for product goals, user needs, feature scope, acceptance expectati
 4. Any traffic without a usable displayed-app identity appears under System/Unattributed.
 5. When counts are incomplete, paused, or awaiting setup, the app communicates that state alongside the totals.
 
-### Journey 3: Manage monitoring and display preferences
+### Journey 3: Manage Monitoring and Display Preferences
 
 1. The user opens settings.
 2. The user checks whether macOS has enabled the monitoring component and sees the current collection state.
@@ -115,17 +115,17 @@ Use the standard repository root folder names when describing platform surfaces:
 
 ## 9. Functional Requirements
 
-- **FR-1 Live speed:** Show current total inbound and outbound rates in the menu bar and popover. Calculate rates from byte-count deltas over elapsed time and refresh the visible rate about once per second. Inbound bytes are downloads; outbound bytes are uploads.
-- **FR-2 Background collection:** Continue collecting while the popover is closed whenever monitoring is active.
-- **FR-3 Daily device totals:** Accumulate downloaded, uploaded, and combined device-level bytes for the MacBook's current local calendar day. Use device counters for these totals.
-- **FR-4 App attribution:** Use macOS Network Extension per-flow reports and the [source app identifier](https://developer.apple.com/documentation/networkextension/nefilterflow/sourceappidentifier) to attribute inbound and outbound observed bytes to apps, using the [flow byte reports](https://developer.apple.com/documentation/networkextension/nefilterreport). Count flows without a usable app identity as System/Unattributed.
-- **FR-5 Ranked apps:** Show up to five apps with the largest combined observed bytes for the current day. Each row includes app name and icon, current download and upload rates, and today's download, upload, and combined totals. Keep ordering stable when app totals are tied or close enough that rate/report timing would otherwise cause unnecessary visual movement; use a deterministic tie-breaker and retain prior order for ties where possible.
-- **FR-6 Measurement distinction:** Keep device-level totals and per-flow attribution totals distinct. The interface must not imply that all device bytes have been attributed to displayed apps. Show System/Unattributed app-flow bytes separately.
-- **FR-7 Local-day boundary:** Use the MacBook's local calendar and time zone. On local midnight, begin a new day's totals. Handle time-zone and daylight-saving changes using local calendar boundaries rather than a fixed 24-hour timer.
+- **FR-1 Live Speed:** Show current total inbound and outbound rates in the menu bar and popover. Calculate rates from byte-count deltas over elapsed time and refresh the visible rate about once per second. Inbound bytes are downloads; outbound bytes are uploads.
+- **FR-2 Background Collection:** Continue collecting while the popover is closed whenever monitoring is active.
+- **FR-3 Daily Device Totals:** Accumulate downloaded, uploaded, and combined device-level bytes for the MacBook's current local calendar day. Use device counters for these totals.
+- **FR-4 App Attribution:** Use macOS Network Extension per-flow reports and the [source app identifier](https://developer.apple.com/documentation/networkextension/nefilterflow/sourceappidentifier) to attribute inbound and outbound observed bytes to apps, using the [flow byte reports](https://developer.apple.com/documentation/networkextension/nefilterreport). Count flows without a usable app identity as System/Unattributed.
+- **FR-5 Ranked Apps:** Show up to five apps with the largest combined observed bytes for the current day. Each row includes app name and icon, current download and upload rates, and today's download, upload, and combined totals. Keep ordering stable when app totals are tied or close enough that rate/report timing would otherwise cause unnecessary visual movement; use a deterministic tie-breaker and retain prior order for ties where possible.
+- **FR-6 Measurement Distinction:** Keep device-level totals and per-flow attribution totals distinct. The interface must not imply that all device bytes have been attributed to displayed apps. Show System/Unattributed app-flow bytes separately.
+- **FR-7 Local-Day Boundary:** Use the MacBook's local calendar and time zone. On local midnight, begin a new day's totals. Handle time-zone and daylight-saving changes using local calendar boundaries rather than a fixed 24-hour timer.
 - **FR-8 Persistence:** Preserve the current day's device and app aggregate counters across app and extension restarts using local shared app-group storage. Do not require a network service or account.
-- **FR-9 Collection state:** Clearly identify whether monitoring is active, paused, needs setup, or has an incomplete collection interval. Paused or unavailable intervals must not be presented as fully observed usage.
-- **FR-10 Controls and preferences:** Provide start-at-login on/off, monitoring pause/resume, Mbps or MB/s rate display, MB/GB or MiB/GiB data display, reset-today control, and a visible indication of whether macOS enabled the monitoring component.
-- **FR-11 Traffic behavior and privacy:** Allow observed traffic through unchanged. Collect app identity and byte counts needed for usage totals, and store current-day aggregates locally on this MacBook.
+- **FR-9 Collection State:** Clearly identify whether monitoring is active, paused, needs setup, or has an incomplete collection interval. Paused or unavailable intervals must not be presented as fully observed usage.
+- **FR-10 Controls And Preferences:** Provide start-at-login on/off, monitoring pause/resume, Mbps or MB/s rate display, MB/GB or MiB/GiB data display, reset-today control, and a visible indication of whether macOS enabled the monitoring component.
+- **FR-11 Traffic Behavior And Privacy:** Allow observed traffic through unchanged. Collect app identity and byte counts needed for usage totals, and store current-day aggregates locally on this MacBook.
 
 ## 10. Acceptance Criteria
 
