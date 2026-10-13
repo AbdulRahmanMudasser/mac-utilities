@@ -2,3 +2,37 @@
 DerivedData/
 *.xcuserstate
 xcuserdata/
+
+# Generated builds, archives, and local test output
+build/
+.build/
+*.app/
+*.dSYM/
+*.xcarchive/
+*.xcresult/
+*.ipa
+*.pkg
+*.dmg
+*.log
+
+# Signing identities, private keys, and provisioning material
+*.p12
+*.pfx
+*.p8
+*.key
+*.pem
+*.cer
+*.cert
+*.crt
+*.der
+*.mobileprovision
+*.provisionprofile
+*.developerprofile
+
+# Local secrets and observed usage data
+.env
+.env.*
+!.env.example
+today-usage.json
+*.sqlite
+*.sqlite3
