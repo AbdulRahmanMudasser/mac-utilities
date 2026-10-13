@@ -6,14 +6,30 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		B4DC26ED307D9B5700512B81 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B4DC26BA307D834500512B81 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B4DC26C1307D834500512B81;
+			remoteInfo = "Mac Utilities";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		B4DC26C2307D834500512B81 /* Mac Utilities.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mac Utilities.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B4DC26E9307D9B5700512B81 /* Mac UtilitiesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Mac UtilitiesTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B4DC26C4307D834500512B81 /* Mac Utilities */ = {
+		B4DC26C4307D834500512B81 /* MacUtilities */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = MacUtilities;
+			sourceTree = "<group>";
+		};
+		B4DC26EA307D9B5700512B81 /* Mac UtilitiesTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Mac UtilitiesTests";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -24,13 +40,19 @@
 			files = (
 			);
 		};
+		B4DC26E6307D9B5700512B81 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		B4DC26B9307D834500512B81 = {
 			isa = PBXGroup;
 			children = (
-				B4DC26C4307D834500512B81 /* Mac Utilities */,
+				B4DC26C4307D834500512B81 /* MacUtilities */,
+				B4DC26EA307D9B5700512B81 /* Mac UtilitiesTests */,
 				B4DC26C3307D834500512B81 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -39,6 +61,7 @@
 			isa = PBXGroup;
 			children = (
 				B4DC26C2307D834500512B81 /* Mac Utilities.app */,
+				B4DC26E9307D9B5700512B81 /* Mac UtilitiesTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -57,12 +80,33 @@
 			buildRules = (
 			);
 			fileSystemSynchronizedGroups = (
-				B4DC26C4307D834500512B81 /* Mac Utilities */,
+				B4DC26C4307D834500512B81 /* MacUtilities */,
 			);
 			name = "Mac Utilities";
 			productName = "Mac Utilities";
 			productReference = B4DC26C2307D834500512B81 /* Mac Utilities.app */;
 			productType = "com.apple.product-type.application";
+		};
+		B4DC26E8307D9B5700512B81 /* Mac UtilitiesTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B4DC26F1307D9B5700512B81 /* Build configuration list for PBXNativeTarget "Mac UtilitiesTests" */;
+			buildPhases = (
+				B4DC26E5307D9B5700512B81 /* Sources */,
+				B4DC26E6307D9B5700512B81 /* Frameworks */,
+				B4DC26E7307D9B5700512B81 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B4DC26EE307D9B5700512B81 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B4DC26EA307D9B5700512B81 /* Mac UtilitiesTests */,
+			);
+			name = "Mac UtilitiesTests";
+			productName = "Mac UtilitiesTests";
+			productReference = B4DC26E9307D9B5700512B81 /* Mac UtilitiesTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -77,9 +121,13 @@
 					B4DC26C1307D834500512B81 = {
 						CreatedOnToolsVersion = 27.0;
 					};
+					B4DC26E8307D9B5700512B81 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = B4DC26C1307D834500512B81;
+					};
 				};
 			};
-			buildConfigurationList = B4DC26BD307D834500512B81 /* Build configuration list for PBXProject "Mac Utilities" */;
+			buildConfigurationList = B4DC26BD307D834500512B81 /* Build configuration list for PBXProject "MacUtilities" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -94,12 +142,18 @@
 			projectRoot = "";
 			targets = (
 				B4DC26C1307D834500512B81 /* Mac Utilities */,
+				B4DC26E8307D9B5700512B81 /* Mac UtilitiesTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		B4DC26C0307D834500512B81 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		B4DC26E7307D9B5700512B81 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -112,10 +166,23 @@
 			files = (
 			);
 		};
+		B4DC26E5307D9B5700512B81 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		B4DC26EE307D9B5700512B81 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B4DC26C1307D834500512B81 /* Mac Utilities */;
+			targetProxy = B4DC26ED307D9B5700512B81 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
-		B4DC26CB307D834500512B81 /* Debug configuration for PBXProject "Mac Utilities" */ = {
+		B4DC26CB307D834500512B81 /* Debug configuration for PBXProject "MacUtilities" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -178,7 +245,7 @@
 			};
 			name = Debug;
 		};
-		B4DC26CC307D834500512B81 /* Release configuration for PBXProject "Mac Utilities" */ = {
+		B4DC26CC307D834500512B81 /* Release configuration for PBXProject "MacUtilities" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -251,7 +318,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.Mac-Utilities";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.abdulrahman.mac-utilities";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -281,7 +348,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.Mac-Utilities";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.abdulrahman.mac-utilities";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -293,14 +360,52 @@
 			};
 			name = Release;
 		};
+		B4DC26EF307D9B5700512B81 /* Debug configuration for PBXNativeTarget "Mac UtilitiesTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.abdulrahman.mac-utilities.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Mac Utilities.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Mac Utilities";
+			};
+			name = Debug;
+		};
+		B4DC26F0307D9B5700512B81 /* Release configuration for PBXNativeTarget "Mac UtilitiesTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.abdulrahman.mac-utilities.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Mac Utilities.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Mac Utilities";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B4DC26BD307D834500512B81 /* Build configuration list for PBXProject "Mac Utilities" */ = {
+		B4DC26BD307D834500512B81 /* Build configuration list for PBXProject "MacUtilities" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				B4DC26CB307D834500512B81 /* Debug configuration for PBXProject "Mac Utilities" */,
-				B4DC26CC307D834500512B81 /* Release configuration for PBXProject "Mac Utilities" */,
+				B4DC26CB307D834500512B81 /* Debug configuration for PBXProject "MacUtilities" */,
+				B4DC26CC307D834500512B81 /* Release configuration for PBXProject "MacUtilities" */,
 			);
 			defaultConfigurationName = Release;
 		};
@@ -309,6 +414,14 @@
 			buildConfigurations = (
 				B4DC26CE307D834500512B81 /* Debug configuration for PBXNativeTarget "Mac Utilities" */,
 				B4DC26CF307D834500512B81 /* Release configuration for PBXNativeTarget "Mac Utilities" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		B4DC26F1307D9B5700512B81 /* Build configuration list for PBXNativeTarget "Mac UtilitiesTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B4DC26EF307D9B5700512B81 /* Debug configuration for PBXNativeTarget "Mac UtilitiesTests" */,
+				B4DC26F0307D9B5700512B81 /* Release configuration for PBXNativeTarget "Mac UtilitiesTests" */,
 			);
 			defaultConfigurationName = Release;
 		};
