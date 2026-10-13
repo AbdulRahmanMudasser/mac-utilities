@@ -109,9 +109,6 @@ struct ContentView: View {
     }
 
     private func presentSettings() {
-        // Temporarily use regular activation while a user-facing window is open.
-        // Accessory apps can show windows, but may not become the active app when
-        // another application owns focus.
         NSApp.setActivationPolicy(.regular)
         openWindow(id: AppWindowID.settings)
         NSApp.activate()
