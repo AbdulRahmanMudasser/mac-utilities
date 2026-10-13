@@ -24,9 +24,9 @@ Do not use this file for:
 ## 3. Platform Baseline
 
 * **Platform Name:** Desktop
-* **Primary Runtime:** SwiftUI with AppKit integration; local device interface counters; ad-hoc signed personal build
+* **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an ad-hoc signed personal build
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; no public distribution target
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.0.1 (build 3), no public binary distribution target
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
   - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-install CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES build`
@@ -35,6 +35,7 @@ Do not use this file for:
 * **Release Gates:**
   - Verify live device rates, current-day totals, restart persistence, local-midnight rollover, collection-state messaging, and normal network connectivity on the target MacBook; local personal use uses ad-hoc signing.
   - Keep per-app usage explicitly deferred until a supported macOS report handoff and app-identity path are proven.
+  - Verify manual diagnostic tools from the signed sandboxed app, including reply permissions, real metrics, impact disclosure, cancellation and child-process cleanup; no diagnostic telemetry or retained history.
 
 ## 4. Status Definitions
 
@@ -58,16 +59,16 @@ Every completed phase must satisfy all of the following:
 
 ## 6. Current Active Phase
 
-* **Current Phase:** None - All Defined Phases Complete
+* **Current Phase:** None - All Approved Phases Complete
 * **Status:** Completed
 * **Owner:** Product Developer
-* **Linked Phase Doc:** [phase-03-menu-controls-settings.md](./phase-03-menu-controls-settings.md)
-* **Immediate Goal:** None. All approved desktop phases are complete and verified on the target MacBook.
-* **Current Blockers:** None for the approved device-wide monitoring scope. Per-app attribution remains deferred as a future scope decision.
+* **Linked Phase Doc:** [phase-06-unified-utility-window.md](./phase-06-unified-utility-window.md)
+* **Immediate Goal:** None. Unified Connection/Settings window and diagnostic lifecycle are complete; the current tray order and version are recorded in Phase 06.
+* **Current Blockers:** None for the approved scope. Per-app attribution remains deferred as a future scope decision.
 
 ## 7. Ready Queue
 
-None. All defined phases are Completed. App-level attribution remains out of scope until a low-impact, supported handoff is proven.
+None. All approved phases are complete.
 
 ## 8. Phase Register
 
@@ -78,12 +79,14 @@ None. All defined phases are Completed. App-level attribution remains out of sco
 | 02 | Flow Attribution Feasibility Decision | Completed | Deferred | Product Developer | Apple API feasibility review | [phase-02-flow-app-attribution.md](./phase-02-flow-app-attribution.md) | Decision 2026-10-13 |
 | 03 | Menu Controls Settings | Completed | High | Product Developer | Phases 00 and 01; Phase 02 is not required | [phase-03-menu-controls-settings.md](./phase-03-menu-controls-settings.md) | Updated And Completed 2026-10-13 |
 | 04 | Target Install Verification | Completed | High | Product Developer | Phases 00, 01, and 03 | [phase-04-target-install-verification.md](./phase-04-target-install-verification.md) | Completed 2026-10-13 |
+| 05 | Connection Quality Checks | Completed | TBD | TBD | Phases 01, 03, 04 | [phase-05-connection-quality-checks.md](./phase-05-connection-quality-checks.md) | Completed 2026-10-13 |
+| 06 | Unified Utility Window | Completed | High | Product Developer | Phases 03, 05 | [phase-06-unified-utility-window.md](./phase-06-unified-utility-window.md) | Completed 2026-10-13 |
 
 ## 9. Blockers And Risks
 
 ### Active Blockers
 
-- None for the approved device-wide monitoring scope.
+- None for the approved scope.
 
 ### Execution Risks
 
@@ -91,6 +94,7 @@ None. All defined phases are Completed. App-level attribution remains out of sco
 - Multiple active physical or virtual interfaces may have platform-specific coverage or duplicate-accounting behavior that needs target-Mac verification.
 - App attribution remains deferred until both report handoff and app-identity resolution can be proven with documented macOS-supported behavior.
 - Ad-hoc signing supports this local personal install only; public distribution would require a separately scoped signing and notarization plan.
+- Manual diagnostic endpoints can filter probes or omit measurements. Under-load checks transfer variable amounts of data; precise results, disclosure and cancellation are required by the PRD.
 
 ## 10. Decision Log
 
