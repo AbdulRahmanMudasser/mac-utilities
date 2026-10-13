@@ -1,120 +1,157 @@
+import AppKit
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject private var monitor: UsageMonitor
+    @Environment(\.openWindow) private var openWindow
+    @State private var confirmReset = false
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top) {
-                Image(systemName: "network.slash")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 38, height: 38)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Mac Utilities")
-                        .font(.headline)
-                    Text("Network activity")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Label("Needs Setup", systemImage: "exclamationmark.circle.fill")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.orange)
-                    .labelStyle(.titleAndIcon)
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("CURRENT SPEED")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                HStack(spacing: 10) {
-                    RateCard(title: "Download", symbol: "arrow.down", tint: .blue)
-                    RateCard(title: "Upload", symbol: "arrow.up", tint: .purple)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("TODAY")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                HStack(spacing: 0) {
-                    TotalValue(title: "Downloaded")
-                    Spacer(minLength: 8)
-                    TotalValue(title: "Uploaded")
-                    Spacer(minLength: 8)
-                    TotalValue(title: "Combined")
-                }
-                .padding(12)
-                .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Top apps")
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Text("TODAY")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-                Text("App usage will appear after network monitoring is configured.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Label("This starter app is not collecting network data yet.", systemImage: "info.circle")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 16) {
+            ratesSection
+            totalsSection
+            footer
         }
         .padding(16)
-        .frame(width: 370)
+        .frame(width: 390)
+        .sheet(isPresented: $confirmReset) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Reset Today's Counters?").font(.headline)
+                Text("Today's observed device totals will restart from zero.")
+                HStack {
+                    Spacer()
+                    Button("Cancel", role: .cancel) { confirmReset = false }
+                        .keyboardShortcut(.cancelAction)
+                        .handPointer()
+                    Button("Reset Today's Counters", role: .destructive) {
+                        monitor.resetToday()
+                        confirmReset = false
+                    }
+                    .handPointer()
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(20)
+            .frame(width: 340)
+        }
+    }
+
+    private var ratesSection: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text("Current Speed")
+                .font(.subheadline.weight(.semibold))
+
+            HStack(spacing: 12) {
+                SpeedValue(title: "Download", value: monitor.formattedDownloadRate)
+                Rectangle()
+                    .fill(.separator)
+                    .frame(width: 1, height: 16)
+                SpeedValue(title: "Upload", value: monitor.formattedUploadRate)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    private var totalsSection: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text("Today's Usage")
+                .font(.subheadline.weight(.semibold))
+
+            HStack(spacing: 0) {
+                TotalValue(title: "Downloaded", value: monitor.formattedDownloadedToday)
+                Spacer(minLength: 8)
+                TotalValue(title: "Uploaded", value: monitor.formattedUploadedToday)
+                Spacer(minLength: 8)
+                TotalValue(title: "Combined", value: monitor.formattedCombinedToday)
+            }
+            .padding(12)
+            .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
+
+        }
+    }
+
+    private var footer: some View {
+        HStack {
+            Button(action: presentSettings) {
+                Text("Settings")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .handPointer()
+
+            Spacer()
+
+            if monitor.isPaused {
+                Button("Resume") { monitor.setPaused(false) }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .handPointer()
+            } else {
+                Button("Pause") { monitor.setPaused(true) }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .handPointer()
+            }
+
+            Button("Reset") { confirmReset = true }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .handPointer()
+
+            Button("Quit") { NSApplication.shared.terminate(nil) }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .handPointer()
+        }
+        .font(.caption)
+    }
+
+    private func presentSettings() {
+        // Temporarily use regular activation while a user-facing window is open.
+        // Accessory apps can show windows, but may not become the active app when
+        // another application owns focus.
+        NSApp.setActivationPolicy(.regular)
+        openWindow(id: AppWindowID.settings)
+        NSApp.activate()
     }
 }
 
-private struct RateCard: View {
+private struct SpeedValue: View {
     let title: String
-    let symbol: String
-    let tint: Color
+    let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label(title, systemImage: symbol)
+        HStack(spacing: 6) {
+            Text(title)
                 .font(.caption)
-                .foregroundStyle(tint)
-            Text("—")
-                .font(.title2.monospacedDigit().weight(.medium))
-            Text("Mbps")
-                .font(.caption2)
                 .foregroundStyle(.secondary)
+                .fixedSize()
+            Text(value)
+                .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityElement(children: .combine)
     }
 }
 
 private struct TotalValue: View {
     let title: String
+    let value: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("—")
+            Text(value)
                 .font(.subheadline.monospacedDigit().weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
     }
-}
-
-#Preview {
-    ContentView()
 }
