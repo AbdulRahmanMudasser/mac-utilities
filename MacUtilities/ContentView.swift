@@ -3,11 +3,22 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var monitor: UsageMonitor
-    @Environment(\.openWindow) private var openWindow
+    @EnvironmentObject private var utilityWindow: UtilityWindowCoordinator
     @State private var confirmReset = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Connection Health")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Button("Check") {
+                    utilityWindow.present(.connection)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .handPointer()
+            }
             ratesSection
             totalsSection
             footer
@@ -100,18 +111,20 @@ struct ContentView: View {
                 .controlSize(.small)
                 .handPointer()
 
-            Button("Quit") { NSApplication.shared.terminate(nil) }
+            Button { NSApplication.shared.terminate(nil) } label: {
+                Image(systemName: "power")
+            }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                .help("Quit")
+                .accessibilityLabel("Quit")
                 .handPointer()
         }
         .font(.caption)
     }
 
     private func presentSettings() {
-        NSApp.setActivationPolicy(.regular)
-        openWindow(id: AppWindowID.settings)
-        NSApp.activate()
+        utilityWindow.present(.settings)
     }
 }
 

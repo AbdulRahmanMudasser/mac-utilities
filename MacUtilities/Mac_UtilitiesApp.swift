@@ -1,10 +1,6 @@
 import AppKit
 import SwiftUI
 
-enum AppWindowID {
-    static let settings = "settings"
-}
-
 enum AppBrand {
     static var icon: NSImage {
         let name = Bundle.main.object(forInfoDictionaryKey: "CFBundleIconFile") as? String ?? "AppIcon"
@@ -43,38 +39,58 @@ extension View {
 @main
 struct Mac_UtilitiesApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var monitor = UsageMonitor()
+    @StateObject private var monitor: UsageMonitor
+    @StateObject private var diagnostics: ConnectionDiagnostics
+    @StateObject private var utilityWindow: UtilityWindowCoordinator
+
+    init() {
+        let monitor = UsageMonitor()
+        let diagnostics = ConnectionDiagnostics()
+        _monitor = StateObject(wrappedValue: monitor)
+        _diagnostics = StateObject(wrappedValue: diagnostics)
+        _utilityWindow = StateObject(wrappedValue: UtilityWindowCoordinator(diagnostics: diagnostics) { coordinator in
+            AnyView(UtilityWindowView()
+                .environmentObject(monitor)
+                .environmentObject(diagnostics)
+                .environmentObject(coordinator))
+        })
+    }
 
     var body: some Scene {
         MenuBarExtra {
             ContentView()
                 .environmentObject(monitor)
+                .environmentObject(utilityWindow)
         } label: {
-            Text(monitor.menuBarText)
-                .monospacedDigit()
-                .font(.system(size: 11, weight: .medium))
-                .help(monitor.collectionStatus)
+            MenuBarStatusLabel(text: monitor.menuBarText, status: monitor.collectionStatus)
+                .environmentObject(utilityWindow)
+                .onAppear { appDelegate.utilityWindow = utilityWindow }
         }
         .menuBarExtraStyle(.window)
-
-        Window("Settings", id: AppWindowID.settings) {
-            SettingsView()
-                .environmentObject(monitor)
-                .frame(width: 500, height: 440)
-        }
-        .defaultSize(width: 500, height: 440)
     }
 }
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    weak var utilityWindow: UtilityWindowCoordinator?
+
+    func applicationWillTerminate(_ notification: Notification) {
+        utilityWindow?.shutdown()
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if let utilityWindow, utilityWindow.window != nil {
+            utilityWindow.present(utilityWindow.selection)
+        }
+        return false
+    }
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.applicationIconImage = AppBrand.icon
         NSApp.setActivationPolicy(.accessory)
     }
 }
 
-private struct SettingsView: View {
+struct SettingsView: View {
     @EnvironmentObject private var monitor: UsageMonitor
 
     private var monitoringBinding: Binding<Bool> {
@@ -92,76 +108,66 @@ private struct SettingsView: View {
     }
 
     var body: some View {
-        Form {
-            Section("Monitoring") {
+        UtilityScrollContent {
+            UtilityPanel("Monitoring") {
                 Toggle("Collect Device Activity", isOn: monitoringBinding)
                     .toggleStyle(HandCursorToggleStyle())
             }
 
-            Section("Readiness") {
-                LabeledContent("Local Time Zone", value: monitor.localTimeZoneDescription)
+            UtilityPanel("Readiness") {
+                UtilityValueRow(title: "Local Time Zone", value: monitor.localTimeZoneDescription)
                 Label(monitor.collectionStatus, systemImage: monitor.isPaused ? "pause.circle.fill" : (monitor.counterError == nil ? "checkmark.circle.fill" : "exclamationmark.circle.fill"))
                     .foregroundStyle(monitor.isPaused ? .orange : (monitor.counterError == nil ? .green : .orange))
             }
 
-            Section("General") {
+            UtilityPanel("General") {
                 Toggle("Start At Login", isOn: loginItemBinding)
                     .toggleStyle(HandCursorToggleStyle())
                 if let message = monitor.loginItemMessage {
                     Text(message)
-                        .font(.caption)
+                        .font(UtilityStyle.helpFont)
                         .foregroundStyle(.orange)
                 }
             }
 
-            Section("Display") {
+            UtilityPanel("Display") {
                 HandCursorPicker(title: "Speed Display", options: RateDisplayUnit.allCases, selection: $monitor.rateUnit, optionTitle: { $0.title })
                 HandCursorPicker(title: "Data Display", options: DataDisplayUnit.allCases, selection: $monitor.dataUnit, optionTitle: { $0.title })
             }
 
-            Section("Today's Usage") {
-                LabeledContent("Downloaded", value: monitor.formattedDownloadedToday)
-                LabeledContent("Uploaded", value: monitor.formattedUploadedToday)
-                LabeledContent("Combined", value: monitor.formattedCombinedToday)
-                LabeledContent {
+            VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
+                UtilityPanel("Today's Usage") {
+                    UtilityValueRow(title: "Downloaded", value: monitor.formattedDownloadedToday)
+                    UtilityValueRow(title: "Uploaded", value: monitor.formattedUploadedToday)
+                    UtilityValueRow(title: "Combined", value: monitor.formattedCombinedToday)
+                }
+                HStack(spacing: UtilityStyle.contentSpacing) {
+                    Spacer()
                     Button("Reset Today's Counters", role: .destructive) { monitor.resetToday() }
+                        .buttonStyle(.bordered)
                         .handPointer()
-                } label: {
-                    EmptyView()
                 }
             }
 
-            Section("Privacy") {
-                Text("Device counters and daily totals are stored locally on this Mac. No network payloads, websites, or remote telemetry are collected.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("About") {
-                HStack(spacing: 12) {
+            UtilityPanel("About") {
+                HStack(spacing: UtilityStyle.contentSpacing) {
                     Image(nsImage: AppBrand.icon)
                         .resizable()
                         .interpolation(.high)
-                        .frame(width: 48, height: 48)
+                        .frame(width: 32, height: 32)
                         .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Mac Utilities").font(.headline)
-                        Text("Network Activity")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text("Version \(appVersion)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text("Mac Utilities").font(UtilityStyle.headingFont)
+                    Spacer(minLength: UtilityStyle.contentSpacing)
+                    Text("Version \(appVersion)")
+                        .font(UtilityStyle.metadataFont)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
                 }
                 .padding(.vertical, 4)
             }
         }
-        .formStyle(.grouped)
-        .padding()
-        .onDisappear {
-            NSApp.setActivationPolicy(.accessory)
-        }
+        .font(UtilityStyle.bodyFont)
+        .controlSize(.regular)
     }
 
     private var appVersion: String {
@@ -174,7 +180,7 @@ private struct SettingsView: View {
 private struct HandCursorToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         Button { configuration.isOn.toggle() } label: {
-            HStack {
+            HStack(spacing: UtilityStyle.contentSpacing) {
                 configuration.label
                 Spacer()
                 Capsule()
@@ -204,7 +210,7 @@ private struct HandCursorPicker<Option: Hashable & Identifiable>: View {
 
     var body: some View {
         Button { isPresented = true } label: {
-            HStack {
+            HStack(spacing: UtilityStyle.contentSpacing) {
                 Text(title)
                 Spacer()
                 Text(optionTitle(selection)).foregroundStyle(.secondary)
@@ -223,7 +229,7 @@ private struct HandCursorPicker<Option: Hashable & Identifiable>: View {
                         selection = option
                         isPresented = false
                     } label: {
-                        HStack {
+                        HStack(spacing: UtilityStyle.contentSpacing) {
                             Text(optionTitle(option))
                             Spacer()
                             Image(systemName: "checkmark").opacity(selection == option ? 1 : 0)
@@ -239,5 +245,31 @@ private struct HandCursorPicker<Option: Hashable & Identifiable>: View {
             .padding(6)
             .frame(width: 150)
         }
+    }
+}
+
+private struct MenuBarStatusLabel: View {
+    let text: String
+    let status: String
+    @EnvironmentObject private var utilityWindow: UtilityWindowCoordinator
+    @State private var presentedDebugWindow = false
+
+    var body: some View {
+        Text(text)
+            .monospacedDigit()
+            .font(.system(size: 11, weight: .medium))
+            .help(status)
+            .onAppear {
+                #if DEBUG
+                if !presentedDebugWindow && CommandLine.arguments.contains("--connection-check") {
+                    presentedDebugWindow = true
+                    utilityWindow.present(.connection)
+                }
+                if !presentedDebugWindow && CommandLine.arguments.contains("--settings") {
+                    presentedDebugWindow = true
+                    utilityWindow.present(.settings)
+                }
+                #endif
+            }
     }
 }
