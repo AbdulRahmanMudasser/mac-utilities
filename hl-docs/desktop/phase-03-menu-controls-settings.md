@@ -142,6 +142,8 @@ Present device-wide menu-bar speeds, daily usage, collection states, and setting
 
 ## 12. Execution Notes
 
+- **Icon Format Verification:** The primary app icon is `MacUtilities/UtilityIcon.icon`, compiled with the UtilityIcon asset name. Its white vector utility mark uses a solid charcoal fill; specular, blur, refraction, translucency, and shadow effects are disabled. Legacy AppIcon PNGs remain available as source fallback assets. Build 2 was installed as a clean bundle and passed strict signature verification. Finder inspection confirmed the new single-tile mark replaces the older inset icon. macOS may still render its own outer tile treatment.
+
 - **Status:** Completed
 - **Started At:** 2026-10-13
 - **Completed At:** 2026-10-13.
