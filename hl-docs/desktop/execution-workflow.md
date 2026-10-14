@@ -63,12 +63,12 @@ Every completed phase must satisfy all of the following:
 * **Status:** Completed
 * **Owner:** Product Developer
 * **Linked Phase Doc:** [phase-06-unified-utility-window.md](./phase-06-unified-utility-window.md)
-* **Immediate Goal:** None. Unified Connection/Settings window and diagnostic lifecycle are complete; the current tray order and version are recorded in Phase 06.
+* **Immediate Goal:** None. Phase 06 is complete; its implementation, automated verification and final tray interactions are recorded in the linked phase document.
 * **Current Blockers:** None for the approved scope. Per-app attribution remains deferred as a future scope decision.
 
 ## 7. Ready Queue
 
-None. All approved phases are complete.
+None. All approved phases are complete; no additional implementation phase is queued.
 
 ## 8. Phase Register
 
@@ -80,7 +80,7 @@ None. All approved phases are complete.
 | 03 | Menu Controls Settings | Completed | High | Product Developer | Phases 00 and 01; Phase 02 is not required | [phase-03-menu-controls-settings.md](./phase-03-menu-controls-settings.md) | Updated And Completed 2026-10-13 |
 | 04 | Target Install Verification | Completed | High | Product Developer | Phases 00, 01, and 03 | [phase-04-target-install-verification.md](./phase-04-target-install-verification.md) | Completed 2026-10-13 |
 | 05 | Connection Quality Checks | Completed | TBD | TBD | Phases 01, 03, 04 | [phase-05-connection-quality-checks.md](./phase-05-connection-quality-checks.md) | Completed 2026-10-13 |
-| 06 | Unified Utility Window | Completed | High | Product Developer | Phases 03, 05 | [phase-06-unified-utility-window.md](./phase-06-unified-utility-window.md) | Completed 2026-10-13 |
+| 06 | Unified Utility Window | Completed | High | Product Developer | Phases 03, 05 | [phase-06-unified-utility-window.md](./phase-06-unified-utility-window.md) | Completed 2026-10-14 |
 
 ## 9. Blockers And Risks
 
