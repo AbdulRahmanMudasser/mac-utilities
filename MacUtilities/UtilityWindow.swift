@@ -9,27 +9,60 @@ enum UtilitySection: String, CaseIterable, Identifiable {
     var id: Self { self }
 }
 
+struct MenuBarPopoverWindowAccessor: NSViewRepresentable {
+    let coordinator: UtilityWindowCoordinator
+
+    func makeNSView(context: Context) -> PopoverWindowView {
+        let view = PopoverWindowView(frame: .zero)
+        view.coordinator = coordinator
+        return view
+    }
+
+    func updateNSView(_ view: PopoverWindowView, context: Context) {
+        view.coordinator = coordinator
+        if let window = view.window { coordinator.menuBarPopoverWindow = window }
+    }
+
+    final class PopoverWindowView: NSView {
+        weak var coordinator: UtilityWindowCoordinator?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let window { coordinator?.menuBarPopoverWindow = window }
+        }
+    }
+}
+
 @MainActor
 final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelegate {
-    static let minimumContentSize = NSSize(width: 620, height: 420)
+    static let minimumContentSize = UtilityStyle.Window.minimumSize
     @Published var selection: UtilitySection = .connection
+    weak var menuBarPopoverWindow: NSWindow?
     private(set) var window: NSWindow?
     private let diagnostics: ConnectionDiagnostics
+    private let setActivationPolicy: (NSApplication.ActivationPolicy) -> Void
+    private let activateApplication: () -> Void
     private let content: (UtilityWindowCoordinator) -> AnyView
 
-    init(diagnostics: ConnectionDiagnostics, content: @escaping (UtilityWindowCoordinator) -> AnyView) {
+    init(diagnostics: ConnectionDiagnostics,
+         setActivationPolicy: @escaping (NSApplication.ActivationPolicy) -> Void = { NSApp.setActivationPolicy($0) },
+         activateApplication: @escaping () -> Void = { NSApp.activate() },
+         content: @escaping (UtilityWindowCoordinator) -> AnyView) {
         self.diagnostics = diagnostics
+        self.setActivationPolicy = setActivationPolicy
+        self.activateApplication = activateApplication
         self.content = content
         super.init()
     }
 
     func present(_ section: UtilitySection) {
+        menuBarPopoverWindow?.orderOut(nil)
         selection = section
         let target: NSWindow
         if let window {
             target = window
         } else {
-            target = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 660),
+            target = NSWindow(contentRect: NSRect(origin: .zero, size: UtilityStyle.Window.defaultSize),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable],
                               backing: .buffered, defer: false)
             target.title = "Mac Utilities"
@@ -60,10 +93,10 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
             target.setFrame(frame, display: false)
         }
         synchronizeContentFrame(target)
-        NSApp.setActivationPolicy(.regular)
+        setActivationPolicy(.regular)
         if target.isMiniaturized { target.deminiaturize(nil) }
         target.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        activateApplication()
     }
 
     func windowDidResize(_ notification: Notification) {
@@ -81,7 +114,7 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
         diagnostics.cancel()
         // Rebuild transient view state on reopen; measurement results remain in the controller.
         closing.contentViewController = nil
-        NSApp.setActivationPolicy(.accessory)
+        setActivationPolicy(.accessory)
     }
 
     func shutdown() {
@@ -90,6 +123,7 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
         window?.orderOut(nil)
         window?.contentViewController = nil
         window = nil
+        setActivationPolicy(.accessory)
     }
 }
 
@@ -108,14 +142,14 @@ struct UtilityWindowView: View {
                             Text(section.rawValue)
                             Spacer(minLength: 0)
                             if section == .connection && diagnostics.isRunning {
-                                ProgressView().controlSize(.mini)
+                                ProgressView().controlSize(UtilityStyle.sidebarProgressControlSize)
                                     .accessibilityHidden(true)
                             }
                         }
-                        .font(UtilityStyle.bodyFont.weight(utilityWindow.selection == section ? .semibold : .regular))
+                        .font(UtilityStyle.sidebarFont(selected: utilityWindow.selection == section))
                         .padding(.horizontal, UtilityStyle.contentSpacing)
                         .padding(.vertical, UtilityStyle.sidebarVerticalPadding)
-                        .background(utilityWindow.selection == section ? Color.primary.opacity(0.08) : .clear,
+                        .background(utilityWindow.selection == section ? UtilityStyle.sidebarSelectedBackground : .clear,
                                     in: RoundedRectangle(cornerRadius: UtilityStyle.cornerRadius))
                         .contentShape(Rectangle())
                     }
@@ -133,7 +167,7 @@ struct UtilityWindowView: View {
             .padding(UtilityStyle.contentSpacing)
             .frame(width: UtilityStyle.sidebarWidth)
             .frame(maxHeight: .infinity)
-            .background(Color(nsColor: .controlBackgroundColor))
+            .background(UtilityStyle.sidebarBackground)
             Divider()
             Group {
                 switch utilityWindow.selection {

@@ -7,13 +7,65 @@ import Testing
 @MainActor
 struct UtilityWindowTests {
     private func coordinator(_ diagnostics: ConnectionDiagnostics? = nil) -> UtilityWindowCoordinator {
-        UtilityWindowCoordinator(diagnostics: diagnostics ?? ConnectionDiagnostics()) { _ in AnyView(Text("Window Test")) }
+        UtilityWindowCoordinator(diagnostics: diagnostics ?? ConnectionDiagnostics(),
+                                 setActivationPolicy: { _ in }, activateApplication: {}) { _ in
+            AnyView(Text("Window Test"))
+        }
+    }
+
+    @Test func activationRequestsRestoreAccessoryModeWithoutChangingTestHostPolicy() {
+        let originalPolicy = NSApp.activationPolicy()
+        var policies: [NSApplication.ActivationPolicy] = []
+        var activationCount = 0
+        let subject = UtilityWindowCoordinator(diagnostics: ConnectionDiagnostics(),
+            setActivationPolicy: { policies.append($0) },
+            activateApplication: { activationCount += 1 }) { _ in AnyView(Text("Window Test")) }
+        subject.present(.settings)
+        subject.window?.close()
+        subject.present(.connection)
+        subject.shutdown()
+        #expect(policies == [.regular, .accessory, .regular, .accessory])
+        #expect(activationCount == 2)
+        #expect(NSApp.activationPolicy() == originalPolicy)
     }
 
     @Test func startupDoesNotCreateAWindow() {
         let subject = coordinator()
         #expect(subject.window == nil)
         #expect(UtilitySection.allCases == [.connection, .settings])
+    }
+
+    @Test(arguments: UtilitySection.allCases)
+    func presentingUtilityDismissesOnlyItsPopover(_ section: UtilitySection) {
+        let subject = coordinator()
+        let popover = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 390, height: 300), styleMask: .borderless, backing: .buffered, defer: false)
+        let unrelated = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 100, height: 100), styleMask: .borderless, backing: .buffered, defer: false)
+        defer {
+            subject.shutdown()
+            popover.orderOut(nil)
+            unrelated.orderOut(nil)
+        }
+        subject.menuBarPopoverWindow = popover
+        unrelated.orderFront(nil)
+        for _ in 0..<2 {
+            popover.orderFront(nil)
+            #expect(popover.isVisible)
+            subject.present(section)
+            #expect(!popover.isVisible)
+            #expect(unrelated.isVisible)
+            #expect(subject.window?.isVisible == true)
+            #expect(subject.selection == section)
+        }
+    }
+
+    @Test func popoverViewRegistersItsEnclosingWindow() {
+        let subject = coordinator()
+        let popover = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 390, height: 300), styleMask: .borderless, backing: .buffered, defer: false)
+        let view = MenuBarPopoverWindowAccessor.PopoverWindowView(frame: .zero)
+        view.coordinator = subject
+        popover.contentView = view
+        #expect(subject.menuBarPopoverWindow === popover)
+        subject.shutdown()
     }
 
     @Test(arguments: UtilitySection.allCases)
@@ -47,7 +99,6 @@ struct UtilityWindowTests {
         original?.close()
         #expect(original?.isVisible == false)
         #expect(original?.contentViewController == nil)
-        #expect(NSApp.activationPolicy() == .accessory)
         subject.present(.connection)
         #expect(subject.window === original)
         #expect(subject.window?.contentViewController != nil)

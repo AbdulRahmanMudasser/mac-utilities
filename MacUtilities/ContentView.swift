@@ -7,29 +7,31 @@ struct ContentView: View {
     @State private var confirmReset = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
+        VStack(alignment: .leading, spacing: UtilityStyle.Popover.sectionSpacing) {
+            HStack(spacing: UtilityStyle.contentSpacing) {
                 Text("Connection Health")
-                    .font(.subheadline.weight(.semibold))
+                    .font(UtilityStyle.headingFont)
                 Spacer()
                 Button("Check") {
                     utilityWindow.present(.connection)
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.small)
+                .controlSize(UtilityStyle.Popover.controlSize)
                 .handPointer()
             }
             ratesSection
             totalsSection
             footer
         }
-        .padding(16)
-        .frame(width: 390)
+        .font(UtilityStyle.bodyFont)
+        .padding(UtilityStyle.Popover.pagePadding)
+        .frame(width: UtilityStyle.Popover.width)
+        .background(MenuBarPopoverWindowAccessor(coordinator: utilityWindow))
         .sheet(isPresented: $confirmReset) {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Reset Today's Counters?").font(.headline)
+            VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
+                Text("Reset Today's Counters?").font(UtilityStyle.headingFont)
                 Text("Today's observed device totals will restart from zero.")
-                HStack {
+                HStack(spacing: UtilityStyle.contentSpacing) {
                     Spacer()
                     Button("Cancel", role: .cancel) { confirmReset = false }
                         .keyboardShortcut(.cancelAction)
@@ -42,54 +44,54 @@ struct ContentView: View {
                 }
                 .buttonStyle(.bordered)
             }
-            .padding(20)
-            .frame(width: 340)
+            .font(UtilityStyle.bodyFont)
+            .padding(UtilityStyle.pagePadding)
+            .frame(width: UtilityStyle.Popover.confirmationWidth)
         }
     }
 
     private var ratesSection: some View {
-        VStack(alignment: .leading, spacing: 9) {
+        VStack(alignment: .leading, spacing: UtilityStyle.Popover.sectionContentSpacing) {
             Text("Current Speed")
-                .font(.subheadline.weight(.semibold))
+                .font(UtilityStyle.headingFont)
 
-            HStack(spacing: 12) {
+            HStack(spacing: UtilityStyle.contentSpacing) {
                 SpeedValue(title: "Download", value: monitor.formattedDownloadRate)
                 Rectangle()
                     .fill(.separator)
-                    .frame(width: 1, height: 16)
+                    .frame(width: UtilityStyle.Popover.dividerWidth, height: UtilityStyle.Popover.dividerHeight)
                 SpeedValue(title: "Upload", value: monitor.formattedUploadRate)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 11)
-            .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
+            .padding(UtilityStyle.Popover.cardPadding)
+            .utilityCardBackground()
         }
     }
 
     private var totalsSection: some View {
-        VStack(alignment: .leading, spacing: 9) {
+        VStack(alignment: .leading, spacing: UtilityStyle.Popover.sectionContentSpacing) {
             Text("Today's Usage")
-                .font(.subheadline.weight(.semibold))
+                .font(UtilityStyle.headingFont)
 
             HStack(spacing: 0) {
                 TotalValue(title: "Downloaded", value: monitor.formattedDownloadedToday)
-                Spacer(minLength: 8)
+                Spacer(minLength: UtilityStyle.Popover.columnSpacing)
                 TotalValue(title: "Uploaded", value: monitor.formattedUploadedToday)
-                Spacer(minLength: 8)
+                Spacer(minLength: UtilityStyle.Popover.columnSpacing)
                 TotalValue(title: "Combined", value: monitor.formattedCombinedToday)
             }
-            .padding(12)
-            .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
+            .padding(UtilityStyle.Popover.cardPadding)
+            .utilityCardBackground()
 
         }
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: UtilityStyle.contentSpacing) {
             Button(action: presentSettings) {
                 Text("Settings")
             }
             .buttonStyle(.bordered)
-            .controlSize(.small)
+            .controlSize(UtilityStyle.Popover.controlSize)
             .handPointer()
 
             Spacer()
@@ -97,30 +99,30 @@ struct ContentView: View {
             if monitor.isPaused {
                 Button("Resume") { monitor.setPaused(false) }
                     .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
+                    .controlSize(UtilityStyle.Popover.controlSize)
                     .handPointer()
             } else {
                 Button("Pause") { monitor.setPaused(true) }
                     .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .controlSize(UtilityStyle.Popover.controlSize)
                     .handPointer()
             }
 
             Button("Reset") { confirmReset = true }
                 .buttonStyle(.bordered)
-                .controlSize(.small)
+                .controlSize(UtilityStyle.Popover.controlSize)
                 .handPointer()
 
             Button { NSApplication.shared.terminate(nil) } label: {
                 Image(systemName: "power")
             }
                 .buttonStyle(.bordered)
-                .controlSize(.small)
+                .controlSize(UtilityStyle.Popover.controlSize)
                 .help("Quit")
                 .accessibilityLabel("Quit")
                 .handPointer()
         }
-        .font(.caption)
+        .font(UtilityStyle.Popover.labelFont)
     }
 
     private func presentSettings() {
@@ -133,15 +135,15 @@ private struct SpeedValue: View {
     let value: String
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: UtilityStyle.Popover.rowSpacing) {
             Text(title)
-                .font(.caption)
+                .font(UtilityStyle.Popover.labelFont)
                 .foregroundStyle(.secondary)
                 .fixedSize()
             Text(value)
-                .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                .font(UtilityStyle.Popover.valueFont)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .fixedSize(horizontal: true, vertical: false)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -154,13 +156,13 @@ private struct TotalValue: View {
     let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: UtilityStyle.Popover.valueSpacing) {
             Text(value)
-                .font(.subheadline.monospacedDigit().weight(.semibold))
+                .font(UtilityStyle.Popover.valueFont)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .fixedSize(horizontal: true, vertical: false)
             Text(title)
-                .font(.caption2)
+                .font(UtilityStyle.Popover.labelFont)
                 .foregroundStyle(.secondary)
         }
     }
