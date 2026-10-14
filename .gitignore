@@ -36,3 +36,6 @@ build/
 today-usage.json
 *.sqlite
 *.sqlite3
+
+# Local Xcode project configuration
+/MacUtilities.xcodeproj/
