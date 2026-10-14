@@ -15,6 +15,69 @@ enum UtilityStyle {
     static let bodyFont: Font = .body
     static let helpFont: Font = .callout
     static let metadataFont: Font = .caption
+    static let emphasizedBodyFont: Font = bodyFont.weight(.semibold)
+    static let menuBarFont: Font = .system(size: 11, weight: .medium)
+    static let controlSize: ControlSize = .regular
+    static let progressControlSize: ControlSize = .small
+    static let sidebarProgressControlSize: ControlSize = .mini
+    static let successColor: Color = .green
+    static let warningColor: Color = .orange
+    static let cardBackgroundOpacity: Double = 0.45
+    static let sidebarSelectedBackground = Color.primary.opacity(0.08)
+    static let sidebarBackground = Color(nsColor: .controlBackgroundColor)
+    static let aboutIconSize: CGFloat = 32
+    static let aboutVerticalPadding: CGFloat = 4
+    static let confirmationWidth: CGFloat = 420
+
+    enum Window {
+        static let defaultSize = NSSize(width: 860, height: 660)
+        static let minimumSize = NSSize(width: 620, height: 420)
+    }
+
+    enum Toggle {
+        static let width: CGFloat = 36
+        static let height: CGFloat = 22
+        static let thumbSize: CGFloat = 18
+        static let thumbInset: CGFloat = 2
+        static let offColor = Color.secondary.opacity(0.3)
+        static let onThumbColor = Color(nsColor: .windowBackgroundColor)
+        static let offThumbColor = Color.white
+    }
+
+    enum Picker {
+        static let indicatorFont: Font = .caption2
+        static let optionSpacing: CGFloat = 4
+        static let optionPadding: CGFloat = 8
+        static let padding: CGFloat = 6
+        static let width: CGFloat = 150
+    }
+
+    static func sidebarFont(selected: Bool) -> Font {
+        selected ? emphasizedBodyFont : bodyFont
+    }
+
+    enum Popover {
+        static let controlSize: ControlSize = .small
+        static let width: CGFloat = 390
+        static let confirmationWidth: CGFloat = 340
+        static let pagePadding: CGFloat = 16
+        static let sectionSpacing: CGFloat = 16
+        static let sectionContentSpacing: CGFloat = 9
+        static let cardPadding: CGFloat = 12
+        static let rowSpacing: CGFloat = 6
+        static let valueSpacing: CGFloat = 4
+        static let columnSpacing: CGFloat = 8
+        static let dividerWidth: CGFloat = 1
+        static let dividerHeight: CGFloat = 16
+        static let valueFont: Font = UtilityStyle.emphasizedBodyFont.monospacedDigit()
+        static let labelFont: Font = UtilityStyle.helpFont
+    }
+}
+
+extension View {
+    func utilityCardBackground() -> some View {
+        background(.quaternary.opacity(UtilityStyle.cardBackgroundOpacity), in: RoundedRectangle(cornerRadius: UtilityStyle.cornerRadius))
+    }
 }
 
 struct UtilityScrollContent<Content: View>: View {
@@ -65,7 +128,7 @@ struct UtilityPanel<Content: View>: View {
             .font(UtilityStyle.bodyFont)
             .padding(UtilityStyle.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: UtilityStyle.cornerRadius))
+            .utilityCardBackground()
         }
     }
 }

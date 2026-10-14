@@ -96,7 +96,7 @@ Present device-wide menu-bar speeds, daily usage, collection states, and setting
   - [x] Do not render an app-attribution section or deferred-attribution placeholder in this release.
   - [x] Keep all visible labels in Title Case and avoid presenting unavailable values as zero.
   - [x] Label the popover control `Settings` without an ellipsis.
-  - [x] Use a uniquely identified SwiftUI `Window` scene and `openWindow(id:)` for the popover Settings control; request app activation so an accessory app foregrounds the window reliably.
+  - [x] Route Settings through the shared AppKit window coordinator, dismiss its captured menu-bar popover, and foreground the same window on Settings; see [Phase 06](./phase-06-unified-utility-window.md) for current ownership, typography and verification.
   - [x] Apply the shared hand-pointer modifier to all app controls, use reusable switch and unit-choice controls, and provide explicit Quit. Keep the native menu-bar item free of hover event handlers so opening the popover remains reliable.
   - [x] Interactively open Settings, cover it with another app, then use the popover control to verify the existing Settings window comes to the front.
 

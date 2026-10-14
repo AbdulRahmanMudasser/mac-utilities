@@ -117,7 +117,7 @@ struct SettingsView: View {
             UtilityPanel("Readiness") {
                 UtilityValueRow(title: "Local Time Zone", value: monitor.localTimeZoneDescription)
                 Label(monitor.collectionStatus, systemImage: monitor.isPaused ? "pause.circle.fill" : (monitor.counterError == nil ? "checkmark.circle.fill" : "exclamationmark.circle.fill"))
-                    .foregroundStyle(monitor.isPaused ? .orange : (monitor.counterError == nil ? .green : .orange))
+                    .foregroundStyle(monitor.isPaused ? UtilityStyle.warningColor : (monitor.counterError == nil ? UtilityStyle.successColor : UtilityStyle.warningColor))
             }
 
             UtilityPanel("General") {
@@ -126,7 +126,7 @@ struct SettingsView: View {
                 if let message = monitor.loginItemMessage {
                     Text(message)
                         .font(UtilityStyle.helpFont)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(UtilityStyle.warningColor)
                 }
             }
 
@@ -154,7 +154,7 @@ struct SettingsView: View {
                     Image(nsImage: AppBrand.icon)
                         .resizable()
                         .interpolation(.high)
-                        .frame(width: 32, height: 32)
+                        .frame(width: UtilityStyle.aboutIconSize, height: UtilityStyle.aboutIconSize)
                         .accessibilityHidden(true)
                     Text("Mac Utilities").font(UtilityStyle.headingFont)
                     Spacer(minLength: UtilityStyle.contentSpacing)
@@ -163,11 +163,11 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, UtilityStyle.aboutVerticalPadding)
             }
         }
         .font(UtilityStyle.bodyFont)
-        .controlSize(.regular)
+        .controlSize(UtilityStyle.controlSize)
     }
 
     private var appVersion: String {
@@ -184,13 +184,13 @@ private struct HandCursorToggleStyle: ToggleStyle {
                 configuration.label
                 Spacer()
                 Capsule()
-                    .fill(configuration.isOn ? Color.accentColor : Color.secondary.opacity(0.3))
-                    .frame(width: 36, height: 22)
+                    .fill(configuration.isOn ? Color.accentColor : UtilityStyle.Toggle.offColor)
+                    .frame(width: UtilityStyle.Toggle.width, height: UtilityStyle.Toggle.height)
                     .overlay(alignment: configuration.isOn ? .trailing : .leading) {
                         Circle()
-                            .fill(configuration.isOn ? Color(nsColor: .windowBackgroundColor) : .white)
-                            .frame(width: 18, height: 18)
-                            .padding(2)
+                            .fill(configuration.isOn ? UtilityStyle.Toggle.onThumbColor : UtilityStyle.Toggle.offThumbColor)
+                            .frame(width: UtilityStyle.Toggle.thumbSize, height: UtilityStyle.Toggle.thumbSize)
+                            .padding(UtilityStyle.Toggle.thumbInset)
                     }
             }
             .contentShape(Rectangle())
@@ -214,7 +214,7 @@ private struct HandCursorPicker<Option: Hashable & Identifiable>: View {
                 Text(title)
                 Spacer()
                 Text(optionTitle(selection)).foregroundStyle(.secondary)
-                Image(systemName: "chevron.up.chevron.down").font(.caption2)
+                Image(systemName: "chevron.up.chevron.down").font(UtilityStyle.Picker.indicatorFont)
             }
             .contentShape(Rectangle())
         }
@@ -223,7 +223,7 @@ private struct HandCursorPicker<Option: Hashable & Identifiable>: View {
         .accessibilityLabel(title)
         .accessibilityValue(optionTitle(selection))
         .popover(isPresented: $isPresented) {
-            VStack(spacing: 4) {
+            VStack(spacing: UtilityStyle.Picker.optionSpacing) {
                 ForEach(options) { option in
                     Button {
                         selection = option
@@ -234,7 +234,7 @@ private struct HandCursorPicker<Option: Hashable & Identifiable>: View {
                             Spacer()
                             Image(systemName: "checkmark").opacity(selection == option ? 1 : 0)
                         }
-                        .padding(8)
+                        .padding(UtilityStyle.Picker.optionPadding)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -242,8 +242,8 @@ private struct HandCursorPicker<Option: Hashable & Identifiable>: View {
                     .accessibilityAddTraits(selection == option ? .isSelected : [])
                 }
             }
-            .padding(6)
-            .frame(width: 150)
+            .padding(UtilityStyle.Picker.padding)
+            .frame(width: UtilityStyle.Picker.width)
         }
     }
 }
@@ -257,7 +257,7 @@ private struct MenuBarStatusLabel: View {
     var body: some View {
         Text(text)
             .monospacedDigit()
-            .font(.system(size: 11, weight: .medium))
+            .font(UtilityStyle.menuBarFont)
             .help(status)
             .onAppear {
                 #if DEBUG
