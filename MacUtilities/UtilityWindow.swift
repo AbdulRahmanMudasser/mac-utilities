@@ -40,13 +40,13 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
     weak var menuBarPopoverWindow: NSWindow?
     private(set) var window: NSWindow?
     private let diagnostics: ConnectionDiagnostics
-    private let setActivationPolicy: (NSApplication.ActivationPolicy) -> Void
-    private let activateApplication: () -> Void
+    private let setActivationPolicy: @MainActor (NSApplication.ActivationPolicy) -> Void
+    private let activateApplication: @MainActor () -> Void
     private let content: (UtilityWindowCoordinator) -> AnyView
 
     init(diagnostics: ConnectionDiagnostics,
-         setActivationPolicy: @escaping (NSApplication.ActivationPolicy) -> Void = { NSApp.setActivationPolicy($0) },
-         activateApplication: @escaping () -> Void = { NSApp.activate() },
+         setActivationPolicy: @escaping @MainActor (NSApplication.ActivationPolicy) -> Void = { NSApp.setActivationPolicy($0) },
+         activateApplication: @escaping @MainActor () -> Void = { NSApp.activate() },
          content: @escaping (UtilityWindowCoordinator) -> AnyView) {
         self.diagnostics = diagnostics
         self.setActivationPolicy = setActivationPolicy
