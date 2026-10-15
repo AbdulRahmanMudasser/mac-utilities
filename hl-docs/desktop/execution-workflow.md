@@ -20,7 +20,7 @@ Do not use this file for:
 ## 2. Linked Source Documents
 
 * **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md)
-* **Usage History Contract:** [Phase 07](./phase-07-usage-history-chart.md), especially Sections 6–8, owns the newly approved history behavior and supersedes the original PRD history exclusion. Earlier completed phases retain their historical scope.
+* **Usage History Contract:** The [PRD](../mac-utilities-prd.md) owns the product requirements; [Phase 07](./phase-07-usage-history-chart.md), especially Sections 6–8, records the detailed storage, accounting, interface and verification contracts. Earlier completed phases retain their historical scope.
 
 ## 3. Platform Baseline
 
@@ -93,7 +93,7 @@ None. All approved phases are complete; no additional implementation phase is qu
 
 ### Execution Risks
 
-- Interface membership changes, counter resets, sleep, pause intervals, and time-zone changes can make totals incomplete.
+- Interface membership changes, counter resets, app shutdown, sleep, and time-zone changes can leave gaps in observed totals.
 - Earlier daily usage cannot be recovered beyond the legacy saved snapshot. History omits unknown dates and does not invent allocations across ambiguous day boundaries. Reset Today preserves history; Clear History is separately confirmed.
 - Multiple active physical or virtual interfaces may have platform-specific coverage or duplicate-accounting behavior that needs target-Mac verification.
 - App attribution remains deferred until both report handoff and app-identity resolution can be proven with documented macOS-supported behavior.
