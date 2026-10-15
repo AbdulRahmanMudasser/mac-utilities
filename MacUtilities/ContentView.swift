@@ -30,7 +30,7 @@ struct ContentView: View {
         .sheet(isPresented: $confirmReset) {
             VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
                 Text("Reset Today's Counters?").font(UtilityStyle.headingFont)
-                Text("Today's observed device totals will restart from zero.")
+                Text("Today's counters will restart from zero. Chart history stays unchanged.")
                 HStack(spacing: UtilityStyle.contentSpacing) {
                     Spacer()
                     Button("Cancel", role: .cancel) { confirmReset = false }
@@ -69,15 +69,22 @@ struct ContentView: View {
 
     private var totalsSection: some View {
         VStack(alignment: .leading, spacing: UtilityStyle.Popover.sectionContentSpacing) {
-            Text("Today's Usage")
-                .font(UtilityStyle.headingFont)
+            HStack(spacing: UtilityStyle.contentSpacing) {
+                Text("Today's Usage")
+                    .font(UtilityStyle.headingFont)
+                Spacer()
+                Button("Usage") { utilityWindow.present(.usage) }
+                    .buttonStyle(.bordered)
+                    .controlSize(UtilityStyle.Popover.controlSize)
+                    .handPointer()
+            }
 
             HStack(spacing: 0) {
-                TotalValue(title: "Downloaded", value: monitor.formattedDownloadedToday)
+                UtilityTotalValue(title: "Downloaded", value: monitor.formattedDownloadedToday)
                 Spacer(minLength: UtilityStyle.Popover.columnSpacing)
-                TotalValue(title: "Uploaded", value: monitor.formattedUploadedToday)
+                UtilityTotalValue(title: "Uploaded", value: monitor.formattedUploadedToday)
                 Spacer(minLength: UtilityStyle.Popover.columnSpacing)
-                TotalValue(title: "Combined", value: monitor.formattedCombinedToday)
+                UtilityTotalValue(title: "Combined", value: monitor.formattedCombinedToday)
             }
             .padding(UtilityStyle.Popover.cardPadding)
             .utilityCardBackground()
@@ -95,18 +102,6 @@ struct ContentView: View {
             .handPointer()
 
             Spacer()
-
-            if monitor.isPaused {
-                Button("Resume") { monitor.setPaused(false) }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(UtilityStyle.Popover.controlSize)
-                    .handPointer()
-            } else {
-                Button("Pause") { monitor.setPaused(true) }
-                    .buttonStyle(.bordered)
-                    .controlSize(UtilityStyle.Popover.controlSize)
-                    .handPointer()
-            }
 
             Button("Reset") { confirmReset = true }
                 .buttonStyle(.bordered)
@@ -148,22 +143,5 @@ private struct SpeedValue: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-    }
-}
-
-private struct TotalValue: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: UtilityStyle.Popover.valueSpacing) {
-            Text(value)
-                .font(UtilityStyle.Popover.valueFont)
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
-            Text(title)
-                .font(UtilityStyle.Popover.labelFont)
-                .foregroundStyle(.secondary)
-        }
     }
 }

@@ -37,11 +37,12 @@ struct PersistedUsage: Codable {
     var uploaded: UInt64 = 0
     var interfaceCounters: [String: InterfaceByteCount] = [:]
     var lastSampleDate: Date?
-    var wasPaused = false
     var isIncomplete = true
     var incompleteReason: String?
+    var history: [DailyUsageRecord]?
+    var bootIdentifier: String?
 
-    var combined: UInt64 { downloaded &+ uploaded }
+    var combined: UInt64 { UsageHistory.add(downloaded, uploaded) }
 }
 
 private enum InterfaceCounterReader {
@@ -122,12 +123,15 @@ final class UsageMonitor: ObservableObject {
     @Published private(set) var uploadedToday: UInt64 = 0
     @Published private(set) var downloadBytesPerSecond: Double = 0
     @Published private(set) var uploadBytesPerSecond: Double = 0
-    @Published private(set) var isPaused = false
     @Published private(set) var isIncomplete = true
     @Published private(set) var incompleteReason: String?
     @Published private(set) var counterError: String?
     @Published private(set) var loginItemEnabled = false
     @Published private(set) var loginItemMessage: String?
+    @Published private(set) var historyRecords: [DailyUsageRecord] = []
+    @Published private(set) var historyError: String?
+    @Published private(set) var historyWritable = true
+    @Published private(set) var historyDate: Date
 
     @Published var rateUnit: RateDisplayUnit {
         didSet { UserDefaults.standard.set(rateUnit.rawValue, forKey: Self.rateUnitKey) }
@@ -144,60 +148,53 @@ final class UsageMonitor: ObservableObject {
     private var timer: Timer?
     private var lastRateSampleUptime: TimeInterval?
     private var lastStateWriteDate: Date?
+    private let now: @MainActor () -> Date
+    private let calendarProvider: @MainActor () -> Calendar
+    private let readCounters: @MainActor () throws -> [String: InterfaceByteCount]
+    private let boot: @MainActor () -> String
 
-    init() {
+    init(stateURL: URL? = nil, startAutomatically: Bool = true,
+         now: @escaping @MainActor () -> Date = Date.init,
+         calendar: @escaping @MainActor () -> Calendar = { UsageHistory.calendar() },
+         readCounters: @escaping @MainActor () throws -> [String: InterfaceByteCount] = InterfaceCounterReader.read,
+         bootIdentifier: @escaping @MainActor () -> String = UsageMonitor.systemBootIdentifier) {
+        self.now = now
+        calendarProvider = calendar
+        self.readCounters = readCounters
+        boot = bootIdentifier
+        let date = now()
+        historyDate = date
         rateUnit = RateDisplayUnit(rawValue: UserDefaults.standard.string(forKey: Self.rateUnitKey) ?? "") ?? .megabitsPerSecond
         dataUnit = DataDisplayUnit(rawValue: UserDefaults.standard.string(forKey: Self.dataUnitKey) ?? "") ?? .decimal
         loginItemEnabled = SMAppService.mainApp.status == .enabled
 
         let supportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let appDirectory = supportDirectory.appendingPathComponent("MacUtilities", isDirectory: true)
-        stateURL = appDirectory.appendingPathComponent("today-usage.json")
-
-        let now = Date()
-        let todayKey = Self.localDayKey(for: now)
-        let currentCounters = try? InterfaceCounterReader.read()
-
-        if let saved = Self.loadState(at: stateURL), saved.localDayKey == todayKey {
-            persisted = saved
-            persisted.schemaVersion = 2
-            let currentTimeZone = TimeZone.autoupdatingCurrent.identifier
-            Self.markTimeZoneChangeIfNeeded(currentTimeZone, state: &persisted)
-            if saved.wasPaused {
-                persisted.isIncomplete = true
-                persisted.incompleteReason = "Monitoring Was Paused Today."
-                persisted.interfaceCounters = currentCounters ?? saved.interfaceCounters
-            } else if let currentCounters {
-                Self.applyDelta(from: saved.interfaceCounters, to: currentCounters, in: &persisted)
-                persisted.interfaceCounters = currentCounters
-            } else {
-                persisted.isIncomplete = true
-                persisted.incompleteReason = "Device Counters Are Unavailable."
+        self.stateURL = stateURL ?? appDirectory.appendingPathComponent("today-usage.json")
+        persisted = PersistedUsage(localDayKey: Self.localDayKey(for: date, calendar: calendar()),
+                                   timeZoneIdentifier: calendar().timeZone.identifier,
+                                   incompleteReason: "Collection Started After Local Midnight.", history: [])
+        do {
+            if let saved = try Self.readState(at: self.stateURL) {
+                persisted = saved
+                UsageHistory.migrate(&persisted)
             }
-        } else {
-            persisted = PersistedUsage(
-                localDayKey: todayKey,
-                interfaceCounters: currentCounters ?? [:],
-                lastSampleDate: now,
-                isIncomplete: !Self.isNearLocalMidnight(now),
-                incompleteReason: Self.isNearLocalMidnight(now) ? nil : "Collection Started After Local Midnight."
-            )
+        } catch {
+            historyWritable = false
+            historyError = "Saved Usage Could Not Be Opened. The Existing File Has Been Kept."
         }
-
-        isPaused = persisted.wasPaused
-        isIncomplete = persisted.isIncomplete
-        incompleteReason = persisted.incompleteReason
-        downloadedToday = persisted.downloaded
-        uploadedToday = persisted.uploaded
-        counterError = currentCounters == nil ? "Device Counters Are Unavailable." : nil
-        persisted.lastSampleDate = now
+        persisted.schemaVersion = 3
+        let counters = try? readCounters()
+        Self.observe(at: date, calendar: calendar(), counters: counters, boot: boot(), state: &persisted)
+        counterError = counters == nil ? "Device Counters Are Unavailable." : nil
+        publish()
         lastRateSampleUptime = ProcessInfo.processInfo.systemUptime
         saveState(force: true)
-
-        if !isPaused { startSampling() }
+        if startAutomatically { startSampling() }
     }
 
-    var combinedToday: UInt64 { downloadedToday &+ uploadedToday }
+    var combinedToday: UInt64 { UsageHistory.add(downloadedToday, uploadedToday) }
+    var historyCalendar: Calendar { calendarProvider() }
 
     var formattedDownloadRate: String { Self.formatRate(downloadBytesPerSecond, unit: rateUnit) }
     var formattedUploadRate: String { Self.formatRate(uploadBytesPerSecond, unit: rateUnit) }
@@ -214,7 +211,6 @@ final class UsageMonitor: ObservableObject {
     }
 
     var collectionStatus: String {
-        if isPaused { return "Monitoring Paused" }
         if counterError != nil { return "Monitoring Unavailable" }
         return "Device Monitoring Active"
     }
@@ -224,51 +220,36 @@ final class UsageMonitor: ObservableObject {
         return "\(zone.identifier) (\(zone.abbreviation() ?? "Local"))"
     }
 
-    func setPaused(_ paused: Bool) {
-        guard paused != isPaused else { return }
-        isPaused = paused
-        persisted.wasPaused = paused
-        persisted.isIncomplete = true
-        persisted.incompleteReason = paused ? "Monitoring Was Paused Today." : "Collection Resumed After A Pause."
-        isIncomplete = true
-        incompleteReason = persisted.incompleteReason
-        downloadBytesPerSecond = 0
-        uploadBytesPerSecond = 0
-
-        if paused {
-            timer?.invalidate()
-            timer = nil
-        } else {
-            if let counters = try? InterfaceCounterReader.read() {
-                persisted.interfaceCounters = counters
-                counterError = nil
-            } else {
-                counterError = "Device Counters Are Unavailable."
-            }
-            startSampling()
-        }
-        saveState(force: true)
-    }
-
     func resetToday() {
-        let now = Date()
-        let currentCounters = try? InterfaceCounterReader.read()
-        persisted.localDayKey = Self.localDayKey(for: now)
-        persisted.timeZoneIdentifier = TimeZone.autoupdatingCurrent.identifier
+        sample()
         persisted.downloaded = 0
         persisted.uploaded = 0
-        persisted.interfaceCounters = currentCounters ?? [:]
-        persisted.lastSampleDate = now
         lastRateSampleUptime = ProcessInfo.processInfo.systemUptime
         persisted.isIncomplete = true
         persisted.incompleteReason = "Counters Were Reset Today."
-        counterError = currentCounters == nil ? "Device Counters Are Unavailable." : nil
         downloadedToday = 0
         uploadedToday = 0
         downloadBytesPerSecond = 0
         uploadBytesPerSecond = 0
         isIncomplete = true
         incompleteReason = persisted.incompleteReason
+        saveState(force: true)
+    }
+
+    func clearHistory() {
+        guard historyWritable else { return }
+        sample()
+        persisted.history = []
+        historyRecords = []
+        saveState(force: true)
+    }
+
+    func flush() { saveState(force: true) }
+
+    func shutdown() {
+        sample()
+        timer?.invalidate()
+        timer = nil
         saveState(force: true)
     }
 
@@ -298,70 +279,79 @@ final class UsageMonitor: ObservableObject {
         timer = samplingTimer
     }
 
-    private func sample() {
-        guard !isPaused else { return }
-        let now = Date()
-        let timeZoneIdentifier = TimeZone.autoupdatingCurrent.identifier
-        guard let counters = try? InterfaceCounterReader.read() else {
-            counterError = "Device Counters Are Unavailable."
-            persisted.isIncomplete = true
-            persisted.incompleteReason = counterError
-            isIncomplete = true
-            incompleteReason = counterError
-            downloadBytesPerSecond = 0
-            uploadBytesPerSecond = 0
-            lastRateSampleUptime = nil
-            saveState()
-            return
-        }
-
-        counterError = nil
-        if Self.rollOverToCurrentLocalDayIfNeeded(
-            at: now,
-            timeZoneIdentifier: timeZoneIdentifier,
-            interfaceCounters: counters,
-            state: &persisted
-        ) {
-            downloadedToday = 0
-            uploadedToday = 0
-            isIncomplete = true
-            incompleteReason = persisted.incompleteReason
-            downloadBytesPerSecond = 0
-            uploadBytesPerSecond = 0
-            lastRateSampleUptime = ProcessInfo.processInfo.systemUptime
-            saveState()
-            return
-        }
-
-        Self.markTimeZoneChangeIfNeeded(timeZoneIdentifier, state: &persisted)
-
-        let previous = persisted.interfaceCounters
-        let downloadDelta = Self.applyDelta(from: previous, to: counters, in: &persisted)
-        persisted.interfaceCounters = counters
-        persisted.lastSampleDate = now
-        downloadedToday = persisted.downloaded
-        uploadedToday = persisted.uploaded
-        isIncomplete = persisted.isIncomplete
-        incompleteReason = persisted.incompleteReason
-
-        let sampleUptime = ProcessInfo.processInfo.systemUptime
-        if let lastRateSampleUptime {
-            let elapsed = sampleUptime - lastRateSampleUptime
-            if let downloadRate = Self.rateInBytesPerSecond(bytes: downloadDelta.downloaded, elapsed: elapsed),
-               let uploadRate = Self.rateInBytesPerSecond(bytes: downloadDelta.uploaded, elapsed: elapsed)
-            {
-                downloadBytesPerSecond = downloadRate
-                uploadBytesPerSecond = uploadRate
-            } else {
-                downloadBytesPerSecond = 0
-                uploadBytesPerSecond = 0
-            }
+    func sample() {
+        let date = now()
+        let counters = try? readCounters()
+        let delta = Self.observe(at: date, calendar: calendarProvider(), counters: counters,
+                                 boot: boot(), state: &persisted)
+        historyDate = date
+        counterError = counters == nil ? "Device Counters Are Unavailable." : nil
+        publish()
+        let uptime = ProcessInfo.processInfo.systemUptime
+        if let previous = lastRateSampleUptime, let delta {
+            downloadBytesPerSecond = Self.rateInBytesPerSecond(bytes: delta.downloaded, elapsed: uptime - previous) ?? 0
+            uploadBytesPerSecond = Self.rateInBytesPerSecond(bytes: delta.uploaded, elapsed: uptime - previous) ?? 0
         } else {
             downloadBytesPerSecond = 0
             uploadBytesPerSecond = 0
         }
-        lastRateSampleUptime = sampleUptime
+        lastRateSampleUptime = counters == nil ? nil : uptime
         saveState()
+    }
+
+    private func publish() {
+        downloadedToday = persisted.downloaded
+        uploadedToday = persisted.uploaded
+        isIncomplete = persisted.isIncomplete
+        incompleteReason = persisted.incompleteReason
+        if historyRecords != (persisted.history ?? []) { historyRecords = persisted.history ?? [] }
+    }
+
+    @discardableResult
+    static func observe(at date: Date, calendar: Calendar, counters: [String: InterfaceByteCount]?,
+                        boot: String, state: inout PersistedUsage) -> InterfaceByteCount? {
+        let zone = calendar.timeZone.identifier
+        let dayChanged = rollOverToCurrentLocalDayIfNeeded(at: date, timeZoneIdentifier: zone,
+            interfaceCounters: [:], state: &state, calendar: calendar)
+        let zoneChanged = markTimeZoneChangeIfNeeded(zone, state: &state)
+        let start = state.lastSampleDate
+        let comparable = !dayChanged && !zoneChanged && state.bootIdentifier == boot && !boot.isEmpty
+            && start != nil && date > start! && !state.interfaceCounters.isEmpty
+        state.bootIdentifier = boot
+        guard let counters else {
+            state.interfaceCounters = [:]
+            state.lastSampleDate = nil
+            state.isIncomplete = true
+            state.incompleteReason = "Device Counters Are Unavailable."
+            return nil
+        }
+        var delta: InterfaceByteCount?
+        if comparable, let start {
+            let previous = state.interfaceCounters
+            let value = applyDelta(from: previous, to: counters, in: &state)
+            // Long intervals are observed totals, not a claim of uninterrupted sampling.
+            if date.timeIntervalSince(start) > 2.5 { state.isIncomplete = true }
+            let hasObservedDirection = counters.contains { name, current in
+                guard let old = previous[name] else { return false }
+                return current.downloaded >= old.downloaded || current.uploaded >= old.uploaded
+            }
+            if hasObservedDirection {
+                UsageHistory.record(value, from: start, to: date, state: &state)
+                delta = value
+            }
+        } else {
+            state.isIncomplete = true
+        }
+        state.interfaceCounters = counters
+        state.lastSampleDate = date
+        return delta
+    }
+
+    static func systemBootIdentifier() -> String {
+        var value = timeval()
+        var size = MemoryLayout<timeval>.size
+        guard sysctlbyname("kern.boottime", &value, &size, nil, 0) == 0 else { return "" }
+        return "\(value.tv_sec).\(value.tv_usec)"
     }
 
     @discardableResult
@@ -382,32 +372,40 @@ final class UsageMonitor: ObservableObject {
         for (name, current) in new {
             guard let previous = old[name] else { continue }
             if current.downloaded >= previous.downloaded {
-                delta.downloaded &+= current.downloaded - previous.downloaded
+                delta.downloaded = UsageHistory.add(delta.downloaded, current.downloaded - previous.downloaded)
             } else {
                 state.isIncomplete = true
                 state.incompleteReason = "An Interface Counter Reset Was Detected."
             }
 
             if current.uploaded >= previous.uploaded {
-                delta.uploaded &+= current.uploaded - previous.uploaded
+                delta.uploaded = UsageHistory.add(delta.uploaded, current.uploaded - previous.uploaded)
             } else {
                 state.isIncomplete = true
                 state.incompleteReason = "An Interface Counter Reset Was Detected."
             }
         }
 
-        state.downloaded &+= delta.downloaded
-        state.uploaded &+= delta.uploaded
+        delta = UsageHistory.accumulating(delta, into: InterfaceByteCount(downloaded: 0, uploaded: 0))
+        let total = UsageHistory.accumulating(delta, into: InterfaceByteCount(downloaded: state.downloaded, uploaded: state.uploaded))
+        state.downloaded = total.downloaded
+        state.uploaded = total.uploaded
         return delta
     }
 
     private func saveState(force: Bool = false) {
-        let now = Date()
-        if !force, let lastStateWriteDate, now.timeIntervalSince(lastStateWriteDate) < 5 { return }
+        let now = now()
+        guard historyWritable else { return }
+        if !force, let lastStateWriteDate {
+            let elapsed = now.timeIntervalSince(lastStateWriteDate)
+            if elapsed >= 0 && elapsed < 5 { return }
+        }
         do {
             try Self.saveState(persisted, at: stateURL)
             lastStateWriteDate = now
+            historyError = nil
         } catch {
+            historyError = "Usage Could Not Be Saved. We Will Try Again."
             persisted.isIncomplete = true
             persisted.incompleteReason = "Today's Usage Could Not Be Saved Locally."
             isIncomplete = true
@@ -420,21 +418,52 @@ final class UsageMonitor: ObservableObject {
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
+        try validate(state)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         try encoder.encode(state).write(to: url, options: .atomic)
     }
 
-    static func loadState(at url: URL) -> PersistedUsage? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
+    static func loadState(at url: URL) -> PersistedUsage? { try? readState(at: url) }
+
+    enum StorageError: Error { case invalidSnapshot }
+
+    static func readState(at url: URL) throws -> PersistedUsage? {
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        let file = try FileHandle(forReadingFrom: url)
+        defer { try? file.close() }
+        let maximum = 8 * 1_024 * 1_024
+        let data = try file.read(upToCount: maximum + 1) ?? Data()
+        guard data.count <= maximum else { throw StorageError.invalidSnapshot }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try? decoder.decode(PersistedUsage.self, from: data)
+        let state = try decoder.decode(PersistedUsage.self, from: data)
+        try validate(state)
+        return state
     }
 
-    static func localDayKey(for date: Date, calendar: Calendar = .autoupdatingCurrent) -> String {
-        let components = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", components.year ?? 0, components.month ?? 0, components.day ?? 0)
+    static func validate(_ state: PersistedUsage) throws {
+        guard (1...3).contains(state.schemaVersion), UsageHistory.validKey(state.localDayKey),
+              !state.downloaded.addingReportingOverflow(state.uploaded).overflow,
+              state.schemaVersion < 3 || state.history != nil,
+              state.lastSampleDate?.timeIntervalSince1970.isFinite != false else {
+            throw StorageError.invalidSnapshot
+        }
+        let records = state.history ?? []
+        guard Set(records.map(\.dayKey)).count == records.count else { throw StorageError.invalidSnapshot }
+        for record in records {
+            guard UsageHistory.validKey(record.dayKey),
+                  record.firstObservedAt.timeIntervalSince1970.isFinite,
+                  record.lastObservedAt.timeIntervalSince1970.isFinite,
+                  record.firstObservedAt <= record.lastObservedAt,
+                  !record.downloaded.addingReportingOverflow(record.uploaded).overflow else {
+                throw StorageError.invalidSnapshot
+            }
+        }
+    }
+
+    static func localDayKey(for date: Date, calendar: Calendar = UsageHistory.calendar()) -> String {
+        UsageHistory.key(for: date, calendar: calendar)
     }
 
     @discardableResult
@@ -443,18 +472,21 @@ final class UsageMonitor: ObservableObject {
         timeZoneIdentifier: String,
         interfaceCounters: [String: InterfaceByteCount],
         state: inout PersistedUsage,
-        calendar: Calendar = .autoupdatingCurrent
+        calendar: Calendar = UsageHistory.calendar()
     ) -> Bool {
         let currentDayKey = localDayKey(for: date, calendar: calendar)
         guard state.localDayKey != currentDayKey else { return false }
+        let history = state.history
+        let boot = state.bootIdentifier
         state = PersistedUsage(
+            schemaVersion: state.schemaVersion,
             localDayKey: currentDayKey,
             timeZoneIdentifier: timeZoneIdentifier,
             interfaceCounters: interfaceCounters,
-            lastSampleDate: date,
-            wasPaused: false,
+            lastSampleDate: nil,
             isIncomplete: true,
-            incompleteReason: "The Local-Day Boundary Was Sampled Between Intervals."
+            incompleteReason: "The Local-Day Boundary Was Sampled Between Intervals.",
+            history: history, bootIdentifier: boot
         )
         return true
     }
@@ -486,11 +518,6 @@ final class UsageMonitor: ObservableObject {
         guard let reason = state.incompleteReason, obsoleteWarnings.contains(reason) else { return }
         state.isIncomplete = true
         state.incompleteReason = "Today's Usage Includes An Incomplete Previous Collection."
-    }
-
-    static func isNearLocalMidnight(_ date: Date) -> Bool {
-        let start = Calendar.autoupdatingCurrent.startOfDay(for: date)
-        return date.timeIntervalSince(start) < 2
     }
 
     static func rateInBytesPerSecond(bytes: UInt64, elapsed: TimeInterval) -> Double? {
