@@ -88,29 +88,23 @@ struct UsageHistoryView: View {
     }
 
     private func tooltip(for day: UsageHistoryDay) -> some View {
-        VStack(alignment: .leading, spacing: UtilityStyle.History.tooltipSpacing) {
-            Text(dateLabel(day.date)).font(UtilityStyle.helpFont.weight(.semibold))
-            if let record = day.record {
-                Grid(alignment: .leading, horizontalSpacing: UtilityStyle.contentSpacing,
-                     verticalSpacing: UtilityStyle.History.tooltipSpacing) {
-                    tooltipMetric("Downloaded", bytes: record.downloaded)
-                    tooltipMetric("Uploaded", bytes: record.uploaded)
-                    tooltipMetric("Combined", bytes: record.combined)
+        UtilityTooltip {
+            VStack(alignment: .leading, spacing: UtilityStyle.Tooltip.spacing) {
+                Text(dateLabel(day.date)).font(UtilityStyle.helpFont.weight(.semibold))
+                if let record = day.record {
+                    Grid(alignment: .leading, horizontalSpacing: UtilityStyle.contentSpacing,
+                         verticalSpacing: UtilityStyle.Tooltip.spacing) {
+                        tooltipMetric("Downloaded", bytes: record.downloaded)
+                        tooltipMetric("Uploaded", bytes: record.uploaded)
+                        tooltipMetric("Combined", bytes: record.combined)
+                    }
+                } else {
+                    Text("No Data").foregroundStyle(.secondary)
                 }
-            } else {
-                Text("No Data").foregroundStyle(.secondary)
             }
         }
         .font(UtilityStyle.metadataFont)
         .fixedSize(horizontal: true, vertical: false)
-        .padding(UtilityStyle.History.tooltipPadding)
-        .background(UtilityStyle.History.tooltipBackground,
-                    in: RoundedRectangle(cornerRadius: UtilityStyle.cornerRadius))
-        .overlay {
-            RoundedRectangle(cornerRadius: UtilityStyle.cornerRadius)
-                .strokeBorder(UtilityStyle.History.tooltipBorder, lineWidth: UtilityStyle.History.tooltipBorderWidth)
-        }
-        .shadow(color: UtilityStyle.History.tooltipShadow, radius: UtilityStyle.History.tooltipShadowRadius)
         .accessibilityElement(children: .combine)
         .allowsHitTesting(false)
     }

@@ -29,6 +29,17 @@ enum UtilityStyle {
     static let aboutVerticalPadding: CGFloat = 4
     static let confirmationWidth: CGFloat = 420
 
+    enum Tooltip {
+        static let spacing: CGFloat = 4
+        static let padding: CGFloat = 8
+        static let background = Color(nsColor: .windowBackgroundColor)
+        static let border = Color.primary.opacity(0.12)
+        static let borderWidth: CGFloat = 1
+        static let shadow = Color.black.opacity(0.12)
+        static let shadowRadius: CGFloat = 6
+        static let infoWidth: CGFloat = 280
+    }
+
     enum History {
         static let metricSpacing: CGFloat = 4
         static let chartHeight: CGFloat = 200
@@ -38,13 +49,6 @@ enum UtilityStyle {
         static let symbolSize: CGFloat = 18
         static let legendSize: CGFloat = 8
         static let axisTickCount = 5
-        static let tooltipSpacing: CGFloat = 4
-        static let tooltipPadding: CGFloat = 8
-        static let tooltipBackground = Color(nsColor: .windowBackgroundColor)
-        static let tooltipBorder = Color.primary.opacity(0.12)
-        static let tooltipBorderWidth: CGFloat = 1
-        static let tooltipShadow = Color.black.opacity(0.12)
-        static let tooltipShadowRadius: CGFloat = 6
     }
 
     enum Window {
@@ -115,39 +119,102 @@ struct UtilityScrollContent<Content: View>: View {
 struct UtilityPanel<Content: View>: View {
     let title: String
     let action: AnyView?
+    let info: String?
+    let showsContent: Bool
     let content: Content
 
-    init(_ title: String, action: AnyView? = nil, @ViewBuilder content: () -> Content) {
+    init(_ title: String, action: AnyView? = nil, info: String? = nil, showsContent: Bool = true,
+         @ViewBuilder content: () -> Content) {
         self.title = title
         self.action = action
+        self.info = info
+        self.showsContent = showsContent
         self.content = content()
+    }
+
+    private var panelHeading: some View {
+        HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.Tooltip.spacing) {
+            Text(title).font(UtilityStyle.headingFont).accessibilityAddTraits(.isHeader)
+            if let info {
+                UtilityInfoTooltip(message: info)
+            }
+        }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: UtilityStyle.contentSpacing) {
-                    Text(title).font(UtilityStyle.headingFont).accessibilityAddTraits(.isHeader)
-                        .fixedSize(horizontal: true, vertical: false)
+                    panelHeading.fixedSize(horizontal: true, vertical: false)
                     Spacer()
                     if let action { action.fixedSize() }
                 }
                 VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
-                    Text(title).font(UtilityStyle.headingFont).accessibilityAddTraits(.isHeader)
+                    panelHeading
                     if let action {
                         HStack { Spacer(); action }
                     }
                 }
             }
             .frame(minHeight: UtilityStyle.headerHeight)
-            VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
-                content
+            if showsContent {
+                VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
+                    content
+                }
+                .font(UtilityStyle.bodyFont)
+                .padding(UtilityStyle.cardPadding)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .utilityCardBackground()
             }
-            .font(UtilityStyle.bodyFont)
-            .padding(UtilityStyle.cardPadding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .utilityCardBackground()
         }
+    }
+}
+
+struct UtilityTooltip<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(UtilityStyle.Tooltip.padding)
+            .background(UtilityStyle.Tooltip.background,
+                        in: RoundedRectangle(cornerRadius: UtilityStyle.cornerRadius))
+            .overlay {
+                RoundedRectangle(cornerRadius: UtilityStyle.cornerRadius)
+                    .strokeBorder(UtilityStyle.Tooltip.border, lineWidth: UtilityStyle.Tooltip.borderWidth)
+            }
+            .shadow(color: UtilityStyle.Tooltip.shadow, radius: UtilityStyle.Tooltip.shadowRadius)
+    }
+}
+
+struct UtilityInfoTooltip: View {
+    let message: String
+    @State private var isHovered = false
+
+    var body: some View {
+        Image(systemName: "info.circle")
+            .font(UtilityStyle.metadataFont)
+            .foregroundStyle(.secondary)
+            .overlay(alignment: .bottomLeading) {
+                if isHovered {
+                    UtilityTooltip {
+                        Text(message)
+                            .font(UtilityStyle.metadataFont)
+                            .foregroundStyle(.primary)
+                            .frame(width: UtilityStyle.Tooltip.infoWidth, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                    .offset(y: -UtilityStyle.Tooltip.spacing)
+                    .zIndex(1)
+                }
+            }
+            .onHover { isHovered = $0 }
+            .accessibilityLabel("More information")
+            .accessibilityHint(message)
     }
 }
 
