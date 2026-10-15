@@ -4,9 +4,17 @@ import SwiftUI
 
 enum UtilitySection: String, CaseIterable, Identifiable {
     case connection = "Connection"
+    case usage = "Usage"
     case settings = "Settings"
 
     var id: Self { self }
+    var shortcut: KeyEquivalent {
+        switch self {
+        case .connection: "1"
+        case .settings: "2"
+        case .usage: "3"
+        }
+    }
 }
 
 struct MenuBarPopoverWindowAccessor: NSViewRepresentable {
@@ -93,6 +101,14 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
             target.setFrame(frame, display: false)
         }
         synchronizeContentFrame(target)
+        #if DEBUG
+        if CommandLine.arguments.contains("--usage-preview") && CommandLine.arguments.contains("--usage-preview-light") {
+            target.appearance = NSAppearance(named: .aqua)
+        }
+        if CommandLine.arguments.contains("--usage-preview") && CommandLine.arguments.contains("--usage-preview-compact") {
+            target.setContentSize(Self.minimumContentSize)
+        }
+        #endif
         setActivationPolicy(.regular)
         if target.isMiniaturized { target.deminiaturize(nil) }
         target.makeKeyAndOrderFront(nil)
@@ -155,7 +171,7 @@ struct UtilityWindowView: View {
                     }
                     .buttonStyle(.plain)
                     .handPointer()
-                    .keyboardShortcut(section == .connection ? "1" : "2", modifiers: .command)
+                    .keyboardShortcut(section.shortcut, modifiers: .command)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(section.rawValue)
                     .accessibilityValue(section == .connection && diagnostics.isRunning ? "Check Running" : "")
@@ -172,6 +188,7 @@ struct UtilityWindowView: View {
             Group {
                 switch utilityWindow.selection {
                 case .connection: ConnectionCheckView()
+                case .usage: UsageHistoryView()
                 case .settings: SettingsView()
                 }
             }

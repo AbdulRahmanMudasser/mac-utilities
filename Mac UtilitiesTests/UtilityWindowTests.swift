@@ -32,7 +32,7 @@ struct UtilityWindowTests {
     @Test func startupDoesNotCreateAWindow() {
         let subject = coordinator()
         #expect(subject.window == nil)
-        #expect(UtilitySection.allCases == [.connection, .settings])
+        #expect(UtilitySection.allCases == [.connection, .usage, .settings])
     }
 
     @Test(arguments: UtilitySection.allCases)
@@ -84,7 +84,7 @@ struct UtilityWindowTests {
         defer { subject.shutdown() }
         subject.present(.settings)
         let original = subject.window
-        for section in [UtilitySection.connection, .settings, .connection] {
+        for section in [UtilitySection.connection, .usage, .settings, .connection] {
             subject.present(section)
             #expect(subject.window === original)
             #expect(subject.selection == section)
@@ -126,6 +126,8 @@ struct UtilityWindowTests {
         defer { subject.shutdown() }
         subject.present(.connection)
         diagnostics.startLatency()
+        #expect(diagnostics.isRunning)
+        subject.present(.usage)
         #expect(diagnostics.isRunning)
         subject.present(.settings)
         #expect(diagnostics.isRunning)
@@ -169,6 +171,8 @@ struct UtilityWindowTests {
         #expect(diagnostics.probes.count == 2)
         let completedAt = diagnostics.latencyCompletedAt
         #expect(completedAt != nil)
+        subject.present(.usage)
+        #expect(diagnostics.latencyCompletedAt == completedAt)
         subject.present(.settings)
         subject.window?.close()
         subject.present(.connection)
@@ -269,5 +273,48 @@ struct UtilityWindowTests {
         let unrelated = NSWindow()
         subject.windowDidResize(Notification(name: NSWindow.didResizeNotification, object: unrelated))
         #expect(subject.window?.contentView?.frame == original)
+    }
+
+    @Test func usageKeepsExistingKeyboardShortcuts() {
+        #expect(UtilitySection.connection.shortcut == "1")
+        #expect(UtilitySection.settings.shortcut == "2")
+        #expect(UtilitySection.usage.shortcut == "3")
+    }
+
+    @Test func realUsageViewKeepsSharedBoundsInBothAppearances() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("usage-history-window-fixture")
+        let url = directory.appendingPathComponent("today-usage.json")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let calendar = UsageHistory.calendar()
+        let date = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 15, hour: 12)))
+        let records = (0..<30).compactMap { offset -> DailyUsageRecord? in
+            guard offset != 6, let day = calendar.date(byAdding: .day, value: -offset, to: date) else { return nil }
+            return DailyUsageRecord(dayKey: UsageHistory.key(for: day),
+                downloaded: UInt64(offset == 8 ? 0 : 2 + offset % 14) * 1_000_000_000,
+                uploaded: UInt64(offset == 8 ? 0 : 1 + offset % 3) * 500_000_000,
+                firstObservedAt: day, lastObservedAt: day, isIncomplete: true)
+        }
+        try UsageMonitor.saveState(PersistedUsage(schemaVersion: 3, localDayKey: UsageHistory.key(for: date), history: records), at: url)
+        let monitor = UsageMonitor(stateURL: url, startAutomatically: false, now: { date },
+                                   calendar: { calendar }, readCounters: { [:] })
+        let diagnostics = ConnectionDiagnostics()
+        let subject = UtilityWindowCoordinator(diagnostics: diagnostics,
+            setActivationPolicy: { _ in }, activateApplication: {}) { coordinator in
+            AnyView(UtilityWindowView().environmentObject(monitor).environmentObject(diagnostics).environmentObject(coordinator))
+        }
+        defer { subject.shutdown(); try? FileManager.default.removeItem(at: directory) }
+        subject.present(.usage)
+        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+            subject.window?.appearance = NSAppearance(named: appearance)
+            for size in [NSSize(width: 620, height: 420), NSSize(width: 860, height: 660), NSSize(width: 1100, height: 800)] {
+                subject.window?.setContentSize(size)
+                let view = try #require(subject.window?.contentView)
+                view.layoutSubtreeIfNeeded()
+                try await Task.sleep(for: .milliseconds(100))
+                view.displayIfNeeded()
+                #expect(view.bounds.size == size)
+                #expect(subject.window?.contentViewController?.children.first?.view.bounds.size == size)
+            }
+        }
     }
 }

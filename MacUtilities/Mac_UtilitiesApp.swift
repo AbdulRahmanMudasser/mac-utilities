@@ -44,7 +44,20 @@ struct Mac_UtilitiesApp: App {
     @StateObject private var utilityWindow: UtilityWindowCoordinator
 
     init() {
-        let monitor = UsageMonitor()
+        let testing = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil || NSClassFromString("XCTestCase") != nil
+        let monitor: UsageMonitor
+        if testing {
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent("usage-history-tests-\(ProcessInfo.processInfo.processIdentifier)/today-usage.json")
+            monitor = UsageMonitor(stateURL: file, startAutomatically: false, readCounters: { [:] })
+        } else {
+            #if DEBUG
+            if CommandLine.arguments.contains("--usage-preview") {
+                monitor = Self.previewMonitor()
+            } else { monitor = UsageMonitor() }
+            #else
+            monitor = UsageMonitor()
+            #endif
+        }
         let diagnostics = ConnectionDiagnostics()
         _monitor = StateObject(wrappedValue: monitor)
         _diagnostics = StateObject(wrappedValue: diagnostics)
@@ -64,18 +77,40 @@ struct Mac_UtilitiesApp: App {
         } label: {
             MenuBarStatusLabel(text: monitor.menuBarText, status: monitor.collectionStatus)
                 .environmentObject(utilityWindow)
-                .onAppear { appDelegate.utilityWindow = utilityWindow }
+                .onAppear {
+                    appDelegate.utilityWindow = utilityWindow
+                    appDelegate.monitor = monitor
+                }
         }
         .menuBarExtraStyle(.window)
     }
+
+    #if DEBUG
+    private static func previewMonitor() -> UsageMonitor {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("usage-history-preview/today-usage.json")
+        let calendar = UsageHistory.calendar()
+        let date = Date()
+        var state = PersistedUsage(schemaVersion: 3, localDayKey: UsageHistory.key(for: date), history: [])
+        state.history = (0..<40).compactMap { offset in
+            guard offset != 6, let day = calendar.date(byAdding: .day, value: -offset, to: date) else { return nil }
+            return DailyUsageRecord(dayKey: UsageHistory.key(for: day), downloaded: UInt64(offset == 8 ? 0 : 2 + (offset * 7) % 18) * 1_000_000_000,
+                uploaded: UInt64(offset == 8 ? 0 : 1 + offset % 3) * 500_000_000,
+                firstObservedAt: day, lastObservedAt: day, isIncomplete: true)
+        }
+        try? UsageMonitor.saveState(state, at: file)
+        return UsageMonitor(stateURL: file, startAutomatically: false, readCounters: { [:] })
+    }
+    #endif
 }
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var utilityWindow: UtilityWindowCoordinator?
+    weak var monitor: UsageMonitor?
 
     func applicationWillTerminate(_ notification: Notification) {
         utilityWindow?.shutdown()
+        monitor?.shutdown()
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -93,13 +128,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct SettingsView: View {
     @EnvironmentObject private var monitor: UsageMonitor
 
-    private var monitoringBinding: Binding<Bool> {
-        Binding(
-            get: { !monitor.isPaused },
-            set: { monitor.setPaused(!$0) }
-        )
-    }
-
     private var loginItemBinding: Binding<Bool> {
         Binding(
             get: { monitor.loginItemEnabled },
@@ -109,18 +137,14 @@ struct SettingsView: View {
 
     var body: some View {
         UtilityScrollContent {
-            UtilityPanel("Monitoring") {
-                Toggle("Collect Device Activity", isOn: monitoringBinding)
-                    .toggleStyle(HandCursorToggleStyle())
-            }
-
-            UtilityPanel("Readiness") {
-                UtilityValueRow(title: "Local Time Zone", value: monitor.localTimeZoneDescription)
-                Label(monitor.collectionStatus, systemImage: monitor.isPaused ? "pause.circle.fill" : (monitor.counterError == nil ? "checkmark.circle.fill" : "exclamationmark.circle.fill"))
-                    .foregroundStyle(monitor.isPaused ? UtilityStyle.warningColor : (monitor.counterError == nil ? UtilityStyle.successColor : UtilityStyle.warningColor))
-            }
+            Label(monitor.collectionStatus, systemImage: monitor.counterError == nil ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                .foregroundStyle(monitor.counterError == nil ? UtilityStyle.successColor : UtilityStyle.warningColor)
+                .padding(UtilityStyle.cardPadding)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .utilityCardBackground()
 
             UtilityPanel("General") {
+                UtilityValueRow(title: "Local Time Zone", value: monitor.localTimeZoneDescription)
                 Toggle("Start At Login", isOn: loginItemBinding)
                     .toggleStyle(HandCursorToggleStyle())
                 if let message = monitor.loginItemMessage {
@@ -133,20 +157,6 @@ struct SettingsView: View {
             UtilityPanel("Display") {
                 HandCursorPicker(title: "Speed Display", options: RateDisplayUnit.allCases, selection: $monitor.rateUnit, optionTitle: { $0.title })
                 HandCursorPicker(title: "Data Display", options: DataDisplayUnit.allCases, selection: $monitor.dataUnit, optionTitle: { $0.title })
-            }
-
-            VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
-                UtilityPanel("Today's Usage") {
-                    UtilityValueRow(title: "Downloaded", value: monitor.formattedDownloadedToday)
-                    UtilityValueRow(title: "Uploaded", value: monitor.formattedUploadedToday)
-                    UtilityValueRow(title: "Combined", value: monitor.formattedCombinedToday)
-                }
-                HStack(spacing: UtilityStyle.contentSpacing) {
-                    Spacer()
-                    Button("Reset Today's Counters", role: .destructive) { monitor.resetToday() }
-                        .buttonStyle(.bordered)
-                        .handPointer()
-                }
             }
 
             UtilityPanel("About") {
@@ -268,6 +278,10 @@ private struct MenuBarStatusLabel: View {
                 if !presentedDebugWindow && CommandLine.arguments.contains("--settings") {
                     presentedDebugWindow = true
                     utilityWindow.present(.settings)
+                }
+                if !presentedDebugWindow && CommandLine.arguments.contains("--usage") {
+                    presentedDebugWindow = true
+                    utilityWindow.present(.usage)
                 }
                 #endif
             }

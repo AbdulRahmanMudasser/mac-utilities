@@ -184,7 +184,7 @@ struct UsageMonitorTests {
         expected.interfaceCounters = ["en0": InterfaceByteCount(downloaded: 90_000, uploaded: 45_000)]
         expected.lastSampleDate = sampleDate
         expected.isIncomplete = true
-        expected.incompleteReason = "Monitoring Was Paused Today."
+        expected.incompleteReason = "Device Counters Are Unavailable."
 
         try UsageMonitor.saveState(expected, at: url)
         let restored = try #require(UsageMonitor.loadState(at: url))

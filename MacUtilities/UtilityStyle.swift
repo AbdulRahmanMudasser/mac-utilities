@@ -29,6 +29,24 @@ enum UtilityStyle {
     static let aboutVerticalPadding: CGFloat = 4
     static let confirmationWidth: CGFloat = 420
 
+    enum History {
+        static let metricSpacing: CGFloat = 4
+        static let chartHeight: CGFloat = 200
+        static let downloadColor = Color.primary.opacity(0.8)
+        static let uploadColor = Color.secondary.opacity(0.35)
+        static let selectionColor = Color.secondary.opacity(0.55)
+        static let symbolSize: CGFloat = 18
+        static let legendSize: CGFloat = 8
+        static let axisTickCount = 5
+        static let tooltipSpacing: CGFloat = 4
+        static let tooltipPadding: CGFloat = 8
+        static let tooltipBackground = Color(nsColor: .windowBackgroundColor)
+        static let tooltipBorder = Color.primary.opacity(0.12)
+        static let tooltipBorderWidth: CGFloat = 1
+        static let tooltipShadow = Color.black.opacity(0.12)
+        static let tooltipShadowRadius: CGFloat = 6
+    }
+
     enum Window {
         static let defaultSize = NSSize(width: 860, height: 660)
         static let minimumSize = NSSize(width: 620, height: 420)
@@ -146,5 +164,22 @@ struct UtilityValueRow: View {
         }
         .font(UtilityStyle.bodyFont)
         .accessibilityElement(children: .combine)
+    }
+}
+
+struct UtilityTotalValue: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: UtilityStyle.Popover.valueSpacing) {
+            Text(value)
+                .font(UtilityStyle.Popover.valueFont)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            Text(title)
+                .font(UtilityStyle.Popover.labelFont)
+                .foregroundStyle(.secondary)
+        }
     }
 }
