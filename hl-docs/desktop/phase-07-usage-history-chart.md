@@ -9,24 +9,24 @@ Extend the existing device-counter monitor with durable daily history and an int
 - **Phase Goal:** Retain observed daily download/upload totals and explore them through one compact stacked bar chart.
 - **User Or System Outcome:** Select This Month, 30 Days, 15 Days or 7 Days, see range totals, and inspect individual days with pointer and keyboard interaction.
 - **In Scope:** Snapshot migration, reset-independent daily records, local-calendar ranges, native Swift Charts, shared styling, error/empty states, accessibility, regression tests and target-Mac visual verification.
-- **Out Of Scope:** Allowances, thresholds, limits, alerts, per-app attribution, iOS, remote storage, export, automatic speed checks, changes to network traffic and automatic history expiry. Git publication was outside the Phase 07 implementation scope; its later user-requested PRs are tracked separately.
+- **Out Of Scope:** Allowances, thresholds, limits, alerts, per-app attribution, remote storage, export, automatic speed checks, changes to network traffic and automatic history expiry. Git publication was outside the Phase 07 implementation scope; its later user-requested PRs are tracked separately.
 
 ## 3. Project Topology & Dependencies
 
 - **Local Tracker:** [Execution Workflow](./execution-workflow.md)
-- **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md); current approved conversation supersedes its original exclusion of usage history.
+- **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md), which owns the product requirements for usage history; this phase records its implementation and verification contracts.
 - **Prerequisites (Blocked By):** Completed [Phase 01](./phase-01-device-usage-counters.md) and [Phase 06](./phase-06-unified-utility-window.md).
 - **Downstream Tasks (Unlocks):** Not applicable; no additional phase is required for the approved feature.
 - **Target Git Commit Prefix:** `feat(usage): ...`
 - **Project Profile(s):** Native macOS SwiftUI/AppKit desktop application (high confidence).
-- **Applicable Development Standards:** `MacUtilities/UtilityStyle.swift` and Phase 06 Section 7 for shared fonts, monochrome surfaces, padding, scroll position, resizing, singleton ownership and accessible controls. Fallback: `/Users/abdulrahman/.codex/skills/check-implementation/references/common-baseline.md` for validation, atomic persistence, lifecycle and regression coverage. No applicable AGENTS.md or separate development standards document exists; no web/mobile baseline applies.
+- **Applicable Development Standards:** `MacUtilities/UtilityStyle.swift` supplies the shared visual tokens and scroll/card helpers. Phase 06 Section 7 remains the reference for the typography, monochrome surfaces, padding, scroll placement, resizing and accessibility conventions reused by Usage; its Connection/Settings-only layout is a completed-phase snapshot. Current sidebar and Settings organization are defined in Section 7 of this document. Fallback: `/Users/abdulrahman/.codex/skills/check-implementation/references/common-baseline.md` for validation, atomic persistence, lifecycle and regression coverage. No applicable AGENTS.md or separate repository development standards document exists.
 
 ## 4. Ownership And Delivery Notes
 
 - **Owner:** TBD
 - **Priority:** TBD
 - **Target Window:** Completed 2026-10-15.
-- **Related PRD Section:** Goals And Non-Goals, Feature Scope, Functional Requirements and Acceptance Criteria; usage history is approved by the current task.
+- **Related PRD Section:** FR-14 Usage History and its related scope, data-handling and acceptance criteria.
 - **Related Build Plan Section:** Not applicable; the execution workflow owns delivery status.
 
 ## 5. Infrastructure & Environment Requirements
@@ -67,7 +67,7 @@ Extend the existing device-counter monitor with durable daily history and an int
 - Pointer, pinned selection, keyboard day navigation and data-unit changes produce consistent selected-day values and chart labels.
 - Clear History requires confirmation, preserves Today and does not reimport it on restart; cancelling changes nothing.
 - Invalid/future data is preserved with a visible failure state; transient write failures recover without dropping in-memory history.
-- No threshold/allowance/limit/alert, iOS target or automatic network check is introduced. Pause/Resume and the monitoring toggle are absent; saved formerly paused states automatically collect new observations.
+- No threshold/allowance/limit/alert or automatic network check is introduced. Pause/Resume and the monitoring toggle are absent; saved formerly paused states automatically collect new observations.
 - Tests never read/write real user usage data or leave test app instances running. Build, signature, tests and visual/interaction evidence cover the acceptance matrix.
 
 ## 9. Implementation Steps (Component Audit)
@@ -159,4 +159,4 @@ Authentication/API rows are not applicable: this is a local device-counter featu
 - **Started At:** 2026-10-15
 - **Completed At:** 2026-10-15
 - **Blockers Encountered:** None remaining. Duplicate app identities initially confused native UI targeting; a separately identified disposable preview resolved the verification issue.
-- **Notes:** Plan creation and review preceded implementation; implementation audit and documentation maintenance followed it. Two bounded research/implementation agents covered accounting/tests and UI; the parent owned integration, fixes and validation. Existing counter tests were retained with obsolete pause wording removed. No pre-feature history can be recovered beyond the saved daily snapshot. No thresholds, limits, alerts or iOS code were added. The later user-requested Git publication is split across separate implementation, test and documentation PRs. Version and personal installation follow the user's explicit release request.
+- **Notes:** Plan creation and review preceded implementation; implementation audit and documentation maintenance followed it. Two bounded research/implementation agents covered accounting/tests and UI; the parent owned integration, fixes and validation. Existing counter tests were retained with obsolete pause wording removed. No pre-feature history can be recovered beyond the saved daily snapshot. No thresholds, limits or alerts were added. The later user-requested Git publication is split across separate implementation, test and documentation PRs. Version and personal installation follow the user's explicit release request.
