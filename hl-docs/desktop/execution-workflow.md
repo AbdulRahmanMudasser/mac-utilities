@@ -20,13 +20,14 @@ Do not use this file for:
 ## 2. Linked Source Documents
 
 * **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md)
+* **Usage History Contract:** [Phase 07](./phase-07-usage-history-chart.md), especially Sections 6–8, owns the newly approved history behavior and supersedes the original PRD history exclusion. Earlier completed phases retain their historical scope.
 
 ## 3. Platform Baseline
 
 * **Platform Name:** Desktop
 * **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an ad-hoc signed personal build
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.0.1 (build 3), no public binary distribution target
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.0.6 (build 8), including Phase 07 usage history and its approved UI changes. No public binary distribution target.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
   - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-install CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES build`
@@ -34,8 +35,9 @@ Do not use this file for:
   - `codesign --verify --deep --strict "$HOME/Applications/Mac Utilities.app"`
 * **Release Gates:**
   - Verify live device rates, current-day totals, restart persistence, local-midnight rollover, collection-state messaging, and normal network connectivity on the target MacBook; local personal use uses ad-hoc signing.
+  - Verify schema-3 daily history migration, reset-independent totals, calendar ranges, missing/zero states, chart interaction, storage protection and explicit clearing using the Phase 07 protocol.
   - Keep per-app usage explicitly deferred until a supported macOS report handoff and app-identity path are proven.
-  - Verify manual diagnostic tools from the signed sandboxed app, including reply permissions, real metrics, impact disclosure, cancellation and child-process cleanup; no diagnostic telemetry or retained history.
+  - Verify manual diagnostic tools from the signed sandboxed app, including reply permissions, real metrics, impact disclosure, cancellation and child-process cleanup; diagnostic results remain transient. Retained usage history contains daily byte aggregates only.
 
 ## 4. Status Definitions
 
@@ -62,8 +64,8 @@ Every completed phase must satisfy all of the following:
 * **Current Phase:** None - All Approved Phases Complete
 * **Status:** Completed
 * **Owner:** Product Developer
-* **Linked Phase Doc:** [phase-06-unified-utility-window.md](./phase-06-unified-utility-window.md)
-* **Immediate Goal:** None. Phase 06 is complete; its implementation, automated verification and final tray interactions are recorded in the linked phase document.
+* **Linked Phase Doc:** [phase-07-usage-history-chart.md](./phase-07-usage-history-chart.md)
+* **Immediate Goal:** None. Phase 07 implementation, accounting regressions, signed build and native visual checks are complete; evidence is recorded in its linked phase document.
 * **Current Blockers:** None for the approved scope. Per-app attribution remains deferred as a future scope decision.
 
 ## 7. Ready Queue
@@ -81,6 +83,7 @@ None. All approved phases are complete; no additional implementation phase is qu
 | 04 | Target Install Verification | Completed | High | Product Developer | Phases 00, 01, and 03 | [phase-04-target-install-verification.md](./phase-04-target-install-verification.md) | Completed 2026-10-13 |
 | 05 | Connection Quality Checks | Completed | TBD | TBD | Phases 01, 03, 04 | [phase-05-connection-quality-checks.md](./phase-05-connection-quality-checks.md) | Completed 2026-10-13 |
 | 06 | Unified Utility Window | Completed | High | Product Developer | Phases 03, 05 | [phase-06-unified-utility-window.md](./phase-06-unified-utility-window.md) | Completed 2026-10-14 |
+| 07 | Usage History Chart | Completed | TBD | TBD | Phases 01, 06 | [phase-07-usage-history-chart.md](./phase-07-usage-history-chart.md) | Completed 2026-10-15 |
 
 ## 9. Blockers And Risks
 
@@ -91,6 +94,7 @@ None. All approved phases are complete; no additional implementation phase is qu
 ### Execution Risks
 
 - Interface membership changes, counter resets, sleep, pause intervals, and time-zone changes can make totals incomplete.
+- Earlier daily usage cannot be recovered beyond the legacy saved snapshot. History omits unknown dates and does not invent allocations across ambiguous day boundaries. Reset Today preserves history; Clear History is separately confirmed.
 - Multiple active physical or virtual interfaces may have platform-specific coverage or duplicate-accounting behavior that needs target-Mac verification.
 - App attribution remains deferred until both report handoff and app-identity resolution can be proven with documented macOS-supported behavior.
 - Ad-hoc signing supports this local personal install only; public distribution would require a separately scoped signing and notarization plan.
