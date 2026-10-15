@@ -10,7 +10,8 @@ struct ConnectionCheckView: View {
                 UtilityPanel("Reply Time And Missed Replies", action: AnyView(
                     Button("Check Now") { diagnostics.startLatency() }
                         .buttonStyle(.bordered).disabled(diagnostics.isRunning).handPointer()
-                ), info: "We send 10 small messages to each of two servers, one second apart, and count the replies.") {
+                ), info: "We send 10 small messages to each of two servers, one second apart, and count the replies.",
+                   showsContent: !diagnostics.probes.isEmpty || diagnostics.latencyCompletedAt != nil) {
                     ForEach(diagnostics.probes) { result in
                         VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
                             Text("\(result.target.name) · \(result.target.address)").font(UtilityStyle.emphasizedBodyFont)
@@ -52,7 +53,8 @@ struct ConnectionCheckView: View {
                 UtilityPanel("Internet Speed While Busy", action: AnyView(
                     Button("Run Speed Test") { confirmLoad = true }
                         .buttonStyle(.bordered).disabled(diagnostics.isRunning).handPointer()
-                ), info: "Checks reply speed while downloading and uploading. Higher scores mean faster replies. RPM means replies per minute.") {
+                ), info: "Checks reply speed while downloading and uploading. Higher scores mean faster replies. RPM means replies per minute.",
+                   showsContent: diagnostics.quality != nil || diagnostics.qualityError != nil || diagnostics.qualityCompletedAt != nil) {
                     if let result = diagnostics.quality {
                         VStack(spacing: UtilityStyle.contentSpacing) {
                             metric("Reply Time Before The Test", milliseconds(result.baseline))
