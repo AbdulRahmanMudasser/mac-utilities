@@ -10,11 +10,7 @@ struct ConnectionCheckView: View {
                 UtilityPanel("Reply Time And Missed Replies", action: AnyView(
                     Button("Check Now") { diagnostics.startLatency() }
                         .buttonStyle(.bordered).disabled(diagnostics.isRunning).handPointer()
-                )) {
-                    Text("We send 10 small messages to each of two servers, one second apart, and count the replies.")
-                        .font(UtilityStyle.helpFont).foregroundStyle(.secondary)
-                        .frame(maxWidth: UtilityStyle.helpWidth, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
+                ), info: "We send 10 small messages to each of two servers, one second apart, and count the replies.") {
                     ForEach(diagnostics.probes) { result in
                         VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
                             Text("\(result.target.name) · \(result.target.address)").font(UtilityStyle.emphasizedBodyFont)
@@ -26,7 +22,8 @@ struct ConnectionCheckView: View {
                                     metric("Missed Test Replies", "\(statistics.lost) Of \(statistics.sent) (\(statistics.lossPercent.formatted(.number.precision(.fractionLength(0))))%)")
                                     metric("Typical Reply Time", milliseconds(statistics.median))
                                     metric("Fastest / Slowest Reply", "\(milliseconds(statistics.minimum)) / \(milliseconds(statistics.maximum))")
-                                    metric("Reply Time Changes", milliseconds(statistics.jitter))
+                                    metric("Reply Time Changes", milliseconds(statistics.jitter),
+                                           explanation: "Shows how much reply times speed up or slow down. This check only tests two servers; a missed reply may not mean there is an internet problem.")
                                 }
                             }
                             if let error = result.error { Text(error).font(UtilityStyle.bodyFont) }
@@ -51,19 +48,11 @@ struct ConnectionCheckView: View {
                     if let date = diagnostics.latencyCompletedAt {
                         checkTimestamp(date, succeeded: !diagnostics.probes.contains { $0.error != nil || $0.httpsError != nil })
                     }
-                    Text("Reply Time Changes shows how much replies speed up or slow down. This checks only two servers; missed replies may not mean an internet problem.")
-                        .font(UtilityStyle.helpFont).foregroundStyle(.secondary)
-                        .frame(maxWidth: UtilityStyle.helpWidth, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
                 UtilityPanel("Internet Speed While Busy", action: AnyView(
                     Button("Run Speed Test") { confirmLoad = true }
                         .buttonStyle(.bordered).disabled(diagnostics.isRunning).handPointer()
-                )) {
-                    Text("Checks reply speed while downloading and uploading. Higher scores mean faster replies. RPM means replies per minute.")
-                        .font(UtilityStyle.helpFont).foregroundStyle(.secondary)
-                        .frame(maxWidth: UtilityStyle.helpWidth, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
+                ), info: "Checks reply speed while downloading and uploading. Higher scores mean faster replies. RPM means replies per minute.") {
                     if let result = diagnostics.quality {
                         VStack(spacing: UtilityStyle.contentSpacing) {
                             metric("Reply Time Before The Test", milliseconds(result.baseline))
@@ -126,9 +115,14 @@ struct ConnectionCheckView: View {
         }
     }
 
-    private func metric(_ title: String, _ value: String, detail: String? = nil) -> some View {
+    private func metric(_ title: String, _ value: String, detail: String? = nil, explanation: String? = nil) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.contentSpacing) {
-            Text(title).foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.Tooltip.spacing) {
+                Text(title).foregroundStyle(.secondary)
+                if let explanation {
+                    UtilityInfoTooltip(message: explanation)
+                }
+            }
             Spacer(minLength: UtilityStyle.contentSpacing)
             HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.contentSpacing) {
                 Text(value).monospacedDigit().multilineTextAlignment(.trailing).textSelection(.enabled)
