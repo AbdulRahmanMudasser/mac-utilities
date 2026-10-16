@@ -21,21 +21,24 @@ Do not use this file for:
 
 * **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md)
 * **Usage History Contract:** The [PRD](../mac-utilities-prd.md) owns the product requirements; [Phase 07](./phase-07-usage-history-chart.md), especially Sections 6–8, records the detailed storage, accounting, interface and verification contracts. Earlier completed phases retain their historical scope.
+* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md), [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) and [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) remain Planned. The PRD records the implemented storage/signing changes, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
 
 ## 3. Platform Baseline
 
 * **Platform Name:** Desktop
-* **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an ad-hoc signed personal build
+* **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an Apple Development signed personal build with verified App Group access
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.0.6 (build 8), including Phase 07 usage history and its approved UI changes. No public binary distribution target.
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.0.6 (build 8), including the Phase 08 architecture/storage foundation. No public binary distribution target.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
+  - `xcodegen generate --spec project.yml` using XcodeGen 2.46.0; configure ignored local signing before a signed build. See [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
   - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-install CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES build`
   - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-install CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES test`
   - `codesign --verify --deep --strict "$HOME/Applications/Mac Utilities.app"`
 * **Release Gates:**
-  - Verify live device rates, current-day totals, restart persistence, local-midnight rollover, collection-state messaging, and normal network connectivity on the target MacBook; local personal use uses ad-hoc signing.
-  - Verify schema-3 daily history migration, reset-independent totals, calendar ranges, missing/zero states, chart interaction, storage protection and explicit clearing using the Phase 07 protocol.
+  - Verify live device rates, current-day totals, restart persistence, local-midnight rollover, collection-state messaging, and normal network connectivity on the target MacBook. Ad-hoc tests use injected storage; the installed app requires a verified matching development signature for group access.
+  - Run the signed Release build with verified group configuration. The sole installation's history is already in the canonical ledger. Preserve it and prevent competing writers during installation.
+  - Verify schema-3 daily history compatibility, reset-independent totals, calendar ranges, missing/zero states, chart interaction, storage protection and explicit clearing using the Phase 07 protocol.
   - Keep per-app usage explicitly deferred until a supported macOS report handoff and app-identity path are proven.
   - Verify manual diagnostic tools from the signed sandboxed app, including reply permissions, real metrics, impact disclosure, cancellation and child-process cleanup; diagnostic results remain transient. Retained usage history contains daily byte aggregates only.
 
@@ -61,16 +64,16 @@ Every completed phase must satisfy all of the following:
 
 ## 6. Current Active Phase
 
-* **Current Phase:** None - All Approved Phases Complete
-* **Status:** Completed
-* **Owner:** Product Developer
-* **Linked Phase Doc:** [phase-07-usage-history-chart.md](./phase-07-usage-history-chart.md)
-* **Immediate Goal:** None. Phase 07 implementation, accounting regressions, signed build and native visual checks are complete; evidence is recorded in its linked phase document.
-* **Current Blockers:** None for the approved scope. Per-app attribution remains deferred as a future scope decision.
+* **Current Phase:** 09 - Extended Stability Checks
+* **Status:** Planned
+* **Owner:** TBD
+* **Linked Phase Doc:** [phase-09-extended-stability-checks.md](./phase-09-extended-stability-checks.md)
+* **Immediate Goal:** Phase 08 is complete: reproducible generation, reorganized sources, signed shared storage, regression coverage and current architecture documentation are verified. Phase 09 is next in delivery order and remains planned until implementation starts.
+* **Current Blockers:** Phase 09–11 implementation has not started. Phase 11 must separately prove extension access. Per-app attribution remains deferred.
 
 ## 7. Ready Queue
 
-None. All approved phases are complete; no additional implementation phase is queued.
+Phases 09–11 remain Planned. Delivery order after the foundation is 09 → 10 → 11; Wi-Fi and the usage widget do not depend on stability measurement data. Each feature requires its own implementation approval and environment checks; the current task implements Phase 08 only.
 
 ## 8. Phase Register
 
@@ -84,12 +87,17 @@ None. All approved phases are complete; no additional implementation phase is qu
 | 05 | Connection Quality Checks | Completed | TBD | TBD | Phases 01, 03, 04 | [phase-05-connection-quality-checks.md](./phase-05-connection-quality-checks.md) | Completed 2026-10-13 |
 | 06 | Unified Utility Window | Completed | High | Product Developer | Phases 03, 05 | [phase-06-unified-utility-window.md](./phase-06-unified-utility-window.md) | Completed 2026-10-14 |
 | 07 | Usage History Chart | Completed | TBD | TBD | Phases 01, 06 | [phase-07-usage-history-chart.md](./phase-07-usage-history-chart.md) | Completed 2026-10-15 |
+| 08 | Shared Architecture Foundation | Completed | TBD | TBD | Phase 07; signed App Group access verified before data cutover | [phase-08-shared-architecture-foundation.md](./phase-08-shared-architecture-foundation.md) | Completed 2026-10-17 |
+| 09 | Extended Stability Checks | Planned | TBD | TBD | Phase 08 | [phase-09-extended-stability-checks.md](./phase-09-extended-stability-checks.md) | TBD |
+| 10 | Wireless Link Quality | Planned | TBD | TBD | Phase 08; delivery follows Phase 09 | [phase-10-wireless-link-quality.md](./phase-10-wireless-link-quality.md) | TBD |
+| 11 | Configurable Usage Widget | Planned | TBD | TBD | Phase 08; delivery follows Phase 10; signed extension/group access | [phase-11-configurable-usage-widget.md](./phase-11-configurable-usage-widget.md) | TBD |
 
 ## 9. Blockers And Risks
 
 ### Active Blockers
 
-- None for the approved scope.
+- Phases 09–11 have passed planning review but remain unimplemented; readiness depends on their own environment and signed-runtime gates.
+- Host App Group access is verified, and the sole installation's history is in the canonical container. Phase 11 must additionally verify actual extension access before widget rollout.
 
 ### Execution Risks
 
@@ -97,8 +105,13 @@ None. All approved phases are complete; no additional implementation phase is qu
 - Earlier daily usage cannot be recovered beyond the legacy saved snapshot. History omits unknown dates and does not invent allocations across ambiguous day boundaries. Reset Today preserves history; Clear History is separately confirmed.
 - Multiple active physical or virtual interfaces may have platform-specific coverage or duplicate-accounting behavior that needs target-Mac verification.
 - App attribution remains deferred until both report handoff and app-identity resolution can be proven with documented macOS-supported behavior.
-- Ad-hoc signing supports this local personal install only; public distribution would require a separately scoped signing and notarization plan.
+- The verified Apple Development signature supports this local shared-container setup; public distribution requires a separately scoped signing and notarization plan.
 - Manual diagnostic endpoints can filter probes or omit measurements. Under-load checks transfer variable amounts of data; precise results, disclosure and cancellation are required by the PRD.
+- The ignored Xcode project is generated from tracked `project.yml`; personal signing values remain local.
+- Shared storage uses one writer and atomic updates; Clear History must not recover records from retained backups.
+- Extended checks must classify sleep/path/scheduler gaps separately from validated missed replies, enforce a continuous deadline and clean up children/observers.
+- CoreWLAN sentinel values and absent readings must remain unavailable; Wi-Fi identity and Location permission are outside the new feature scope.
+- WidgetKit schedules refreshes. The widget shows timestamped saved usage and must not start a second collector or imply live data while the host is closed.
 
 ## 10. Decision Log
 
@@ -107,6 +120,7 @@ None. All approved phases are complete; no additional implementation phase is qu
 | 2026-10-13 | Ship the first release with device-wide counters and defer per-app ranking; do not use a proxy, best-effort `nettop` estimates, or in-path payload sampling. | Live per-app rates require traffic-path sampling, which was not proven low-impact on the target MacBook. | Network Extension and app-group dependencies are removed from the first-release scope; Phase 02 records the completed feasibility decision and does not block Phases 03–04. |
 | 2026-10-13 | Use a project-specific bundle identifier and ad-hoc signing for the local personal install. | The Xcode scaffold identifier was a placeholder, and no Apple signing identity is configured on the target MacBook. | The app is uniquely identified, runs from the user Applications folder, and supports Start At Login without Apple account credentials; distribution signing remains out of scope. |
 | 2026-10-13 | Use a singleton identified `Window` scene and `openWindow(id:)` for Settings, then request app activation. | The app runs with accessory activation policy, and `SettingsLink` did not reliably foreground an already-open Settings window in the reported interaction. | The scene action explicitly orders an existing Settings window to the front and the app requests activation; interactive verification remains pending. |
+| 2026-10-17 | Plan four phases in order: shared architecture/storage, extended stability, Wi-Fi quality, usage widget. | The user requested all three features plus professional organization/reuse; shared storage and reproducible targets must precede a reliable extension. | Register Phases 08–11 as Planned. Preserve existing behavior and defer code, PRD updates, data-transfer and release work to implementation. A separate strict check-plan pass completed after creation; phases stay Planned until prerequisites are satisfied. |
 
 
 ## 11. Execution Log
@@ -129,7 +143,7 @@ None. All approved phases are complete; no additional implementation phase is qu
 ### 2026-10-13 - Phase 01 / Counter Persistence Check
 - **Status Change:** In Progress -> In Progress
 - **Summary:** Added a persisted local time-zone identifier and incomplete-state handling when the time zone changes without changing the local-day key. Kept the app project at repository root and moved the phase workflow to `hl/docs/desktop/` as specified.
-- **Evidence:** The root-level arm64 build succeeded. Restarting the rebuilt app preserved and advanced the current-day counters and wrote schema version 2 with the local time-zone identifier. `xcodebuild test` could not run because the `Mac Utilities` scheme has no configured test action. At that time, app-group migration and app attribution were open; the later product decision below removes the app-group dependency and defers attribution.
+- **Evidence:** The root-level arm64 build succeeded. Restarting the rebuilt app preserved and advanced the current-day counters and wrote schema version 2 with the local time-zone identifier. `xcodebuild test` could not run because the `Mac Utilities` scheme has no configured test action. At that time, a future App Group data-transfer path and app attribution were open. The later product decision deferred attribution; Phase 08 subsequently adopted App Group storage for the shared architecture.
 
 ### 2026-10-13 - Product Scope / Device-Only First Release
 - **Status Change:** Phase 02 remains Blocked/Deferred; Phase 03 becomes In Progress; Phase 04 remains Planned.
@@ -175,6 +189,11 @@ None. All approved phases are complete; no additional implementation phase is qu
 - **Status Change:** In Progress -> In Progress
 - **Summary:** Replaced `SettingsLink` and the `Settings` scene with a singleton identified `Window` scene opened through `openWindow(id:)`; the click also requests activation for the accessory app. This directly addresses the reported failure to foreground an existing window.
 - **Evidence:** The arm64 `xcodebuild test` suite passed all 12 monitor tests and the signed arm64 build succeeded. The signed build was installed at `~/Applications/Mac Utilities.app`, passed strict code-signature verification, and launched. Apple documents that opening an identified `Window` scene orders an already-open window to the front. The computer-use bridge timed out attaching to the menu-bar app, so interactive window ordering remains to be verified on the target UI.
+
+### 2026-10-17 - Phases 08–11 / Planning
+- **Status Change:** New phases registered as Planned; implementation has not started.
+- **Summary:** Researched current storage, accounting, diagnostics, window lifecycle, source membership and tests, plus official Apple CoreWLAN/WidgetKit/App Group guidance and XcodeGen documentation. Created four phase plans with the shared architecture/storage foundation first, followed by stability checks, Wi-Fi readings and the usage chart widget.
+- **Evidence:** All four plan filenames, twelve-section structures, Planned statuses, unchecked tasks, relative links and workflow entries passed documentation structure validation. `git diff --check` passed. No app source, project configuration, personal data or tests were changed or executed. A subsequent strict check-plan pass refined atomic embedded widget publication, old-writer gates, file-size and projection recovery, probe interruption cleanup and Wi-Fi visibility/discovery. Phase 08's later implementation superseded the earlier signing and data-transfer gates. No source code, tests or live data were changed during planning.
 
 ## 12. Workflow Rules
 
