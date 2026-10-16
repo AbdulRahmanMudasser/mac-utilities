@@ -1,0 +1,105 @@
+name: MacUtilities
+
+options:
+  minimumXcodeGenVersion: "2.46.0"
+  deploymentTarget:
+    macOS: "26.6"
+
+configs:
+  Debug: debug
+  Release: release
+
+configFiles:
+  Debug: Configuration/Build.xcconfig
+  Release: Configuration/Build.xcconfig
+
+fileGroups:
+  - Configuration
+
+targets:
+  Mac Utilities:
+    type: application
+    platform: macOS
+    sources:
+      - path: MacUtilities
+        excludes:
+          - "**/.DS_Store"
+      - path: Shared
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: UtilityIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_ENTITLEMENTS: Configuration/MacUtilities.entitlements
+        COMBINE_HIDPI_IMAGES: "YES"
+        ENABLE_APP_SANDBOX: "YES"
+        ENABLE_INCOMING_NETWORK_CONNECTIONS: "YES"
+        ENABLE_OUTGOING_NETWORK_CONNECTIONS: "YES"
+        ENABLE_PREVIEWS: "YES"
+        ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+        ENABLE_USER_SELECTED_FILES: readonly
+        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_FILE: Configuration/Info.plist
+        INFOPLIST_PREPROCESS: "YES"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+        LOCALIZATION_PREFERS_STRING_CATALOGS: "YES"
+        PRODUCT_BUNDLE_IDENTIFIER: com.abdulrahman.mac-utilities
+        PRODUCT_MODULE_NAME: Mac_Utilities
+        PRODUCT_NAME: "$(TARGET_NAME)"
+        REGISTER_APP_GROUPS: "NO"
+        STRING_CATALOG_GENERATE_SYMBOLS: "YES"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_EMIT_LOC_STRINGS: "YES"
+      configs:
+        Debug:
+          INFOPLIST_PREPROCESSOR_DEFINITIONS: DEBUG=1
+
+  Mac UtilitiesTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Mac UtilitiesTests
+        excludes:
+          - "**/.DS_Store"
+    dependencies:
+      - target: Mac Utilities
+    settings:
+      base:
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks"
+        GENERATE_INFOPLIST_FILE: "YES"
+        PRODUCT_BUNDLE_IDENTIFIER: com.abdulrahman.mac-utilities.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Mac Utilities.app/Contents/MacOS/Mac Utilities"
+        STRING_CATALOG_GENERATE_SYMBOLS: "NO"
+        SWIFT_EMIT_LOC_STRINGS: "NO"
+
+schemes:
+  Mac Utilities:
+    build:
+      targets:
+        Mac Utilities: all
+        Mac UtilitiesTests: [test]
+      parallelizeBuild: true
+      buildImplicitDependencies: true
+    run:
+      config: Debug
+    test:
+      config: Debug
+      macroExpansion: Mac Utilities
+      targets:
+        - name: Mac UtilitiesTests
+          parallelizable: false
+      environmentVariables:
+        - variable: UTILITIES_VERIFICATION_ROOT
+          value: "$(UTILITIES_VERIFICATION_ROOT)"
+          isEnabled: true
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+      revealArchiveInOrganizer: true
+    management:
+      shared: true

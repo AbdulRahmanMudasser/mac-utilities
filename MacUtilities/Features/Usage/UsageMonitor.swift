@@ -1,7 +1,6 @@
-import AppKit
+import Foundation
 import Combine
 import Darwin
-import ServiceManagement
 
 enum RateDisplayUnit: String, CaseIterable, Identifiable {
     case megabitsPerSecond
@@ -13,107 +12,6 @@ enum RateDisplayUnit: String, CaseIterable, Identifiable {
         case .megabitsPerSecond: "Mbps"
         case .megabytesPerSecond: "MB/s"
         }
-    }
-}
-
-enum DataDisplayUnit: String, CaseIterable, Identifiable {
-    case decimal
-    case binary
-
-    var id: String { rawValue }
-    var title: String { self == .decimal ? "MB/GB" : "MiB/GiB" }
-}
-
-struct InterfaceByteCount: Codable, Equatable {
-    var downloaded: UInt64
-    var uploaded: UInt64
-}
-
-struct PersistedUsage: Codable {
-    var schemaVersion = 2
-    var localDayKey: String
-    var timeZoneIdentifier: String? = TimeZone.autoupdatingCurrent.identifier
-    var downloaded: UInt64 = 0
-    var uploaded: UInt64 = 0
-    var interfaceCounters: [String: InterfaceByteCount] = [:]
-    var lastSampleDate: Date?
-    var isIncomplete = true
-    var incompleteReason: String?
-    var history: [DailyUsageRecord]?
-    var bootIdentifier: String?
-
-    var combined: UInt64 { UsageHistory.add(downloaded, uploaded) }
-}
-
-private enum InterfaceCounterReader {
-    enum ReaderError: LocalizedError {
-        case sysctl(String)
-        case noPhysicalInterfaces
-
-        var errorDescription: String? {
-            switch self {
-            case .sysctl(let message): "Could not read network interface counters: \(message)"
-            case .noPhysicalInterfaces: "No active Ethernet or Wi-Fi interface counters are available."
-            }
-        }
-    }
-
-    static func read() throws -> [String: InterfaceByteCount] {
-        var mib: [Int32] = [CTL_NET, PF_ROUTE, 0, 0, NET_RT_IFLIST2, 0]
-        var length = 0
-
-        guard sysctl(&mib, u_int(mib.count), nil, &length, nil, 0) == 0, length > 0 else {
-            throw ReaderError.sysctl(String(cString: strerror(errno)))
-        }
-
-        var buffer = [UInt8](repeating: 0, count: length)
-        let result = buffer.withUnsafeMutableBytes { bytes in
-            sysctl(&mib, u_int(mib.count), bytes.baseAddress, &length, nil, 0)
-        }
-        guard result == 0 else {
-            throw ReaderError.sysctl(String(cString: strerror(errno)))
-        }
-
-        var counters: [String: InterfaceByteCount] = [:]
-        var offset = 0
-        let minimumMessageSize = MemoryLayout<if_msghdr2>.size
-
-        while offset + MemoryLayout<UInt16>.size + 2 <= length {
-            let messageLength = buffer.withUnsafeBytes {
-                Int($0.loadUnaligned(fromByteOffset: offset, as: UInt16.self))
-            }
-            guard messageLength >= MemoryLayout<UInt16>.size + 2, offset + messageLength <= length else { break }
-
-            let messageType = buffer[offset + 3]
-            if messageType == UInt8(RTM_IFINFO2), messageLength >= minimumMessageSize {
-                let message = buffer.withUnsafeBytes {
-                    $0.loadUnaligned(fromByteOffset: offset, as: if_msghdr2.self)
-                }
-                if let interfaceName = name(for: message.ifm_index), isPhysicalInterface(interfaceName) {
-                    counters[interfaceName] = InterfaceByteCount(
-                        downloaded: message.ifm_data.ifi_ibytes,
-                        uploaded: message.ifm_data.ifi_obytes
-                    )
-                }
-            }
-
-            offset += messageLength
-        }
-
-        guard !counters.isEmpty else { throw ReaderError.noPhysicalInterfaces }
-        return counters
-    }
-
-    private static func name(for index: UInt16) -> String? {
-        var nameBuffer = [CChar](repeating: 0, count: Int(IFNAMSIZ))
-        guard if_indextoname(UInt32(index), &nameBuffer) != nil else { return nil }
-        return String(cString: nameBuffer)
-    }
-
-    private static func isPhysicalInterface(_ name: String) -> Bool {
-        guard name.hasPrefix("en") else { return false }
-        let suffix = name.dropFirst(2)
-        return !suffix.isEmpty && suffix.allSatisfy(\.isNumber)
     }
 }
 
@@ -134,16 +32,24 @@ final class UsageMonitor: ObservableObject {
     @Published private(set) var historyDate: Date
 
     @Published var rateUnit: RateDisplayUnit {
-        didSet { UserDefaults.standard.set(rateUnit.rawValue, forKey: Self.rateUnitKey) }
+        didSet { preferences.set(rateUnit.rawValue, forKey: Self.rateUnitKey) }
     }
 
     @Published var dataUnit: DataDisplayUnit {
-        didSet { UserDefaults.standard.set(dataUnit.rawValue, forKey: Self.dataUnitKey) }
+        didSet {
+            preferences.set(dataUnit.rawValue, forKey: Self.dataUnitKey)
+            saveState(force: true)
+        }
     }
 
     private static let rateUnitKey = "rateDisplayUnit"
     private static let dataUnitKey = "dataDisplayUnit"
-    private let stateURL: URL
+    private var store: UsageStateStore?
+    private var storageReady = false
+    private var canSample = false
+    private let loginItems: LoginItemService
+    private let preferences: UserDefaults
+    var onSnapshotCommitted: ((UsageWidgetSnapshot) -> Void)?
     private var persisted: PersistedUsage
     private var timer: Timer?
     private var lastRateSampleUptime: TimeInterval?
@@ -154,6 +60,9 @@ final class UsageMonitor: ObservableObject {
     private let boot: @MainActor () -> String
 
     init(stateURL: URL? = nil, startAutomatically: Bool = true,
+         stateStore: UsageStateStore? = nil, loginItems: LoginItemService? = nil,
+         preferences: UserDefaults? = nil,
+         storagePaths: UsageStoragePaths? = nil,
          now: @escaping @MainActor () -> Date = Date.init,
          calendar: @escaping @MainActor () -> Calendar = { UsageHistory.calendar() },
          readCounters: @escaping @MainActor () throws -> [String: InterfaceByteCount] = InterfaceCounterReader.read,
@@ -162,35 +71,53 @@ final class UsageMonitor: ObservableObject {
         calendarProvider = calendar
         self.readCounters = readCounters
         boot = bootIdentifier
+        let isolated = stateURL != nil || stateStore != nil || storagePaths != nil ||
+            !(Bundle.main.object(forInfoDictionaryKey: "MACUTILITIES_VERIFICATION_NAMESPACE") as? String ?? "").isEmpty
+        let preferences = preferences ?? (isolated ? UserDefaults(suiteName: "MacUtilities.Verification.\(UUID().uuidString)")! : .standard)
+        self.preferences = preferences
         let date = now()
         historyDate = date
-        rateUnit = RateDisplayUnit(rawValue: UserDefaults.standard.string(forKey: Self.rateUnitKey) ?? "") ?? .megabitsPerSecond
-        dataUnit = DataDisplayUnit(rawValue: UserDefaults.standard.string(forKey: Self.dataUnitKey) ?? "") ?? .decimal
-        loginItemEnabled = SMAppService.mainApp.status == .enabled
-
-        let supportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let appDirectory = supportDirectory.appendingPathComponent("MacUtilities", isDirectory: true)
-        self.stateURL = stateURL ?? appDirectory.appendingPathComponent("today-usage.json")
+        rateUnit = RateDisplayUnit(rawValue: preferences.string(forKey: Self.rateUnitKey) ?? "") ?? .megabitsPerSecond
+        dataUnit = DataDisplayUnit(rawValue: preferences.string(forKey: Self.dataUnitKey) ?? "") ?? .decimal
+        self.loginItems = loginItems ?? (isolated ? .isolated : .system)
+        loginItemEnabled = self.loginItems.isEnabled
         persisted = PersistedUsage(localDayKey: Self.localDayKey(for: date, calendar: calendar()),
                                    timeZoneIdentifier: calendar().timeZone.identifier,
                                    incompleteReason: "Collection Started After Local Midnight.", history: [])
+        var verification = false
         do {
-            if let saved = try Self.readState(at: self.stateURL) {
-                persisted = saved
-                UsageHistory.migrate(&persisted)
+            let selectedStore: UsageStateStore
+            if let stateStore {
+                selectedStore = stateStore
+            } else if let stateURL {
+                selectedStore = UsageStateStore(stateURL: stateURL, acquireLease: false)
+            } else {
+                let paths = try storagePaths ?? UsageStoragePaths.resolve()
+                verification = paths.isVerification
+                selectedStore = UsageStateStore(stateURL: paths.stateURL)
             }
+            store = selectedStore
+            if let saved = try selectedStore.load() {
+                persisted = saved
+                UsageAccounting.migrate(&persisted)
+            }
+            storageReady = true
+            canSample = !verification
         } catch {
             historyWritable = false
-            historyError = "Saved Usage Could Not Be Opened. The Existing File Has Been Kept."
+            historyError = "Saved Usage Could Not Be Opened. " + error.localizedDescription
+            counterError = "Usage Storage Is Unavailable."
         }
         persisted.schemaVersion = 3
-        let counters = try? readCounters()
-        Self.observe(at: date, calendar: calendar(), counters: counters, boot: boot(), state: &persisted)
-        counterError = counters == nil ? "Device Counters Are Unavailable." : nil
+        if canSample {
+            let counters = try? readCounters()
+            Self.observe(at: date, calendar: calendar(), counters: counters, boot: boot(), state: &persisted)
+            counterError = counters == nil ? "Device Counters Are Unavailable." : nil
+            lastRateSampleUptime = ProcessInfo.processInfo.systemUptime
+        }
         publish()
-        lastRateSampleUptime = ProcessInfo.processInfo.systemUptime
-        saveState(force: true)
-        if startAutomatically { startSampling() }
+        if canSample { saveState(force: true) }
+        if startAutomatically && canSample { startSampling() }
     }
 
     var combinedToday: UInt64 { UsageHistory.add(downloadedToday, uploadedToday) }
@@ -198,9 +125,9 @@ final class UsageMonitor: ObservableObject {
 
     var formattedDownloadRate: String { Self.formatRate(downloadBytesPerSecond, unit: rateUnit) }
     var formattedUploadRate: String { Self.formatRate(uploadBytesPerSecond, unit: rateUnit) }
-    var formattedDownloadedToday: String { Self.formatData(downloadedToday, unit: dataUnit) }
-    var formattedUploadedToday: String { Self.formatData(uploadedToday, unit: dataUnit) }
-    var formattedCombinedToday: String { Self.formatData(combinedToday, unit: dataUnit) }
+    var formattedDownloadedToday: String { UsageFormatting.data(downloadedToday, unit: dataUnit) }
+    var formattedUploadedToday: String { UsageFormatting.data(uploadedToday, unit: dataUnit) }
+    var formattedCombinedToday: String { UsageFormatting.data(combinedToday, unit: dataUnit) }
 
     var menuBarText: String {
         Self.formatMenuBarRates(
@@ -210,8 +137,10 @@ final class UsageMonitor: ObservableObject {
         )
     }
 
+    var isMonitoringActive: Bool { storageReady && canSample && counterError == nil }
+
     var collectionStatus: String {
-        if counterError != nil { return "Monitoring Unavailable" }
+        if !isMonitoringActive { return "Monitoring Unavailable" }
         return "Device Monitoring Active"
     }
 
@@ -221,6 +150,7 @@ final class UsageMonitor: ObservableObject {
     }
 
     func resetToday() {
+        guard canSample else { return }
         sample()
         persisted.downloaded = 0
         persisted.uploaded = 0
@@ -237,7 +167,7 @@ final class UsageMonitor: ObservableObject {
     }
 
     func clearHistory() {
-        guard historyWritable else { return }
+        guard historyWritable && canSample else { return }
         sample()
         persisted.history = []
         historyRecords = []
@@ -251,19 +181,16 @@ final class UsageMonitor: ObservableObject {
         timer?.invalidate()
         timer = nil
         saveState(force: true)
+        canSample = false
+        store?.close()
     }
 
     func setLoginItemEnabled(_ enabled: Bool) {
         do {
-            if enabled {
-                try SMAppService.mainApp.register()
-            } else {
-                try SMAppService.mainApp.unregister()
-            }
-            loginItemEnabled = SMAppService.mainApp.status == .enabled
+            loginItemEnabled = try loginItems.setEnabled(enabled)
             loginItemMessage = loginItemEnabled == enabled ? nil : "macOS Requires Approval In Login Items."
         } catch {
-            loginItemEnabled = SMAppService.mainApp.status == .enabled
+            loginItemEnabled = loginItems.isEnabled
             loginItemMessage = error.localizedDescription
         }
     }
@@ -280,6 +207,9 @@ final class UsageMonitor: ObservableObject {
     }
 
     func sample() {
+        guard canSample else { return }
+        let previousDay = persisted.localDayKey
+        let previousZone = persisted.timeZoneIdentifier
         let date = now()
         let counters = try? readCounters()
         let delta = Self.observe(at: date, calendar: calendarProvider(), counters: counters,
@@ -296,7 +226,7 @@ final class UsageMonitor: ObservableObject {
             uploadBytesPerSecond = 0
         }
         lastRateSampleUptime = counters == nil ? nil : uptime
-        saveState()
+        saveState(force: previousDay != persisted.localDayKey || previousZone != persisted.timeZoneIdentifier)
     }
 
     private func publish() {
@@ -336,7 +266,7 @@ final class UsageMonitor: ObservableObject {
                 return current.downloaded >= old.downloaded || current.uploaded >= old.uploaded
             }
             if hasObservedDirection {
-                UsageHistory.record(value, from: start, to: date, state: &state)
+                UsageAccounting.record(value, from: start, to: date, state: &state)
                 delta = value
             }
         } else {
@@ -395,13 +325,15 @@ final class UsageMonitor: ObservableObject {
 
     private func saveState(force: Bool = false) {
         let now = now()
-        guard historyWritable else { return }
+        guard historyWritable, canSample, let store else { return }
         if !force, let lastStateWriteDate {
             let elapsed = now.timeIntervalSince(lastStateWriteDate)
             if elapsed >= 0 && elapsed < 5 { return }
         }
         do {
-            try Self.saveState(persisted, at: stateURL)
+            persisted.widgetSnapshot = try UsageSnapshotPublisher.snapshot(for: persisted, at: now, unit: dataUnit, calendar: calendarProvider())
+            try store.save(persisted)
+            if let snapshot = persisted.widgetSnapshot { onSnapshotCommitted?(snapshot) }
             lastStateWriteDate = now
             historyError = nil
         } catch {
@@ -410,55 +342,6 @@ final class UsageMonitor: ObservableObject {
             persisted.incompleteReason = "Today's Usage Could Not Be Saved Locally."
             isIncomplete = true
             incompleteReason = persisted.incompleteReason
-        }
-    }
-
-    static func saveState(_ state: PersistedUsage, at url: URL) throws {
-        try FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try validate(state)
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        try encoder.encode(state).write(to: url, options: .atomic)
-    }
-
-    static func loadState(at url: URL) -> PersistedUsage? { try? readState(at: url) }
-
-    enum StorageError: Error { case invalidSnapshot }
-
-    static func readState(at url: URL) throws -> PersistedUsage? {
-        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-        let file = try FileHandle(forReadingFrom: url)
-        defer { try? file.close() }
-        let maximum = 8 * 1_024 * 1_024
-        let data = try file.read(upToCount: maximum + 1) ?? Data()
-        guard data.count <= maximum else { throw StorageError.invalidSnapshot }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let state = try decoder.decode(PersistedUsage.self, from: data)
-        try validate(state)
-        return state
-    }
-
-    static func validate(_ state: PersistedUsage) throws {
-        guard (1...3).contains(state.schemaVersion), UsageHistory.validKey(state.localDayKey),
-              !state.downloaded.addingReportingOverflow(state.uploaded).overflow,
-              state.schemaVersion < 3 || state.history != nil,
-              state.lastSampleDate?.timeIntervalSince1970.isFinite != false else {
-            throw StorageError.invalidSnapshot
-        }
-        let records = state.history ?? []
-        guard Set(records.map(\.dayKey)).count == records.count else { throw StorageError.invalidSnapshot }
-        for record in records {
-            guard UsageHistory.validKey(record.dayKey),
-                  record.firstObservedAt.timeIntervalSince1970.isFinite,
-                  record.lastObservedAt.timeIntervalSince1970.isFinite,
-                  record.firstObservedAt <= record.lastObservedAt,
-                  !record.downloaded.addingReportingOverflow(record.uploaded).overflow else {
-                throw StorageError.invalidSnapshot
-            }
         }
     }
 
@@ -544,14 +427,4 @@ final class UsageMonitor: ObservableObject {
         return String(format: "%.1f", locale: Locale.current, amount)
     }
 
-    static func formatData(_ bytes: UInt64, unit: DataDisplayUnit) -> String {
-        let base = unit == .decimal ? 1_000.0 : 1_024.0
-        let mega = base * base
-        let giga = mega * base
-        let value = Double(bytes)
-        if value >= giga {
-            return String(format: "%.2f %@", locale: Locale.current, value / giga, unit == .decimal ? "GB" : "GiB")
-        }
-        return String(format: "%.1f %@", locale: Locale.current, value / mega, unit == .decimal ? "MB" : "MiB")
-    }
 }

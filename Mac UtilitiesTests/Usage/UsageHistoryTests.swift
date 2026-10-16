@@ -40,7 +40,7 @@ struct UsageHistoryTests {
             state.uploaded = upload
             state.interfaceCounters = counters
             state.lastSampleDate = date.addingTimeInterval(-60)
-            try UsageMonitor.saveState(state, at: url)
+            try UsageStateStore.saveState(state, at: url)
         }
     }
 
@@ -53,7 +53,7 @@ struct UsageHistoryTests {
         let saved = PersistedUsage(schemaVersion: version, localDayKey: "2026-10-15",
             downloaded: 120, uploaded: 40, interfaceCounters: [:], lastSampleDate: nil,
             history: version == 3 ? [] : nil, bootIdentifier: f.boot)
-        try UsageMonitor.saveState(saved, at: f.url)
+        try UsageStateStore.saveState(saved, at: f.url)
         var json = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: f.url)) as? [String: Any])
         json["wasPaused"] = true
         try JSONSerialization.data(withJSONObject: json).write(to: f.url)
@@ -79,12 +79,12 @@ struct UsageHistoryTests {
                                     downloaded: 120, uploaded: 40)
         legacy.timeZoneIdentifier = nil
         legacy.lastSampleDate = f.date
-        try UsageMonitor.saveState(legacy, at: f.url)
+        try UsageStateStore.saveState(legacy, at: f.url)
         let monitor = f.makeMonitor()
         #expect(monitor.historyWritable)
         #expect(monitor.combinedToday == 160)
         #expect(monitor.historyRecords.first?.combined == 160)
-        #expect(try UsageMonitor.readState(at: f.url)?.schemaVersion == 3)
+        #expect(try UsageStateStore.readState(at: f.url)?.schemaVersion == 3)
     }
 
     @Test
@@ -103,7 +103,7 @@ struct UsageHistoryTests {
         let restarted = f.makeMonitor()
         #expect(restarted.historyRecords.count == 1)
         #expect(restarted.historyRecords.first?.downloaded == 120)
-        #expect(try UsageMonitor.readState(at: f.url)?.schemaVersion == 3)
+        #expect(try UsageStateStore.readState(at: f.url)?.schemaVersion == 3)
     }
 
     @Test
@@ -365,7 +365,7 @@ struct UsageHistoryTests {
         try FileManager.default.removeItem(at: f.url)
         monitor.flush()
         #expect(monitor.historyError == nil)
-        #expect(try UsageMonitor.readState(at: f.url)?.history?.first?.combined == 120)
+        #expect(try UsageStateStore.readState(at: f.url)?.history?.first?.combined == 120)
     }
 
     @Test
@@ -374,22 +374,22 @@ struct UsageHistoryTests {
         let record = DailyUsageRecord(dayKey: "2026-10-15", downloaded: 1, uploaded: 2,
             firstObservedAt: at, lastObservedAt: at, isIncomplete: false)
         var valid = PersistedUsage(schemaVersion: 3, localDayKey: record.dayKey, history: [record])
-        try UsageMonitor.validate(valid)
+        try UsageStateStore.validate(valid)
         valid.history = [record, record]
-        #expect(throws: (any Error).self) { try UsageMonitor.validate(valid) }
+        #expect(throws: (any Error).self) { try UsageStateStore.validate(valid) }
         valid.history = [record]
         valid.history![0].dayKey = "2026-02-30"
-        #expect(throws: (any Error).self) { try UsageMonitor.validate(valid) }
+        #expect(throws: (any Error).self) { try UsageStateStore.validate(valid) }
         valid.history = [record]
         valid.history![0].firstObservedAt = at.addingTimeInterval(1)
-        #expect(throws: (any Error).self) { try UsageMonitor.validate(valid) }
+        #expect(throws: (any Error).self) { try UsageStateStore.validate(valid) }
         valid.history = [record]
         valid.history![0].downloaded = .max
-        #expect(throws: (any Error).self) { try UsageMonitor.validate(valid) }
+        #expect(throws: (any Error).self) { try UsageStateStore.validate(valid) }
         valid.history = []
         valid.downloaded = .max
         valid.uploaded = 1
-        #expect(throws: (any Error).self) { try UsageMonitor.validate(valid) }
+        #expect(throws: (any Error).self) { try UsageStateStore.validate(valid) }
         #expect(UsageHistory.add(.max, 1) == .max)
         #expect(UsageHistory.validKey("2028-02-29"))
         #expect(!UsageHistory.validKey("2026-02-29"))
@@ -441,7 +441,7 @@ struct UsageHistoryTests {
             timeZoneIdentifier: f.calendar.timeZone.identifier, downloaded: record.downloaded,
             uploaded: record.uploaded, interfaceCounters: f.counters, lastSampleDate: f.date,
             history: [record], bootIdentifier: f.boot)
-        try UsageMonitor.saveState(state, at: f.url)
+        try UsageStateStore.saveState(state, at: f.url)
         let monitor = f.makeMonitor()
         f.advance(download: 3, upload: 20)
         monitor.sample()
@@ -452,14 +452,14 @@ struct UsageHistoryTests {
         #expect(monitor.downloadedToday == UInt64.max - 7)
         #expect(monitor.uploadedToday == 7)
         #expect(monitor.historyRecords.first?.combined == .max)
-        state = try #require(try UsageMonitor.readState(at: f.url))
-        try UsageMonitor.validate(state)
+        state = try #require(try UsageStateStore.readState(at: f.url))
+        try UsageStateStore.validate(state)
         f.advance(download: 50, upload: 50)
         monitor.sample()
         monitor.flush()
         #expect(monitor.historyError == nil)
         #expect(monitor.historyRecords.first?.combined == .max)
-        #expect(try UsageMonitor.readState(at: f.url)?.combined == .max)
+        #expect(try UsageStateStore.readState(at: f.url)?.combined == .max)
     }
 
     @Test
@@ -487,7 +487,7 @@ struct UsageHistoryTests {
         var legacy = PersistedUsage(localDayKey: "2026-10-14", timeZoneIdentifier: "GMT",
             downloaded: 123, uploaded: 45, interfaceCounters: f.counters)
         legacy.lastSampleDate = nil
-        try UsageMonitor.saveState(legacy, at: f.url)
+        try UsageStateStore.saveState(legacy, at: f.url)
         let monitor = f.makeMonitor()
         #expect(monitor.combinedToday == 0)
         #expect(monitor.historyRecords.count == 1)
@@ -507,13 +507,13 @@ struct UsageHistoryTests {
         let monitor = f.makeMonitor()
         f.advance(6, download: 10, upload: 2)
         monitor.sample()
-        #expect(try UsageMonitor.readState(at: f.url)?.history?.first?.combined == 12)
+        #expect(try UsageStateStore.readState(at: f.url)?.history?.first?.combined == 12)
         f.advance(-30, download: 1_000, upload: 1_000)
         monitor.sample()
-        #expect(try UsageMonitor.readState(at: f.url)?.lastSampleDate == f.date)
+        #expect(try UsageStateStore.readState(at: f.url)?.lastSampleDate == f.date)
         f.advance(6, download: 4, upload: 1)
         monitor.sample()
-        #expect(try UsageMonitor.readState(at: f.url)?.history?.first?.combined == 17)
+        #expect(try UsageStateStore.readState(at: f.url)?.history?.first?.combined == 17)
     }
 
     @Test func sandboxedTargetReadsRealCountersAndBootIdentityIntoIsolatedHistory() async throws {
@@ -524,7 +524,7 @@ struct UsageHistoryTests {
         try await Task.sleep(for: .milliseconds(150))
         monitor.sample()
         monitor.flush()
-        let saved = try #require(try UsageMonitor.readState(at: f.url))
+        let saved = try #require(try UsageStateStore.readState(at: f.url))
         #expect(saved.schemaVersion == 3)
         #expect(saved.bootIdentifier?.isEmpty == false)
         #expect(saved.history?.count == 1)
@@ -539,6 +539,6 @@ struct UsageHistoryTests {
         let delegate = AppDelegate()
         delegate.monitor = monitor
         delegate.applicationWillTerminate(Notification(name: Notification.Name("Usage History Test Termination")))
-        #expect(try UsageMonitor.readState(at: f.url)?.history?.first?.combined == 120)
+        #expect(try UsageStateStore.readState(at: f.url)?.history?.first?.combined == 120)
     }
 }

@@ -186,8 +186,8 @@ struct UsageMonitorTests {
         expected.isIncomplete = true
         expected.incompleteReason = "Device Counters Are Unavailable."
 
-        try UsageMonitor.saveState(expected, at: url)
-        let restored = try #require(UsageMonitor.loadState(at: url))
+        try UsageStateStore.saveState(expected, at: url)
+        let restored = try #require((try? UsageStateStore.readState(at: url)))
 
         #expect(restored.localDayKey == expected.localDayKey)
         #expect(restored.timeZoneIdentifier == expected.timeZoneIdentifier)
@@ -207,7 +207,7 @@ struct UsageMonitorTests {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try Data("not-json".utf8).write(to: url)
 
-        #expect(UsageMonitor.loadState(at: url) == nil)
+        #expect((try? UsageStateStore.readState(at: url)) == nil)
     }
 
     @Test @MainActor
@@ -224,7 +224,7 @@ struct UsageMonitorTests {
             uploadBytesPerSecond: 100_000,
             unit: .megabytesPerSecond
         ) == "↓ 1.6 / ↑ 0.1 MB/s")
-        #expect(UsageMonitor.formatData(1_000_000, unit: .decimal) == "1.0 MB")
-        #expect(UsageMonitor.formatData(1_048_576, unit: .binary) == "1.0 MiB")
+        #expect(UsageFormatting.data(1_000_000, unit: .decimal) == "1.0 MB")
+        #expect(UsageFormatting.data(1_048_576, unit: .binary) == "1.0 MiB")
     }
 }

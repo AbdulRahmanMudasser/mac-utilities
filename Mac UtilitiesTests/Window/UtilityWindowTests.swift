@@ -294,7 +294,7 @@ struct UtilityWindowTests {
                 uploaded: UInt64(offset == 8 ? 0 : 1 + offset % 3) * 500_000_000,
                 firstObservedAt: day, lastObservedAt: day, isIncomplete: true)
         }
-        try UsageMonitor.saveState(PersistedUsage(schemaVersion: 3, localDayKey: UsageHistory.key(for: date), history: records), at: url)
+        try UsageStateStore.saveState(PersistedUsage(schemaVersion: 3, localDayKey: UsageHistory.key(for: date), history: records), at: url)
         let monitor = UsageMonitor(stateURL: url, startAutomatically: false, now: { date },
                                    calendar: { calendar }, readCounters: { [:] })
         let diagnostics = ConnectionDiagnostics()
