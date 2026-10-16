@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>MacUtilitiesAppGroupIdentifier</key>
+    <string>$(MACUTILITIES_APP_GROUP_IDENTIFIER)</string>
+#if DEBUG
+    <key>MACUTILITIES_VERIFICATION_NAMESPACE</key>
+    <string>$(MACUTILITIES_VERIFICATION_NAMESPACE)</string>
+#endif
+</dict>
+</plist>

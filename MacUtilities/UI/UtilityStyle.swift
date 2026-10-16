@@ -43,8 +43,8 @@ enum UtilityStyle {
     enum History {
         static let metricSpacing: CGFloat = 4
         static let chartHeight: CGFloat = 200
-        static let downloadColor = Color.primary.opacity(0.8)
-        static let uploadColor = Color.secondary.opacity(0.35)
+        static let downloadColor = UsageChartPresentation.downloadColor
+        static let uploadColor = UsageChartPresentation.uploadColor
         static let selectionColor = Color.secondary.opacity(0.55)
         static let symbolSize: CGFloat = 18
         static let legendSize: CGFloat = 8

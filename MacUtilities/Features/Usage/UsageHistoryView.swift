@@ -20,15 +20,8 @@ struct UsageHistoryView: View {
 
     private var totals: InterfaceByteCount { UsageHistory.totals(days) }
     private var maximumBytes: UInt64 { days.compactMap { $0.record?.combined }.max() ?? 0 }
-    private var scale: Double {
-        let base = monitor.dataUnit == .binary ? 1024.0 : 1000.0
-        let gigabyte = base * base * base
-        return Double(maximumBytes) >= gigabyte ? gigabyte : base * base
-    }
-    private var scaleLabel: String {
-        if monitor.dataUnit == .binary { return scale >= 1_073_741_824 ? "GiB" : "MiB" }
-        return scale >= 1_000_000_000 ? "GB" : "MB"
-    }
+    private var scale: Double { UsageChartPresentation.scale(maximumBytes: maximumBytes, unit: monitor.dataUnit) }
+    private var scaleLabel: String { UsageChartPresentation.scaleLabel(scale: scale, unit: monitor.dataUnit) }
 
     var body: some View {
         UtilityScrollContent {
@@ -266,5 +259,5 @@ struct UsageHistoryView: View {
         date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, calendar: monitor.historyCalendar, timeZone: monitor.historyCalendar.timeZone))
     }
 
-    private func formatted(_ bytes: UInt64) -> String { UsageMonitor.formatData(bytes, unit: monitor.dataUnit) }
+    private func formatted(_ bytes: UInt64) -> String { UsageFormatting.data(bytes, unit: monitor.dataUnit) }
 }

@@ -38,4 +38,5 @@ today-usage.json
 *.sqlite3
 
 # Local Xcode project configuration
+/Configuration/Signing.local.xcconfig
 /MacUtilities.xcodeproj/
