@@ -43,7 +43,7 @@ Use this file for product goals, user needs, feature scope, acceptance expectati
 * **Why Now:** The project provides a focused personal utility for understanding live network activity and daily data use on the target MacBook.
 * **Current Pain Points:** Built-in macOS views do not combine live interface rates, local-day device totals, recent daily history, and a persistent menu bar presentation. Device counters show observed traffic; gaps caused by app shutdown, sleep, or counter changes cannot always be reconstructed.
 * **Business Value:** Personal visibility into bandwidth use and a practical native macOS project foundation. No commercial or subscription outcome is targeted.
-* **Constraints:** The target is this MacBook running macOS 26.6.2 on arm64. The first release uses device-level interface counters and local app storage. The user selected the lower-impact device-counter approach without a proxy, `nettop` estimates, or in-path payload sampling. macOS exposes flow-report and source-audit-token APIs, but the documented flow byte totals are nonzero only when a flow closes; live per-app rates would require sampling data as it passes through a content filter. That path has not been validated end to end on this MacBook and is deferred. The personal local build uses an ad-hoc signature; Developer ID signing and notarization are not release goals.
+* **Constraints:** The target is this MacBook running macOS 26.6.2 on arm64. The app uses device-level interface counters and local shared-container storage. The user selected the lower-impact device-counter approach without a proxy, `nettop` estimates, or in-path payload sampling. macOS exposes flow-report and source-audit-token APIs, but the documented flow byte totals are nonzero only when a flow closes; live per-app rates would require sampling data as it passes through a content filter. That path has not been validated end to end on this MacBook and is deferred. The personal local build uses an Apple Development signature for verified App Group access; Developer ID signing and notarization are not release goals.
 
 ## 5. Target Users And Roles
 
@@ -140,7 +140,7 @@ Use the standard repository root folder names when describing platform surfaces:
 - `web/` for the web application - not applicable.
 - `backend/` for the backend service layer - not applicable; there is no backend.
 - `desktop/` is the planning area for the macOS product surface, located at `hl-docs/desktop/`.
-- The native macOS application source and Xcode project remain at the repository root in `MacUtilities/` and `MacUtilities.xcodeproj`.
+- The native macOS application remains rooted in `MacUtilities/`, organized by App, Features, Platform and UI; reusable usage contracts live in `Shared/`. Track `project.yml` and `Configuration/` to generate the ignored root `MacUtilities.xcodeproj`. See [Desktop Development Standards](./desktop/development-standards.md) for source ownership and build setup.
 
 * **Backend Service:** None. Monitoring and aggregation are local to the MacBook.
 * **Web Application:** None.
@@ -152,7 +152,7 @@ Use the standard repository root folder names when describing platform surfaces:
 - **FR-2 Background Collection:** Start sampling automatically while the app is open and continue while the popover and shared utility window are closed. Sampling stops when the app quits. There is no pause/resume control or monitoring switch.
 - **FR-3 Daily Device Totals:** Accumulate downloaded, uploaded, and combined device-level bytes for the MacBook's current local calendar day. Use device interface counters for these totals.
 - **FR-4 Local-Day Boundary:** Use the MacBook's local calendar and time zone. Begin a new day's totals at local midnight. Handle time-zone and daylight-saving changes using local calendar boundaries rather than a fixed 24-hour timer.
-- **FR-5 Persistence:** Preserve the current day's device aggregate counters across app restarts using local storage on this MacBook. Daily aggregation requires no network service, account, app group, or monitoring-provider handoff.
+- **FR-5 Persistence:** Preserve the current day's device aggregate counters and independent daily history across app restarts in the locally authorized App Group container. The host is the sole writer and collector. Daily aggregation requires no network service, user account or monitoring-provider handoff. A matching local development signature is required for shared-container access.
 - **FR-6 Collection State:** Show collection status in a compact row in Settings. Put the current local time zone in General beside Start At Login. Do not provide a Readiness section, monitoring switch, or pause state. Do not display a Partial badge or historical pause/incomplete-collection messages; displayed totals are observed traffic and are not guaranteed full-day coverage.
 - **FR-7 Controls And Preferences:** Provide Start At Login, Mbps or MB/s rate display, and MB/GB or MiB/GiB data display. Reset Today's Counters is in the popover footer, outside the totals card; it resets only today's counters and preserves saved history. Provide a separate, confirmed Clear History action in Usage that leaves today's counters unchanged. About is one icon/name/version row; the Privacy section and Network Activity subtitle are absent. The popover Settings control is labeled `Settings` and opens or foregrounds the shared Mac Utilities window on Settings.
 - **FR-8 App-Level Data Scope:** Do not display per-app rates, totals, rankings, icons, or System/Unattributed values in the initial release. Do not show an attribution placeholder or represent missing app data as zero. Reconsider this scope only after a low-impact, macOS-supported measurement and local handoff path is proven on the target machine.
@@ -212,7 +212,7 @@ Use the standard repository root folder names when describing platform surfaces:
 
 - Xcode and a compatible macOS SDK installed on the target MacBook.
 - Device-level interface counters accessible to the app on the target macOS version.
-- Local writable Application Support storage for the current-day totals and daily history snapshot.
+- Writable App Group storage, authorized by a matching local development signature, for the current-day totals and daily history snapshot. XcodeGen 2.46.0 and the ignored local signing configuration reproduce the personal build.
 - System ping/networkQuality tools, the app's network client/server sandbox entitlements for sending tests and receiving datagram replies, and reachable public test services. The app opens no listening service.
 - A macOS-supported flow-report handoff and source-app identity method are future prerequisites only if app attribution is reconsidered.
 
@@ -236,7 +236,7 @@ Use the standard repository root folder names when describing platform surfaces:
 ## 15. Runtime And Data Contracts
 
 * **Local Data Model:** The macOS snapshot stores byte-based current-day totals, daily history keyed by local calendar day, interface baselines, the latest sample time, and collection metadata.
-* **Local Storage:** The app stores current-day aggregates and daily history in Application Support using atomic updates.
+* **Local Storage:** The app alone writes `Library/Application Support/MacUtilities/today-usage.json` beneath its authorized App Group container by atomic replacement under a process-lifetime writer lease. Schema 3 includes an optional bounded derived usage projection in the same commit. The sole installation's history transfer is complete; startup reads only this shared file. An absent file starts a new ledger. Invalid optional derived data is regenerated from valid history; corrupt or unsupported core data is preserved and collection remains unavailable. Current storage rules are owned by [Desktop Development Standards Section 3](./desktop/development-standards.md#3-runtime-ownership-and-storage); Phase 08 retains evidence of the completed transfer.
 * **Identity Model:** No app identity is collected or persisted in the initial release. A future attribution phase must use a supported macOS source identity and must not persist raw audit tokens.
 * **Failure Expectations:** The compact Settings status row reports active collection or unavailable counters. Retain collection-gap metadata internally without historical warning labels; totals represent observed traffic. Usage distinguishes missing days, recorded zeroes, and storage errors. Diagnostics distinguish endpoint silence, tool errors, absent metrics, timeout and cancellation, and discard late results after cancellation.
 
@@ -250,4 +250,4 @@ Use the standard repository root folder names when describing platform surfaces:
 
 * **Release Strategy:** Current installed personal release: 1.0.6 (build 8). Use a developer-installed local build on the target MacBook; public binary distribution is not in scope.
 * **Rollback Strategy:** The user can quit or remove the local app, or restore a previous build. The app does not install a network filter or change system traffic configuration.
-* **Support Readiness:** Verify menu bar rates, observed totals, persistence, local-day rollover, history migration/ranges/reset/clear behavior, Settings status and preferences, and diagnostic controls/results in the signed app. Check sandbox entitlement behavior, public endpoint responses, system-tool output, cancellation, close/quit cleanup and absent/error measurements. Verify the shared monochrome layout and accessible controls. The UI omits app-attribution rows, Partial badges, pause controls and historical pause messages.
+* **Support Readiness:** Verify menu bar rates, observed totals, persistence, local-day rollover, schema compatibility, history ranges/reset/clear behavior, Settings status and preferences, and diagnostic controls/results in the signed app. Check sandbox entitlement behavior, public endpoint responses, system-tool output, cancellation, close/quit cleanup and absent/error measurements. Verify the shared monochrome layout and accessible controls. The UI omits app-attribution rows, Partial badges, pause controls and historical pause messages.
