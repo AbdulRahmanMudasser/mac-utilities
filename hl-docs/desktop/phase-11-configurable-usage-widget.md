@@ -1,0 +1,143 @@
+# Phase 11 - Configurable Usage Widget
+
+## 1. Phase Purpose
+
+Expose the existing stacked daily usage chart in a native macOS desktop/Notification Center widget. Use shared saved readings, a configurable range and a link into the existing Usage section.
+
+## 2. Feature Objective
+
+- **Phase Goal:** Deliver medium and large usage widgets with an independently configurable date range and accurate saved-data presentation.
+- **User Or System Outcome:** Glance at downloaded/uploaded totals and daily usage, select a period through Edit Widget and open the matching detailed chart in the app.
+- **In Scope:** WidgetKit extension, App Intent range configuration, shared snapshot reader/presentation, system-adaptive chart layout, freshness/errors, coalesced reload requests, cold/warm app routing, source membership and signed extension/container verification.
+- **Out Of Scope:** iOS or cross-device widgets, live per-second speed, a widget-owned sampler, Wi-Fi/stability widget metrics, network traffic, cloud services, interactive in-widget chart tooltips, a custom dropdown menu inside the rendered widget, reset/clear controls, allowances, thresholds, limits and alerts. Full chart exploration stays in the app.
+
+## 3. Project Topology & Dependencies
+
+- **Local Tracker:** [Execution Workflow](./execution-workflow.md).
+- **Product Source:** Current request, supplied usage-chart/range-selector screenshots and [PRD](../mac-utilities-prd.md) FR-14. The screenshots establish stacked bars, directional legend and the existing four ranges; the widget adapts those to system sizes.
+- **Prerequisites (Blocked By):** Completed [Phase 08](./phase-08-shared-architecture-foundation.md): reproducible target generation, verified host App Group access and atomically embedded widget projection. Phases [09](./phase-09-extended-stability-checks.md)/[10](./phase-10-wireless-link-quality.md) precede it in delivery order but do not provide widget data. Verify actual extension authorization before treating integration as complete.
+- **Downstream Tasks (Unlocks):** Not applicable; this completes the requested four-phase series.
+- **Target Git Commit Prefix:** `feat(widget): ...`.
+- **Project Profile(s):** Native macOS WidgetKit/App Intents/Swift Charts extension and SwiftUI/AppKit host routing (high confidence).
+- **Applicable Development Standards:** Phase 08's future `hl-docs/desktop/development-standards.md`; existing Phase 06/07 shared visual and accounting conventions; `Shared/Usage/` and `Shared/Presentation/UsageChartPresentation.swift` established in Phase 08. Fallback: `/Users/abdulrahman/.codex/skills/check-implementation/references/common-baseline.md`. Widget system margins/backgrounds take precedence over copying app card dimensions.
+- **Platform References:** [Creating a widget extension](https://developer.apple.com/documentation/widgetkit/creating-a-widget-extension), [configurable widgets](https://developer.apple.com/documentation/widgetkit/making-a-configurable-widget), [WidgetKit refresh budget](https://developer.apple.com/documentation/widgetkit/keeping-a-widget-up-to-date), [widget deep links](https://developer.apple.com/documentation/widgetkit/linking-to-specific-app-scenes-from-your-widget-or-live-activity), [App Group authorization](https://developer.apple.com/documentation/xcode/accessing-app-group-containers) and [XcodeGen specification](https://github.com/yonaskolb/XcodeGen/blob/master/Docs/ProjectSpec.md).
+
+## 4. Ownership And Delivery Notes
+
+- **Owner:** TBD
+- **Priority:** TBD
+- **Target Window:** TBD
+- **Related PRD Section:** Usage History, platform surfaces, dependencies, local storage and acceptance criteria; add the widget surface during implementation.
+- **Related Build Plan Section:** Not applicable; the execution workflow owns delivery sequencing.
+
+## 5. Infrastructure & Environment Requirements
+
+- **Environment Variables:** No production variables. Reuse the same local signing/App Group configuration as Phase 08. Tests/previews use an explicit synthetic snapshot source; a production provider never falls back to a test path. For native signed verification, use the shared Debug-only MACUTILITIES_VERIFICATION_NAMESPACE from Phase 08 in both built targets so an OS-launched extension reads only the isolated fixture namespace; environment variables from the host are not assumed to propagate.
+- **Database/Index Changes:** None. Read only the Phase 08 derived `widgetSnapshot` schema-1 field inside the shared canonical `today-usage.json` schema-3 envelope. The host commits history and projection in one atomic file replacement. Never load the legacy file, migrate data, collect from interface checkpoints or write storage from the extension.
+- **Feature Flags / Config Switches:** New `Mac UtilitiesWidgets` app-extension target, bundle ID `com.abdulrahman.mac-utilities.widgets`, shared deployment target macOS 26.6 and `APPLICATION_EXTENSION_API_ONLY=YES`. Embed it through the tracked XcodeGen host dependency. Only sandbox and the matching App Group entitlement are required in the extension; do not copy host network permissions or startup APIs into it. Set the WidgetKit extension point in its Info.plist.
+- **Signing Gate:** Confirm host/extension group entitlement identifiers match, both signed products have the same nonempty TeamIdentifier and their runtime group access is authorized; a build setting alone is insufficient. Host-only Phase 08 access does not prove extension access. Run the real installed extension against an app-published synthetic snapshot in an isolated verification context before personal rollout, then verify the production shared path without modifying usage. No entitlement bypass or hardcoded container path.
+- **Seed / Fixture Requirements:** Nonempty/all-empty/missing/zero history, long-lived saved snapshots, midnight/month/DST/time-zone transitions, byte-unit changes, clear history, absent/invalid/future embedded projection and warm/cold route requests. Widget placeholders/previews use synthetic values only.
+- **Required Reusable Utilities:** Shared date/range/byte/chart presentation logic and snapshot reader, host `UsageSnapshotPublisher`, `UtilityWindowCoordinator.present(.usage)` and existing Usage view. Widget layout is separate from the window/popover views; no embedded UsageMonitor or app environment objects.
+
+## 6. API & Data Contract Specifications
+
+- **Endpoint / Event:** WidgetKit requests a placeholder, snapshot or timeline. Read the shared canonical file once through the injected projection reader and map it into immutable timeline entries. The provider performs no network requests, canonical writes, collection or diagnostic startup.
+- **Configuration Contract:** `UsageWidgetConfigurationIntent` has one `Usage Range` parameter, default This Month. A widget-local AppEnum adapter maps stable option identifiers `thisMonth`, `thirtyDays`, `fifteenDays`, `sevenDays` to existing `UsageHistoryRange` values/titles. Use AppIntentConfiguration/AppIntentTimelineProvider and the system's Edit Widget UI. Two widget instances can hold different ranges without changing the app's settings or each other's configuration.
+- **Snapshot Read Contract:** Bound the canonical file read to the shared 9 MiB whole-envelope ceiling, decode its supported envelope version and only the `widgetSnapshot` object, then validate projection schema 1, serialized size at most 64 KiB, maximum 31 records, unique valid day keys, finite ordered dates, valid unit and byte overflow. Do not materialize the full historical ledger or interface checkpoints as widget objects. The extension validates the fields it consumes; complete canonical validation remains the host store's job. A valid schema-3 envelope with no projection is an older/unpublished state and asks the user to open the host, not a measured zero. Distinguish a valid empty projection (including Clear History) from missing/invalid data. Atomic replacement exposes either the previous complete file or the next complete file: after a successful clear commit, every new read contains the empty history projection. There is no sidecar cache, old legacy fallback or separately persisted last-good copy that can resurrect cleared records. A failed read may retry once, then produce an honest unavailable state. Test projection read/peak memory with a near-9-MiB valid envelope as well as ordinary small fixtures; use the same UsageStorageLimits constants as the host. Invalid derived data remains unavailable until the host regenerates it from valid core history; the extension never repairs or writes it.
+- **Timeline Contract:** Recompute ranges through the current local day using shared calendar arithmetic and the supplied saved records. An old snapshot may yield no records in the newly selected range; do not move old bytes onto today's date. Request a timeline update around 30 minutes later or the next local midnight, whichever occurs first. Prepare a day-boundary entry when appropriate, deriving it from existing data only. Refresh timing remains system-controlled; requests do not promise a fixed interval. Time-zone changes are handled on the next provider read/reload using the current system calendar; saved civil keys remain unchanged.
+- **Freshness Contract:** Carry both `savedAt` and `lastObservedAt` into the entry. Show the actual last observation as Last Reading; a rewritten projection or repeated timeline must not imply new measured traffic. When observations are absent, display No Readings Yet. Never claim the app is currently collecting based on a saved state flag. If the app quits, the widget continues to display saved data with its original timestamp; it does not open the app or collect counters on a timer.
+- **Reload Contract:** Host-only `WidgetReloadCoordinator` consumes Phase 08 successful canonical/projection commit events. Coalesce ordinary requests to at most one per 30 minutes while observations change; immediately request reload after Clear History, data-unit changes or a day/time-zone boundary. Request only the usage widget kind. A reload request on every one-second sample/five-second canonical save is prohibited, although the embedded projection is committed with those canonical saves. Missing widgets or delayed system refresh do not block canonical writes. Clear/unit changes commit the canonical state plus projection before requesting reload; the rendered widget can remain stale until WidgetKit honors the request, so no immediate-display guarantee is made.
+- **App Route Contract:** Register `macutilities` as the host URL scheme and use `macutilities://usage?range=<stable-option-id>`. Accept exactly the usage host, allowed range tokens, no arbitrary file/action payload and bounded query input. Missing/unknown range safely opens Usage with This Month; malformed/unknown routes perform no privileged action and never start a diagnostic. A matching link requests the corresponding period in the Usage view and clears old chart selection/tooltips.
+- **Cold/Warm Routing Contract:** Queue a valid URL received before app composition/window readiness, then deliver it once to the existing coordinator. Move delegate/coordinator wiring earlier than the current menu-label onAppear-only registration as needed. Carry an explicit request generation so repeating the same widget link can reapply its range after the user has changed the app picker. Warm routes foreground/restore the singleton window, dismiss the popover and preserve running diagnostics. Normal startup still opens no utility window.
+
+## 7. UX / Behavioral Expectations
+
+- **User-Facing Change:** Provide a Usage History widget in the Mac widget gallery for desktop and Notification Center. Medium shows period, compact range totals, last reading and the stacked chart; large provides more chart/axis room. Use the width available in each family rather than a fixed window-sized frame. Keep the directional legend, readable units and a clear combined total without adding nested app-style cards.
+- **Chart:** Reuse the current download/upload series treatment and shared scale calculations. Reserve every selected local day, including missing days; distinguish No Data from a recorded zero in accessibility and restrained symbols. Keep date labels sparse enough to fit and omit date-axis ticks, matching the app's approved chart. Do not add hover/pinned tooltips or chart gestures the widget cannot deliver reliably.
+- **Selection And Open:** The widget displays its selected period; the system's Edit Widget setting changes it. Clicking the chart opens the same period in the app where detailed hover/keyboard interaction is available. Keep native system edit affordances rather than drawing a nonfunctional dropdown.
+- **Appearance:** Respect widget container background/content margins, vibrant/accented/tinted rendering where supplied by the OS, light/dark appearances and system scaling. Shared semantic colors/typography establish consistency; host-specific pointer controls, scroll cards and NSColor dependencies are excluded.
+- **Errors:** Missing file or absent embedded projection says Open Mac Utilities To Load Usage; valid empty data says No Usage History Yet or No Data In This Range as appropriate. Invalid/unsupported/unavailable envelope or projection shows a concise Saved Usage Unavailable state with an open-app link. Do not display placeholder measurements or zeros as real values. A successful app Clear History produces a valid empty projection in the canonical file, not an error. An already rendered timeline can remain visible until WidgetKit honors reload; the app must not promise instant on-screen erasure.
+- **Accessibility / Platform Constraints:** Each chart day/series exposes date, direction and byte value or No Data. Header includes selected range and last reading. Support relevant text scaling and sufficient contrast without relying only on color; synthesize a concise summary where chart labels cannot fit visually.
+
+## 8. Acceptance Criteria
+
+- A fresh generated project builds and embeds the WidgetKit extension with matching signed group access and explicit, minimal source/entitlement membership.
+- Medium/large widgets show correct saved totals/stacked bars for all four periods and independently preserve their own configuration.
+- Widget code has no collector, diagnostic runner, canonical writer, ServiceManagement or app entry-point dependency; preview/timeline reads cannot start the host or contact an endpoint.
+- Missing, zero, cleared, stale, denied and unsupported states remain distinguishable; last-observed timestamps never advance merely because WidgetKit refreshes.
+- Ordinary reload requests are coalesced; Clear History and units request a reload after the atomic canonical/projection commit. The UI remains accurate about system-controlled update timing.
+- A widget click opens the correct range through the one reusable Usage window on cold/warm/minimized launches; normal startup and existing diagnostic cancellation behavior remain correct.
+
+## 9. Implementation Steps (Component Audit)
+
+### A. Target And Entitlements
+
+- [MODIFY] `project.yml`; [NEW] `Configuration/MacUtilitiesWidgets.entitlements`, `Configuration/MacUtilitiesWidgets-Info.plist`; [NEW OR MODIFY AS REQUIRED] `Configuration/MacUtilities-Info.plist`:
+  - **Target Anchor:** Phase 08 generated host/test project, shared source declarations and local group configuration.
+  - [ ] Add/embed the app-extension target and WidgetKit extension point, host URL scheme and matching group substitution. Keep app/test/module IDs and existing icon/version settings. Give extension and host matching release version/build values from the tracked version configuration.
+  - [ ] Include only `MacUtilitiesWidgets/`, required `Shared/Usage`, `Shared/Storage` and extension-safe `Shared/Presentation` files. Exclude host entry point, AppKit controls, counter/checkpoint writers and tests. Validate minimum deployment, framework availability and extension-only API checks on the installed toolchain.
+
+### B. Widget Provider And Layout
+
+- [NEW] `MacUtilitiesWidgets/UsageWidgetBundle.swift`, `UsageHistoryWidget.swift`, `UsageWidgetConfigurationIntent.swift`, `UsageWidgetProvider.swift`, `UsageWidgetView.swift`:
+  - [ ] Declare one extension entry point and usage widget kind, medium/large families and App Intent configuration. Implement lightweight placeholder/snapshot/timeline adapters over the shared embedded-projection reader/presentation. Placeholders and previews must not read production data.
+  - [ ] Render the family-adaptive static chart/summary/freshness states using the Section 7 design and shared calculations. Add the matching widgetURL for every supported range.
+- [NEW] `Shared/Usage/UsageWidgetPresentation.swift`; [MODIFY] `Shared/Storage/UsageWidgetSnapshotReader.swift`, `Shared/Presentation/UsageChartPresentation.swift` only for necessary deltas:
+  - [ ] Keep state selection, freshness/date projection and range totals pure and injectable. Reuse Phase 08 decoding/formatting instead of duplicating its schema. Represent invalid/missing/empty/saved states explicitly for both tests and extension rendering.
+
+### C. Host Publication And Routing
+
+- [NEW] `MacUtilities/Platform/Widgets/WidgetReloadCoordinator.swift`; [MODIFY] `MacUtilities/Features/Usage/UsageSnapshotPublisher.swift` and app composition:
+  - [ ] Subscribe once to successful canonical/projection commits, implement throttled targeted reloads and lifecycle cleanup; never let WidgetKit errors interfere with canonical accounting. Unit/clear/day changes must be classified explicitly as immediate requests.
+- [NEW] `Shared/Usage/UsageRoute.swift`; [MODIFY] `MacUtilities/App/AppDelegate.swift`, `App/Mac_UtilitiesApp.swift`, `App/UtilityWindow.swift`, `Features/Usage/UsageHistoryView.swift`:
+  - **Target Anchor:** Current AppDelegate has reopen/termination hooks but no URL handler; the coordinator accepts UtilitySection only; UsageHistoryView owns its picker in local State.
+  - [ ] Add bounded allowlisted route parsing and queued early URL delivery. Wire coordinator/delegate readiness independently of menu-label appearance. Extend presentation requests with optional Usage range plus generation and apply them when the view is created or an existing view receives a repeated link. Reuse `present(.usage)` rather than creating another window.
+
+### D. Tests And Documentation
+
+- [NEW] `Mac UtilitiesTests/Widgets/UsageWidgetPresentationTests.swift`, `UsageRouteTests.swift`, `WidgetReloadCoordinatorTests.swift`; [MODIFY] `Mac UtilitiesTests/Window/UtilityWindowTests.swift` and shared projection tests:
+  - [ ] Test pure shared loader/presentation through the existing host test module, which already compiles Shared sources. Keep the WidgetKit provider as a thin adapter verified by build/previews/native runtime rather than inventing an unsupported test-host import of the extension executable.
+  - [ ] Cover four ranges in both units, missing/zero/empty/invalid snapshots, old saved observations across midnight/month/DST/time-zone changes, freshness preservation, future-schema protection, atomic clear/projection consistency after failed writes and process crashes, clear/unit publication ordering, coalescing with injected clock/reload closure, independent configurations and route validation/cold/warm/repeated/minimized delivery.
+- [MODIFY] PRD, desktop development standards and workflow during implementation:
+  - [ ] Document widget setup, Edit Widget range selection, saved-reading/refresh limits, host-open collection requirement, source ownership and signed extension/container verification. Record actual gallery/runtime evidence and all unperformed gates.
+
+## 10. Risks And Rollback Notes
+
+- **Implementation Risks:** Target glob mistakes can link the host entry point or side effects into the extension. Unqueued cold-start links can be dropped; repeated links can fail to update local State. Explicit membership, pure presentation and generation-based routing address these cases.
+- **Operational Risks:** WidgetKit decides when reloads occur; cached data may remain visible after app quit or a recent clear. Display observation time and avoid live/instant claims. App Group registration/signing and widget gallery caching require actual host/extension verification, beyond a successful compile.
+- **Rollback Approach:** Stop the widget reload subscription, remove the embedded extension dependency and regenerate/reinstall the host as needed. Preserve the canonical shared ledger; do not reverse storage just because widget UI is rolled back. The embedded projection can be safely regenerated by the host without changing historical accounting. Remove the widget instance through the system UI when validating rollback.
+
+## 11. Verification Protocol (Definition of Done)
+
+### A. Automated Suite
+
+- **Generation Command:** `xcodegen generate --spec project.yml` after target changes.
+- **Exact Regression Command:** `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-widget CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES test`
+- **Targeted Tests:** New Widgets tests, shared projection tests and UtilityWindowTests, then the existing suite once. Tests use injected storage/reload operations; they do not register widgets, launch secondary app copies or claim to prove group authorization.
+- **Signed Integration Build:** Same project/scheme/destination with `-configuration Release build`, using Phase 08's verified local signing settings without ad-hoc overrides. Use a Debug configuration plus its isolated namespace for synthetic native verification; Release must have no verification namespace. Verify both `'/tmp/mac-utilities-widget/Build/Products/Release/Mac Utilities.app'` and its `Contents/PlugIns/` widget bundle with `codesign --verify --deep --strict`; confirm the generated extension product name before using the path. Inspect matching group/team entitlements and real runtime app-write/extension-read access.
+
+### B. Functional Verification Matrix
+
+| State | Trigger Action | Expected Result | Evidence |
+| :--- | :--- | :--- | :--- |
+| Gallery / Families | Install the verified local build and add medium/large widgets | Native gallery entry, readable full-width charts, correct containment/appearance | Signed native inspection |
+| Configuration | Configure two instances with different ranges | Independent This Month/30/15/7 selections and correct values | Intent/model tests and native UI |
+| Publication | Collect, change units, then clear synthetic history | Canonical/projection commit precedes reload; new reads cannot return pre-clear data; system eventually refreshes | Unit tests and extension read |
+| App Quit / Date Boundary | Quit app, advance the fixture calendar | Saved data keeps true observation time; new range does not invent today's usage | Timeline/presentation tests |
+| Missing / Denied / Corrupt | Inject unavailable or malformed embedded projection | Honest open-app/unavailable state, no collection or fabricated zeros | Loader tests/native fixtures |
+| Cold / Warm Route | Click widget with app closed/open/minimized and repeat a prior range | One foregrounded Usage window showing matching range; diagnostics preserved on navigation | Route/window tests/native clicks |
+| Cleanup / Regression | Remove widget, quit verification build and reopen installed app | No orphan extension/test/app processes; shared ledger intact; popover and existing sections work | Process/storage inspection |
+
+### C. Evidence To Capture
+
+- Generated target graph, source membership, extension API checks, build/test/signature and matching App Group runtime evidence.
+- Native medium/large screenshots in both appearances and available system rendering modes, using synthetic data; include range editing and correct app opening.
+- Provider data states, reload coalescing and cold/warm URL test results. Record actual observed refresh delay without presenting it as a guarantee.
+
+## 12. Execution Notes
+
+- **Status:** Planned
+- **Started At:** Not started
+- **Completed At:** Not completed
+- **Blockers Encountered:** Phase 08 shared storage and signing gates; real extension authorization and near-limit provider resource checks are additional completion gates.
+- **Notes:** The widget adds a macOS surface only. It shares the four existing history ranges and saved byte measurements; it does not expand the collector's runtime beyond the host app being open. No extension, app routing or build configuration was implemented during planning.
