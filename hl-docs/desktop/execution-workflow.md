@@ -21,20 +21,21 @@ Do not use this file for:
 
 * **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md)
 * **Usage History Contract:** The [PRD](../mac-utilities-prd.md) owns the product requirements; [Phase 07](./phase-07-usage-history-chart.md), especially Sections 6–8, records the detailed storage, accounting, interface and verification contracts. Earlier completed phases retain their historical scope.
-* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md), [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) and [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) remain Planned. The PRD records the implemented storage/signing changes, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
+* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions. [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) and [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) remain Planned. The PRD records implemented behavior, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
 
 ## 3. Platform Baseline
 
 * **Platform Name:** Desktop
 * **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an Apple Development signed personal build with verified App Group access
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.0.6 (build 8), including the Phase 08 architecture/storage foundation. No public binary distribution target.
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.0.7 (build 9), including the shared foundation and extended stability checks. No public binary distribution target.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
   - `xcodegen generate --spec project.yml` using XcodeGen 2.46.0; configure ignored local signing before a signed build. See [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
   - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-install CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES build`
   - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-install CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES test`
   - `codesign --verify --deep --strict "$HOME/Applications/Mac Utilities.app"`
+  - Run the complete regression suite and opt-in signed five-minute/notification checks in [Phase 09 Section 11](./phase-09-extended-stability-checks.md#11-verification-protocol-definition-of-done) when changing stability scheduling or lifecycle behavior.
 * **Release Gates:**
   - Verify live device rates, current-day totals, restart persistence, local-midnight rollover, collection-state messaging, and normal network connectivity on the target MacBook. Ad-hoc tests use injected storage; the installed app requires a verified matching development signature for group access.
   - Run the signed Release build with verified group configuration. The sole installation's history is already in the canonical ledger. Preserve it and prevent competing writers during installation.
@@ -65,15 +66,15 @@ Every completed phase must satisfy all of the following:
 ## 6. Current Active Phase
 
 * **Current Phase:** 09 - Extended Stability Checks
-* **Status:** Planned
+* **Status:** Completed
 * **Owner:** TBD
 * **Linked Phase Doc:** [phase-09-extended-stability-checks.md](./phase-09-extended-stability-checks.md)
-* **Immediate Goal:** Phase 08 is complete: reproducible generation, reorganized sources, signed shared storage, regression coverage and current architecture documentation are verified. Phase 09 is next in delivery order and remains planned until implementation starts.
-* **Current Blockers:** Phase 09–11 implementation has not started. Phase 11 must separately prove extension access. Per-app attribution remains deferred.
+* **Immediate Goal:** Phase 09's implementation, regression, signed runtime, installation and documentation gates are complete. Phase 10 is next in delivery order and remains Planned pending its own implementation approval.
+* **Current Blockers:** No Phase 09 blocker. Phase 11 must separately prove extension access. Per-app attribution remains deferred.
 
 ## 7. Ready Queue
 
-Phases 09–11 remain Planned. Delivery order after the foundation is 09 → 10 → 11; Wi-Fi and the usage widget do not depend on stability measurement data. Each feature requires its own implementation approval and environment checks; the current task implements Phase 08 only.
+The current changes complete Phase 09 and apply shared interactive series legends to Usage and Reply Times. Phases 10 and 11 remain Planned, in that order; Wi-Fi and the usage widget do not depend on stability measurement data. Each requires its own implementation approval and environment checks.
 
 ## 8. Phase Register
 
@@ -88,7 +89,7 @@ Phases 09–11 remain Planned. Delivery order after the foundation is 09 → 10 
 | 06 | Unified Utility Window | Completed | High | Product Developer | Phases 03, 05 | [phase-06-unified-utility-window.md](./phase-06-unified-utility-window.md) | Completed 2026-10-14 |
 | 07 | Usage History Chart | Completed | TBD | TBD | Phases 01, 06 | [phase-07-usage-history-chart.md](./phase-07-usage-history-chart.md) | Completed 2026-10-15 |
 | 08 | Shared Architecture Foundation | Completed | TBD | TBD | Phase 07; signed App Group access verified before data cutover | [phase-08-shared-architecture-foundation.md](./phase-08-shared-architecture-foundation.md) | Completed 2026-10-17 |
-| 09 | Extended Stability Checks | Planned | TBD | TBD | Phase 08 | [phase-09-extended-stability-checks.md](./phase-09-extended-stability-checks.md) | TBD |
+| 09 | Extended Stability Checks | Completed | TBD | TBD | Phase 08 | [phase-09-extended-stability-checks.md](./phase-09-extended-stability-checks.md) | Completed 2026-10-17 |
 | 10 | Wireless Link Quality | Planned | TBD | TBD | Phase 08; delivery follows Phase 09 | [phase-10-wireless-link-quality.md](./phase-10-wireless-link-quality.md) | TBD |
 | 11 | Configurable Usage Widget | Planned | TBD | TBD | Phase 08; delivery follows Phase 10; signed extension/group access | [phase-11-configurable-usage-widget.md](./phase-11-configurable-usage-widget.md) | TBD |
 
@@ -96,7 +97,7 @@ Phases 09–11 remain Planned. Delivery order after the foundation is 09 → 10 
 
 ### Active Blockers
 
-- Phases 09–11 have passed planning review but remain unimplemented; readiness depends on their own environment and signed-runtime gates.
+- Phases 10–11 have passed planning review but remain unimplemented; readiness depends on their own environment and signed-runtime gates.
 - Host App Group access is verified, and the sole installation's history is in the canonical container. Phase 11 must additionally verify actual extension access before widget rollout.
 
 ### Execution Risks
