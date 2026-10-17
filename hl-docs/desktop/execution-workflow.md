@@ -28,7 +28,7 @@ Do not use this file for:
 * **Platform Name:** Desktop
 * **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an Apple Development signed personal build with verified App Group access
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.1.0 (build 11), including the shared foundation, extended stability checks and responsive usage-summary cards with selection-based averages. No public binary distribution target.
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.1.1 (build 12), including the shared foundation, extended stability checks, responsive usage-summary cards with selection-based averages, and compact connection guidance cards. No public binary distribution target.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
   - `xcodegen generate --spec project.yml` using XcodeGen 2.46.0; configure ignored local signing before a signed build. See [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
@@ -195,6 +195,11 @@ The current changes complete Phase 09 and apply shared interactive series legend
 - **Status Change:** New phases registered as Planned; implementation has not started.
 - **Summary:** Researched current storage, accounting, diagnostics, window lifecycle, source membership and tests, plus official Apple CoreWLAN/WidgetKit/App Group guidance and XcodeGen documentation. Created four phase plans with the shared architecture/storage foundation first, followed by stability checks, Wi-Fi readings and the usage chart widget.
 - **Evidence:** All four plan filenames, twelve-section structures, Planned statuses, unchecked tasks, relative links and workflow entries passed documentation structure validation. `git diff --check` passed. No app source, project configuration, personal data or tests were changed or executed. A subsequent strict check-plan pass refined atomic embedded widget publication, old-writer gates, file-size and projection recovery, probe interruption cleanup and Wi-Fi visibility/discovery. Phase 08's later implementation superseded the earlier signing and data-transfer gates. No source code, tests or live data were changed during planning.
+
+### 2026-10-18 - Local Release / Version 1.1.1
+- **Status Change:** Installed version 1.1.0 (build 11) -> 1.1.1 (build 12)
+- **Summary:** Released the compact connection guidance cards and reduced shared content and card padding in the signed local app.
+- **Evidence:** The arm64 Release build succeeded and passed strict code-signature verification with the existing team and App Group. The prior app bundle and canonical usage ledger were backed up before replacement; the ledger backup hash matched the original. Version 1.1.1 (build 12) was installed, signature-verified and launched, and the canonical ledger remained readable.
 
 ## 12. Workflow Rules
 
