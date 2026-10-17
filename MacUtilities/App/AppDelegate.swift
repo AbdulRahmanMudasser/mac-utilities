@@ -32,12 +32,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.applicationIconImage = AppBrand.icon
         NSApp.setActivationPolicy(.accessory)
         #if DEBUG
-        if CommandLine.arguments.contains("--stability-preview") {
+        if CommandLine.arguments.contains("--stability-preview") || CommandLine.arguments.contains("--usage-preview") {
             Task { [weak self] in
                 for _ in 0..<40 where self?.utilityWindow == nil {
                     try? await Task.sleep(for: .milliseconds(50))
                 }
-                self?.utilityWindow?.present(.connection)
+                self?.utilityWindow?.present(CommandLine.arguments.contains("--usage-preview") ? .usage : .connection)
             }
         }
         #endif

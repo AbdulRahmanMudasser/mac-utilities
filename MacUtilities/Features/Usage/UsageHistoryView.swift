@@ -31,17 +31,9 @@ struct UsageHistoryView: View {
 
     var body: some View {
         UtilityScrollContent {
-            UtilityPanel("Usage Summary", action: AnyView(rangePicker)) {
-                if let first = days.first, let last = days.last {
-                    Text("\(dateLabel(first.date)) – \(dateLabel(last.date))")
-                        .font(UtilityStyle.metadataFont).foregroundStyle(.secondary)
-                        .accessibilityLabel("Selected Range, \(dateLabel(first.date)) through \(dateLabel(last.date))")
-                }
+            UtilityPanel("Usage Summary", subtitle: summaryRange, action: AnyView(rangePicker), wrapsContent: false) {
                 if days.contains(where: { $0.record != nil }) {
-                    UtilityValueRow(title: "Downloaded", value: formatted(totals.downloaded))
-                    UtilityValueRow(title: "Uploaded", value: formatted(totals.uploaded))
-                    UtilityValueRow(title: "Combined", value: formatted(UsageHistory.add(totals.downloaded, totals.uploaded)))
-                        .fontWeight(.semibold)
+                    summaryMetrics
                 } else {
                     Text("No Data In This Range").foregroundStyle(.secondary)
                 }
@@ -82,6 +74,71 @@ struct UsageHistoryView: View {
         .onChange(of: showDownloads) { _, _ in resetSelectionIfNeeded() }
         .onChange(of: showUploads) { _, _ in resetSelectionIfNeeded() }
         .sheet(isPresented: $confirmClear) { clearConfirmation }
+    }
+
+    private var summaryRange: String? {
+        guard let first = days.first, let last = days.last else { return nil }
+        let format = Date.FormatStyle(calendar: monitor.historyCalendar, timeZone: monitor.historyCalendar.timeZone)
+            .month(.abbreviated).day().year(.twoDigits)
+        return "(\(first.date.formatted(format)) – \(last.date.formatted(format)))"
+    }
+
+    private var averageTitle: String {
+        switch range {
+        case .thisMonth: "Month Average"
+        case .sevenDays: "7 Day Average"
+        case .fifteenDays: "15 Day Average"
+        case .thirtyDays: "30 Day Average"
+        }
+    }
+
+    private var summaryMetrics: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: UtilityStyle.contentSpacing) {
+                summaryTiles
+            }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())],
+                      spacing: UtilityStyle.contentSpacing) {
+                summaryTiles
+            }
+        }
+    }
+
+    @ViewBuilder private var summaryTiles: some View {
+        summaryMetric("Downloaded", value: formatted(totals.downloaded), symbol: "arrow.down")
+        summaryMetric("Uploaded", value: formatted(totals.uploaded), symbol: "arrow.up")
+        summaryMetric("Combined", value: formatted(UsageHistory.add(totals.downloaded, totals.uploaded)),
+                      symbol: "arrow.up.arrow.down", emphasized: true)
+        summaryMetric(averageTitle, value: formatted(UsageHistory.average(days) ?? 0),
+                      symbol: "chart.bar.xaxis")
+    }
+
+    private func summaryMetric(_ title: String, value: String, symbol: String,
+                               emphasized: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
+            HStack(spacing: UtilityStyle.History.metricSpacing) {
+                Image(systemName: symbol)
+                    .accessibilityHidden(true)
+                Text(title)
+            }
+            .font(UtilityStyle.metadataFont)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: true, vertical: false)
+            Text(value)
+                .font(UtilityStyle.History.summaryValueFont)
+                .monospacedDigit()
+                .fixedSize(horizontal: true, vertical: false)
+                .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(UtilityStyle.cardPadding)
+        .background(emphasized ? UtilityStyle.History.summaryEmphasis : Color.clear,
+                    in: RoundedRectangle(cornerRadius: UtilityStyle.cornerRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: UtilityStyle.cornerRadius)
+                .strokeBorder(UtilityStyle.History.summaryBorder, lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private var rangePicker: some View {

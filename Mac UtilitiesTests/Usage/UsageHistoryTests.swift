@@ -397,6 +397,22 @@ struct UsageHistoryTests {
     }
 
     @Test
+    func selectionAverageUsesAllRangeDaysAndAvoidsOverflow() {
+        let at = date("2026-10-15T12:00:00Z")
+        func day(_ value: UInt64?) -> UsageHistoryDay {
+            UsageHistoryDay(date: at, dayKey: "2026-10-15", record: value.map {
+                DailyUsageRecord(dayKey: "2026-10-15", downloaded: $0, uploaded: 0,
+                                 firstObservedAt: at, lastObservedAt: at, isIncomplete: true)
+            })
+        }
+        #expect(UsageHistory.average([]) == nil)
+        #expect(UsageHistory.average([day(nil)]) == nil)
+        #expect(UsageHistory.average([day(12), day(0), day(nil)]) == 4)
+        #expect(UsageHistory.average([day(5), day(6)]) == 5)
+        #expect(UsageHistory.average([day(.max), day(.max)]) == .max)
+    }
+
+    @Test
     func rangeTotalsIncludeOnlyStoredValuesAndSaturateSafely() {
         let calendar = UsageHistory.calendar(timeZone: TimeZone(secondsFromGMT: 0)!)
         let at = date("2026-10-15T12:00:00Z")
