@@ -39,6 +39,27 @@ struct ConnectionDiagnosticsTests {
         #expect(result.lost == 10)
     }
 
+    @Test func expectedProbeCountAcceptsOneReplyOnlyForOneProbe() throws {
+        let output = """
+        64 bytes from 8.8.8.8: icmp_seq=0 ttl=52 time=12.500 ms
+        1 packets transmitted, 1 packets received, 0.0% packet loss
+        """
+        let result = try ProbeStatistics.parse(output, expectedCount: 1)
+        #expect(result.sent == 1)
+        #expect(result.received == 1)
+        #expect(result.samples == [12.5])
+        #expect(throws: (any Error).self) {
+            try ProbeStatistics.parse(output, expectedCount: 10)
+        }
+    }
+
+    @Test func receivedSummaryWithoutRTTIsRejected() {
+        let delayedReplySummary = "1 packets transmitted, 1 packets received, 0.0% packet loss"
+        #expect(throws: (any Error).self) {
+            try ProbeStatistics.parse(delayedReplySummary, expectedCount: 1)
+        }
+    }
+
     @Test func zeroReplySummaryWithErrorExitIsRejected() {
         #expect(throws: (any Error).self) {
             try ProbeStatistics.parse("10 packets transmitted, 0 packets received, 100.0% packet loss", exitCode: 77)
@@ -118,14 +139,35 @@ struct ConnectionDiagnosticsTests {
         do {
             _ = try await runner.run(executable: "/bin/sleep", arguments: ["5"], timeout: 0.1)
             Issue.record("Expected timeout")
-        } catch DiagnosticError.timeout { }
+        } catch let failure as DiagnosticProcessFailure {
+            #expect(failure.message == DiagnosticError.timeout.localizedDescription)
+            #expect(failure.stderrDetail == nil)
+        }
         catch { Issue.record("Unexpected error: \(error)") }
+        #expect(runner.activeProcessIDs.isEmpty)
+    }
+
+    @Test func processFailureCarriesItsOwnStandardErrorDetail() async {
+        let runner = DiagnosticProcessRunner()
+        do {
+            _ = try await runner.run(
+                executable: "/bin/sh",
+                arguments: ["-c", "printf 'operation detail\\n' >&2; exec /bin/sleep 5"],
+                timeout: 0.2,
+                operationID: UUID()
+            )
+            Issue.record("Expected timeout")
+        } catch let failure as DiagnosticProcessFailure {
+            #expect(failure.message == DiagnosticError.timeout.localizedDescription)
+            #expect(failure.stderrDetail == "operation detail")
+        } catch { Issue.record("Unexpected error: \(error)") }
         #expect(runner.activeProcessIDs.isEmpty)
     }
 
     @Test func processCancellationReapsChild() async throws {
         let runner = DiagnosticProcessRunner()
-        let task = Task { try await runner.run(executable: "/bin/sleep", arguments: ["5"], timeout: 10) }
+        let operationID = UUID()
+        let task = Task { try await runner.run(executable: "/bin/sleep", arguments: ["5"], timeout: 10, operationID: operationID) }
         try await Task.sleep(for: .milliseconds(150))
         let pids = runner.activeProcessIDs
         #expect(!pids.isEmpty)
@@ -136,12 +178,53 @@ struct ConnectionDiagnosticsTests {
         for pid in pids { #expect(kill(pid, 0) == -1) }
     }
 
+    @Test func stopOnlyKillsProcessesTaggedWithRequestedOperationIDs() async throws {
+        let runner = DiagnosticProcessRunner()
+        let stoppedOperationID = UUID()
+        let continuingOperationID = UUID()
+        let stopped = Task {
+            try await runner.run(executable: "/bin/sleep", arguments: ["5"], timeout: 10, operationID: stoppedOperationID)
+        }
+        let continuing = Task {
+            try await runner.run(executable: "/bin/sleep", arguments: ["5"], timeout: 10, operationID: continuingOperationID)
+        }
+        for _ in 0..<100 {
+            if runner.activeProcessIDs.count == 2 { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let pids = runner.activeProcessIDs
+        #expect(pids.count == 2)
+        runner.stop(operationIDs: [stoppedOperationID])
+        for _ in 0..<100 {
+            if runner.activeProcessIDs.count == 1 { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let remainingPIDs = runner.activeProcessIDs
+        #expect(remainingPIDs.count == 1)
+        if let remainingPID = remainingPIDs.first {
+            #expect(kill(remainingPID, 0) == 0)
+            runner.stop(operationIDs: [continuingOperationID])
+            _ = try? await stopped.value
+            _ = try? await continuing.value
+            #expect(runner.activeProcessIDs.isEmpty)
+            #expect(kill(remainingPID, 0) == -1)
+        } else {
+            runner.stopAll()
+            _ = try? await stopped.value
+            _ = try? await continuing.value
+            Issue.record("Expected the unrelated operation to remain active")
+        }
+    }
+
     @Test func missingExecutableFailsWithoutLeavingChild() async {
         let runner = DiagnosticProcessRunner()
         do {
             _ = try await runner.run(executable: "/does-not-exist/mac-utilities-test", arguments: [], timeout: 1)
             Issue.record("Expected launch failure")
-        } catch { }
+        } catch let failure as DiagnosticProcessFailure {
+            #expect(!failure.message.isEmpty)
+            #expect(failure.stderrDetail == nil)
+        } catch { Issue.record("Unexpected error: \(error)") }
         #expect(runner.activeProcessIDs.isEmpty)
     }
 
@@ -150,7 +233,9 @@ struct ConnectionDiagnosticsTests {
         do {
             _ = try await runner.run(executable: "/usr/bin/head", arguments: ["-c", "1048577", "/dev/zero"], timeout: 3)
             Issue.record("Expected output limit")
-        } catch DiagnosticError.outputLimit { }
+        } catch let failure as DiagnosticProcessFailure {
+            #expect(failure.message == DiagnosticError.outputLimit.localizedDescription)
+        }
         catch { Issue.record("Unexpected error: \(error)") }
         #expect(runner.activeProcessIDs.isEmpty)
     }

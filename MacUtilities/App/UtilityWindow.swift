@@ -102,6 +102,14 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
         }
         synchronizeContentFrame(target)
         #if DEBUG
+        if CommandLine.arguments.contains("--stability-preview") {
+            target.appearance = NSAppearance(named: CommandLine.arguments.contains("--stability-preview-light") ? .aqua : .darkAqua)
+            if CommandLine.arguments.contains("--stability-preview-compact") {
+                target.setContentSize(Self.minimumContentSize)
+            } else if CommandLine.arguments.contains("--stability-preview-expanded") {
+                target.setContentSize(NSSize(width: 1100, height: 800))
+            }
+        }
         if CommandLine.arguments.contains("--usage-preview") && CommandLine.arguments.contains("--usage-preview-light") {
             target.appearance = NSAppearance(named: .aqua)
         }

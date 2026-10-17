@@ -32,7 +32,7 @@ struct ProbeStatistics: Equatable, Sendable {
         return zip(samples, samples.dropFirst()).map { abs($0 - $1) }.reduce(0, +) / Double(samples.count - 1)
     }
 
-    static func parse(_ output: String, exitCode: Int32 = 0) throws -> ProbeStatistics {
+    static func parse(_ output: String, exitCode: Int32 = 0, expectedCount: Int? = nil) throws -> ProbeStatistics {
         guard exitCode == 0 || exitCode == 2 else {
             throw DiagnosticError.toolFailed("The reply check could not finish. Error code \(exitCode).")
         }
@@ -43,6 +43,9 @@ struct ProbeStatistics: Equatable, Sendable {
               let received = Int(ns.substring(with: match.range(at: 2))),
               sent > 0, sent <= 10, received >= 0, received <= sent else {
             throw DiagnosticError.invalidOutput("The reply check returned results we could not read. Please try again.")
+        }
+        if let expectedCount, sent != expectedCount {
+            throw DiagnosticError.invalidOutput("The reply counts do not match. Please try again.")
         }
         guard exitCode != 2 || received == 0 else {
             throw DiagnosticError.invalidOutput("The reply check returned results that do not match. Please try again.")

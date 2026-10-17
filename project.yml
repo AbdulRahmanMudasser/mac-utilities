@@ -91,6 +91,9 @@ schemes:
         - name: Mac UtilitiesTests
           parallelizable: false
       environmentVariables:
+        - variable: MACUTILITIES_SIGNED_STABILITY_CHECK
+          value: "$(MACUTILITIES_SIGNED_STABILITY_CHECK)"
+          isEnabled: true
         - variable: UTILITIES_VERIFICATION_ROOT
           value: "$(UTILITIES_VERIFICATION_ROOT)"
           isEnabled: true
