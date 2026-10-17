@@ -6,6 +6,41 @@ import Testing
 @Suite(.serialized)
 @MainActor
 struct UtilityWindowTests {
+    #if DEBUG
+    @Test func realStabilityViewsKeepSharedBoundsAcrossSizesAppearancesAndEmptyStates() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("stability-window-\(UUID().uuidString)")
+        let file = directory.appendingPathComponent("today-usage.json")
+        try UsageStateStore.saveState(PersistedUsage(schemaVersion: 3,
+            localDayKey: UsageHistory.key(for: Date()), history: []), at: file)
+        let monitor = UsageMonitor(startAutomatically: false,
+            storagePaths: UsageStoragePaths(stateURL: file, isVerification: true))
+        let diagnostics = ConnectionDiagnostics()
+        let subject = UtilityWindowCoordinator(diagnostics: diagnostics,
+            setActivationPolicy: { _ in }, activateApplication: {}) { coordinator in
+            AnyView(UtilityWindowView().environmentObject(monitor).environmentObject(diagnostics).environmentObject(coordinator))
+        }
+        defer { subject.shutdown(); monitor.shutdown(); try? FileManager.default.removeItem(at: directory) }
+        subject.present(.connection)
+        for mode in 0..<3 {
+            diagnostics.showStabilityPreview(unobserved: mode == 1, sparse: mode == 2)
+            for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+                subject.window?.appearance = NSAppearance(named: appearance)
+                for size in [NSSize(width: 620, height: 420), NSSize(width: 860, height: 660), NSSize(width: 1100, height: 800)] {
+                    subject.window?.setContentSize(size)
+                    let view = try #require(subject.window?.contentView)
+                    view.layoutSubtreeIfNeeded()
+                    try await Task.sleep(for: .milliseconds(50))
+                    view.displayIfNeeded()
+                    #expect(view.bounds.size == size)
+                    #expect(subject.window?.contentViewController?.children.first?.view.bounds.size == size)
+                }
+            }
+        }
+        #expect(!monitor.isMonitoringActive)
+        #expect(!diagnostics.isRunning)
+    }
+    #endif
+
     private func coordinator(_ diagnostics: ConnectionDiagnostics? = nil) -> UtilityWindowCoordinator {
         UtilityWindowCoordinator(diagnostics: diagnostics ?? ConnectionDiagnostics(),
                                  setActivationPolicy: { _ in }, activateApplication: {}) { _ in
@@ -153,6 +188,97 @@ struct UtilityWindowTests {
             try? await Task.sleep(for: .milliseconds(5))
         }
         #expect(!diagnostics.isRunning)
+    }
+
+    @Test func stabilityNavigationKeepsSamplingAndCloseReopenRetainsPartialResults() async {
+        let clock = StabilityTestClock()
+        clock.advancesAutomatically = false
+        let events = FakeStabilityEventSource()
+        let diagnostics = ConnectionDiagnostics(processOperation: { _, _, _ in stabilityReplyOutput() },
+            stabilityClock: clock.makeClock(), stabilityEvents: { events })
+        let subject = coordinator(diagnostics)
+        defer { subject.shutdown() }
+
+        subject.present(.connection)
+        diagnostics.startStability()
+        for _ in 0..<10_000 where (diagnostics.stabilitySnapshot?.observations.count ?? 0) < 2 {
+            await Task.yield()
+        }
+        let initialID = diagnostics.stabilitySnapshot?.id
+        #expect(initialID != nil)
+        #expect(diagnostics.activity == .stability)
+
+        subject.present(.usage)
+        subject.present(.settings)
+        #expect(diagnostics.activity == .stability)
+        #expect(diagnostics.stabilitySnapshot?.id == initialID)
+
+        let originalWindow = subject.window
+        originalWindow?.close()
+        await diagnostics.waitUntilStopped()
+        #expect(diagnostics.stabilitySnapshot?.status == .cancelled)
+        #expect(diagnostics.stabilitySnapshot?.observations.count == 2)
+
+        subject.present(.connection)
+        #expect(subject.window === originalWindow)
+        #expect(subject.selection == .connection)
+        #expect(subject.window?.isVisible == true)
+        #expect(diagnostics.stabilitySnapshot?.id == initialID)
+        #expect(diagnostics.stabilitySnapshot?.observations.count == 2)
+        #expect(events.stopCount == 1)
+    }
+
+    @Test func stabilityShutdownCancelsAndRetainsTheCurrentSnapshot() async {
+        let clock = StabilityTestClock()
+        clock.advancesAutomatically = false
+        let events = FakeStabilityEventSource()
+        let diagnostics = ConnectionDiagnostics(processOperation: { _, _, _ in stabilityReplyOutput() },
+            stabilityClock: clock.makeClock(), stabilityEvents: { events })
+        let subject = coordinator(diagnostics)
+        subject.present(.connection)
+        diagnostics.startStability()
+        for _ in 0..<10_000 where (diagnostics.stabilitySnapshot?.observations.count ?? 0) < 2 {
+            await Task.yield()
+        }
+        let initialID = diagnostics.stabilitySnapshot?.id
+
+        subject.shutdown()
+        await diagnostics.waitUntilStopped()
+
+        #expect(subject.window == nil)
+        #expect(!diagnostics.isRunning)
+        #expect(diagnostics.stabilitySnapshot?.id == initialID)
+        #expect(diagnostics.stabilitySnapshot?.status == .cancelled)
+        #expect(diagnostics.stabilitySnapshot?.observations.count == 2)
+        #expect(events.stopCount == 1)
+    }
+
+    @Test func applicationTerminationWaitsForStabilityCleanupBeforeReplying() async {
+        let clock = StabilityTestClock()
+        clock.advancesAutomatically = false
+        let events = FakeStabilityEventSource()
+        let diagnostics = ConnectionDiagnostics(processOperation: { _, _, _ in stabilityReplyOutput() },
+            stabilityClock: clock.makeClock(), stabilityEvents: { events })
+        diagnostics.startStability()
+        for _ in 0..<10_000 where (diagnostics.stabilitySnapshot?.observations.count ?? 0) < 2 {
+            await Task.yield()
+        }
+
+        let delegate = AppDelegate()
+        delegate.diagnostics = diagnostics
+        var replies: [Bool] = []
+        delegate.replyToTermination = { replies.append($0) }
+
+        #expect(delegate.applicationShouldTerminate(NSApp) == .terminateLater)
+        #expect(replies.isEmpty)
+        #expect(diagnostics.isStopping)
+
+        await diagnostics.waitUntilStopped()
+        for _ in 0..<10_000 where replies.isEmpty { await Task.yield() }
+
+        #expect(replies == [true])
+        #expect(diagnostics.stabilitySnapshot?.status == .cancelled)
+        #expect(events.stopCount == 1)
     }
 
     @Test func resultsSurviveNavigationAndWindowReopen() async {

@@ -11,45 +11,16 @@ struct ConnectionCheckView: View {
                     Button("Check Now") { diagnostics.startLatency() }
                         .buttonStyle(.bordered).disabled(diagnostics.isRunning).handPointer()
                 ), info: "We send 10 small messages to each of two servers, one second apart, and count the replies.",
-                   showsContent: !diagnostics.probes.isEmpty || diagnostics.latencyCompletedAt != nil) {
-                    ForEach(diagnostics.probes) { result in
-                        VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
-                            Text("\(result.target.name) · \(result.target.address)").font(UtilityStyle.emphasizedBodyFont)
-                            if let statistics = result.statistics {
-                                metric("Replies", "\(statistics.received) Of \(statistics.sent)")
-                                if statistics.received == 0 {
-                                    Text("This Server Did Not Reply.").font(UtilityStyle.bodyFont)
-                                } else {
-                                    metric("Missed Test Replies", "\(statistics.lost) Of \(statistics.sent) (\(statistics.lossPercent.formatted(.number.precision(.fractionLength(0))))%)")
-                                    metric("Typical Reply Time", milliseconds(statistics.median))
-                                    metric("Fastest / Slowest Reply", "\(milliseconds(statistics.minimum)) / \(milliseconds(statistics.maximum))")
-                                    metric("Reply Time Changes", milliseconds(statistics.jitter),
-                                           explanation: "Shows how much reply times speed up or slow down. This check only tests two servers; a missed reply may not mean there is an internet problem.")
-                                }
-                            }
-                            if let error = result.error { Text(error).font(UtilityStyle.bodyFont) }
-                            if let https = result.https {
-                                Divider()
-                                metric("Web Check", "Server Replied · Code \(https.statusCode)")
-                                metric("Web Reply Time", milliseconds(https.elapsedMilliseconds))
-                                Text("This time includes the server’s work. It does not measure missed test replies.")
-                                    .font(UtilityStyle.helpFont).foregroundStyle(.secondary)
-                                    .frame(maxWidth: UtilityStyle.helpWidth, alignment: .leading)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            if let error = result.httpsError {
-                                Text("Web Check: \(error)").font(UtilityStyle.helpFont).foregroundStyle(.secondary)
-                                .frame(maxWidth: UtilityStyle.helpWidth, alignment: .leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .padding(.top, UtilityStyle.contentSpacing)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                   showsContent: diagnostics.activity == .latency || !diagnostics.probes.isEmpty || diagnostics.latencyCompletedAt != nil,
+                   wrapsContent: false) {
+                    ConnectionServerCards { target in
+                        quickTargetSummary(target)
                     }
                     if let date = diagnostics.latencyCompletedAt {
                         checkTimestamp(date, succeeded: !diagnostics.probes.contains { $0.error != nil || $0.httpsError != nil })
                     }
                 }
+                StabilityCheckView()
                 UtilityPanel("Internet Speed While Busy", action: AnyView(
                     Button("Run Speed Test") { confirmLoad = true }
                         .buttonStyle(.bordered).disabled(diagnostics.isRunning).handPointer()
@@ -80,9 +51,18 @@ struct ConnectionCheckView: View {
                 if diagnostics.isRunning {
                     ProgressView().controlSize(UtilityStyle.progressControlSize)
                 }
-                Text(diagnostics.message)
-                    .font(UtilityStyle.bodyFont)
-                    .foregroundStyle(.secondary)
+                Group {
+                    if diagnostics.lastStartedActivity == .stability,
+                       let snapshot = diagnostics.stabilitySnapshot {
+                        Text("\(diagnostics.message) · \(elapsedTime(snapshot.unobservedDuration)) Missed")
+                            .help("Missed is time when the check could not run. This does not mean your internet stopped working.")
+                    } else {
+                        Text(diagnostics.message)
+                    }
+                }
+                .font(UtilityStyle.bodyFont)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
                 Spacer()
                 if diagnostics.isRunning {
                     Button("Cancel") { diagnostics.cancel() }
@@ -117,42 +97,47 @@ struct ConnectionCheckView: View {
         }
     }
 
-    private func metric(_ title: String, _ value: String, detail: String? = nil, explanation: String? = nil) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.contentSpacing) {
-            HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.Tooltip.spacing) {
-                Text(title).foregroundStyle(.secondary)
-                if let explanation {
-                    UtilityInfoTooltip(message: explanation)
-                }
+    private func quickTargetSummary(_ target: ProbeTarget) -> some View {
+        let result = diagnostics.probes.first { $0.target.id == target.id }
+        let statistics = result?.statistics
+        return VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
+            ConnectionReplyMetrics(received: statistics?.received, completed: statistics?.sent,
+                missed: statistics?.lost, missedPercent: statistics?.lossPercent,
+                median: statistics?.median, minimum: statistics?.minimum, maximum: statistics?.maximum,
+                changes: statistics?.jitter, isWaiting: diagnostics.activity == .latency && result == nil,
+                changesExplanation: "Shows how much reply times speed up or slow down. This check only tests two servers; a missed reply may not mean there is an internet problem.")
+            if let error = result?.error {
+                Text(error).font(UtilityStyle.helpFont).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: UtilityStyle.contentSpacing)
-            HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.contentSpacing) {
-                Text(value).monospacedDigit().multilineTextAlignment(.trailing).textSelection(.enabled)
-                if let detail {
-                    Text("· \(detail)").font(UtilityStyle.metadataFont).foregroundStyle(.secondary)
-                }
+            if let https = result?.https {
+                metric("Web Check", "Server Replied · Code \(https.statusCode)")
+                metric("Web Reply Time", milliseconds(https.elapsedMilliseconds),
+                    explanation: "This time includes the server’s work. It does not measure missed test replies.")
             }
-            .fixedSize(horizontal: true, vertical: false)
+            if let error = result?.httpsError {
+                Text("Web Check: \(error)").font(UtilityStyle.helpFont).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .font(UtilityStyle.bodyFont)
-        .accessibilityElement(children: .combine)
+    }
+
+    private func metric(_ title: String, _ value: String, detail: String? = nil, explanation: String? = nil) -> some View {
+        UtilityMetricRow(title: title, value: value, detail: detail, explanation: explanation)
     }
 
     private func checkTimestamp(_ date: Date, succeeded: Bool) -> some View {
-        HStack(spacing: UtilityStyle.contentSpacing) {
-            Label("Last Checked", systemImage: succeeded ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-            Spacer()
-            Text(date.formatted(date: .abbreviated, time: .shortened))
-                .monospacedDigit()
-                .multilineTextAlignment(.trailing)
-        }
-        .font(UtilityStyle.bodyFont)
-        .foregroundStyle(succeeded ? UtilityStyle.successColor : UtilityStyle.warningColor)
-        .accessibilityElement(children: .combine)
+        ConnectionCheckTimestamp(date: date,
+            symbol: succeeded ? "checkmark.circle.fill" : "exclamationmark.circle.fill",
+            color: succeeded ? UtilityStyle.successColor : UtilityStyle.warningColor)
     }
 
     private func milliseconds(_ value: Double?) -> String {
         value.map { "\($0.formatted(.number.precision(.fractionLength(1)))) ms" } ?? "Not Available"
+    }
+    private func elapsedTime(_ seconds: Double) -> String {
+        let whole = max(0, Int(seconds.rounded(.down)))
+        return String(format: "%d:%02d", whole / 60, whole % 60)
     }
     private func rpm(_ value: Double?) -> String {
         value.map { "\($0.formatted(.number.precision(.fractionLength(0)))) RPM" } ?? "Not Available"

@@ -40,15 +40,40 @@ enum UtilityStyle {
         static let infoWidth: CGFloat = 280
     }
 
+    enum Chart {
+        static let summaryColumnWidth: CGFloat = 400
+        static let selectionColor = Color.secondary.opacity(0.55)
+        static let legendSize: CGFloat = 8
+        static let hiddenLegendOpacity: Double = 0.4
+    }
+
     enum History {
         static let metricSpacing: CGFloat = 4
         static let chartHeight: CGFloat = 200
         static let downloadColor = UsageChartPresentation.downloadColor
         static let uploadColor = UsageChartPresentation.uploadColor
-        static let selectionColor = Color.secondary.opacity(0.55)
         static let symbolSize: CGFloat = 18
-        static let legendSize: CGFloat = 8
         static let axisTickCount = 5
+    }
+
+    enum Stability {
+        static let tooltipWidth: CGFloat = 180
+        static let chartHeight: CGFloat = 220
+        static let lineWidth: CGFloat = 2
+        static let pointSize: CGFloat = 18
+        static let missPointSize: CGFloat = 24
+        static let laneFraction: Double = 0.14
+        static let missLaneOffsets: [Double] = [0.65, 1.35]
+        static let missLaneLowerBound: Double = 1.7
+        static let axisTickCount = 4
+        static let legendMarkWidth: CGFloat = 24
+        static let gapColor = Color.secondary.opacity(0.12)
+        static let laneColor = Color.secondary.opacity(0.5)
+        static let transitionColor = Color.primary.opacity(0.42)
+        static let firstSeriesColor = Color.primary.opacity(0.88)
+        static let secondSeriesColor = Color.secondary.opacity(0.72)
+        static let firstSeriesDash: [CGFloat] = []
+        static let secondSeriesDash: [CGFloat] = [5, 3]
     }
 
     enum Window {
@@ -113,6 +138,17 @@ struct UtilityScrollContent<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(UtilityStyle.pagePadding)
         }
+        .overlayPreferenceValue(UtilityInfoTooltipPreference.self) { tooltips in
+            GeometryReader { geometry in
+                if let tooltip = tooltips.last {
+                    UtilityInfoTooltipOverlay(message: tooltip.message, anchor: geometry[tooltip.anchor],
+                                              viewport: geometry.size)
+                        .id(tooltip.id)
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
     }
 }
 
@@ -121,14 +157,17 @@ struct UtilityPanel<Content: View>: View {
     let action: AnyView?
     let info: String?
     let showsContent: Bool
+    let wrapsContent: Bool
     let content: Content
 
     init(_ title: String, action: AnyView? = nil, info: String? = nil, showsContent: Bool = true,
+         wrapsContent: Bool = true,
          @ViewBuilder content: () -> Content) {
         self.title = title
         self.action = action
         self.info = info
         self.showsContent = showsContent
+        self.wrapsContent = wrapsContent
         self.content = content()
     }
 
@@ -158,15 +197,52 @@ struct UtilityPanel<Content: View>: View {
             }
             .frame(minHeight: UtilityStyle.headerHeight)
             if showsContent {
-                VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
-                    content
+                if wrapsContent {
+                    panelContent
+                        .padding(UtilityStyle.cardPadding)
+                        .utilityCardBackground()
+                } else {
+                    panelContent
                 }
-                .font(UtilityStyle.bodyFont)
-                .padding(UtilityStyle.cardPadding)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .utilityCardBackground()
             }
         }
+    }
+
+    private var panelContent: some View {
+        VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) { content }
+            .font(UtilityStyle.bodyFont)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct UtilityChartEmptyState: View {
+    let height: CGFloat
+
+    var body: some View {
+        Text("Choose A Series To Show")
+            .font(UtilityStyle.metadataFont)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .frame(height: height)
+    }
+}
+
+struct UtilityChartLegendButton<Content: View>: View {
+    let title: String
+    @Binding var isVisible: Bool
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        Button { isVisible.toggle() } label: {
+            content()
+                .contentShape(Rectangle())
+                .opacity(isVisible ? 1 : UtilityStyle.Chart.hiddenLegendOpacity)
+        }
+        .buttonStyle(.plain)
+        .handPointer()
+        .accessibilityLabel(title)
+        .accessibilityValue(isVisible ? "Shown" : "Hidden")
+        .accessibilityHint(isVisible ? "Hide from chart" : "Show in chart")
     }
 }
 
@@ -192,29 +268,96 @@ struct UtilityTooltip<Content: View>: View {
 
 struct UtilityInfoTooltip: View {
     let message: String
+    @State private var id = UUID()
     @State private var isHovered = false
 
     var body: some View {
         Image(systemName: "info.circle")
             .font(UtilityStyle.metadataFont)
             .foregroundStyle(.secondary)
-            .overlay(alignment: .bottomLeading) {
-                if isHovered {
-                    UtilityTooltip {
-                        Text(message)
-                            .font(UtilityStyle.metadataFont)
-                            .foregroundStyle(.primary)
-                            .frame(width: UtilityStyle.Tooltip.infoWidth, alignment: .leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
-                    .offset(y: -UtilityStyle.Tooltip.spacing)
-                    .zIndex(1)
-                }
+            .anchorPreference(key: UtilityInfoTooltipPreference.self, value: .bounds) { anchor in
+                isHovered ? [UtilityInfoTooltipAnchor(id: id, message: message, anchor: anchor)] : []
             }
             .onHover { isHovered = $0 }
             .accessibilityLabel("More information")
             .accessibilityHint(message)
+    }
+}
+
+private struct UtilityInfoTooltipAnchor {
+    let id: UUID
+    let message: String
+    let anchor: Anchor<CGRect>
+}
+
+private struct UtilityInfoTooltipPreference: PreferenceKey {
+    static var defaultValue: [UtilityInfoTooltipAnchor] { [] }
+
+    static func reduce(value: inout [UtilityInfoTooltipAnchor], nextValue: () -> [UtilityInfoTooltipAnchor]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
+private struct UtilityInfoTooltipOverlay: View {
+    let message: String
+    let anchor: CGRect
+    let viewport: CGSize
+    @State private var size: CGSize = .zero
+
+    private var margin: CGFloat { UtilityStyle.Tooltip.padding }
+
+    private var center: CGPoint {
+        let x = min(max(anchor.midX, margin + size.width / 2), viewport.width - margin - size.width / 2)
+        let above = anchor.minY - UtilityStyle.Tooltip.spacing - size.height / 2
+        let below = anchor.maxY + UtilityStyle.Tooltip.spacing + size.height / 2
+        let preferred = above - size.height / 2 >= margin ? above : below
+        let y = min(max(preferred, margin + size.height / 2), viewport.height - margin - size.height / 2)
+        return CGPoint(x: x, y: y)
+    }
+
+    var body: some View {
+        if anchor.intersects(CGRect(origin: .zero, size: viewport)) {
+            UtilityTooltip {
+                Text(message)
+                    .font(UtilityStyle.metadataFont)
+                    .foregroundStyle(.primary)
+                    .frame(width: max(0, min(UtilityStyle.Tooltip.infoWidth,
+                        viewport.width - 2 * margin - 2 * UtilityStyle.Tooltip.padding)), alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .fixedSize()
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
+            .position(center)
+            .opacity(size == .zero ? 0 : 1)
+        }
+    }
+}
+
+struct UtilityMetricRow: View {
+    let title: String
+    let value: String
+    var detail: String? = nil
+    var explanation: String? = nil
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.contentSpacing) {
+            HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.Tooltip.spacing) {
+                Text(title).foregroundStyle(.secondary)
+                if let explanation {
+                    UtilityInfoTooltip(message: explanation)
+                }
+            }
+            Spacer(minLength: UtilityStyle.contentSpacing)
+            HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.contentSpacing) {
+                Text(value).monospacedDigit().multilineTextAlignment(.trailing).textSelection(.enabled)
+                if let detail {
+                    Text("· \(detail)").font(UtilityStyle.metadataFont).foregroundStyle(.secondary)
+                }
+            }
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .font(UtilityStyle.bodyFont)
+        .accessibilityElement(children: .combine)
     }
 }
 

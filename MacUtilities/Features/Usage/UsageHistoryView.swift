@@ -7,6 +7,8 @@ struct UsageHistoryView: View {
     @State private var selectedKey: String?
     @State private var hoveredKey: String?
     @State private var confirmClear = false
+    @State private var showDownloads = true
+    @State private var showUploads = true
 
     private var days: [UsageHistoryDay] {
         UsageHistory.days(records: monitor.historyRecords, range: range,
@@ -14,12 +16,16 @@ struct UsageHistoryView: View {
     }
 
     private var inspectedDay: UsageHistoryDay? {
+        guard showDownloads || showUploads else { return nil }
         let key = hoveredKey ?? selectedKey
         return days.first(where: { $0.dayKey == key })
     }
 
     private var totals: InterfaceByteCount { UsageHistory.totals(days) }
-    private var maximumBytes: UInt64 { days.compactMap { $0.record?.combined }.max() ?? 0 }
+    private func visibleBytes(_ record: DailyUsageRecord) -> UInt64 {
+        UsageHistory.add(showDownloads ? record.downloaded : 0, showUploads ? record.uploaded : 0)
+    }
+    private var maximumBytes: UInt64 { days.compactMap { $0.record.map(visibleBytes) }.max() ?? 0 }
     private var scale: Double { UsageChartPresentation.scale(maximumBytes: maximumBytes, unit: monitor.dataUnit) }
     private var scaleLabel: String { UsageChartPresentation.scaleLabel(scale: scale, unit: monitor.dataUnit) }
 
@@ -49,7 +55,11 @@ struct UsageHistoryView: View {
             VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
                 UtilityPanel("Daily Usage") {
                     legend
-                    chart
+                    if showDownloads || showUploads {
+                        chart
+                    } else {
+                        UtilityChartEmptyState(height: UtilityStyle.History.chartHeight)
+                    }
                     if monitor.historyRecords.isEmpty {
                         Text("No history yet. Usage appears as readings are collected.")
                             .font(UtilityStyle.helpFont).foregroundStyle(.secondary)
@@ -69,6 +79,8 @@ struct UsageHistoryView: View {
         .environment(\.timeZone, monitor.historyCalendar.timeZone)
         .onChange(of: range) { _, _ in resetSelectionIfNeeded() }
         .onChange(of: days.map(\.dayKey)) { _, _ in resetSelectionIfNeeded() }
+        .onChange(of: showDownloads) { _, _ in resetSelectionIfNeeded() }
+        .onChange(of: showUploads) { _, _ in resetSelectionIfNeeded() }
         .sheet(isPresented: $confirmClear) { clearConfirmation }
     }
 
@@ -87,9 +99,9 @@ struct UsageHistoryView: View {
                 if let record = day.record {
                     Grid(alignment: .leading, horizontalSpacing: UtilityStyle.contentSpacing,
                          verticalSpacing: UtilityStyle.Tooltip.spacing) {
-                        tooltipMetric("Downloaded", bytes: record.downloaded)
-                        tooltipMetric("Uploaded", bytes: record.uploaded)
-                        tooltipMetric("Combined", bytes: record.combined)
+                        if showDownloads { tooltipMetric("Downloaded", bytes: record.downloaded) }
+                        if showUploads { tooltipMetric("Uploaded", bytes: record.uploaded) }
+                        if showDownloads && showUploads { tooltipMetric("Combined", bytes: record.combined) }
                     }
                 } else {
                     Text("No Data").foregroundStyle(.secondary)
@@ -113,21 +125,25 @@ struct UsageHistoryView: View {
         Chart {
             ForEach(days) { day in
                 if let record = day.record {
-                    BarMark(x: .value("Day", day.dayKey), y: .value("Usage", Double(record.downloaded) / scale))
-                        .foregroundStyle(by: .value("Direction", "Downloaded"))
-                        .accessibilityLabel("\(day.date.formatted(date: .abbreviated, time: .omitted)), Downloaded")
-                        .accessibilityValue(formatted(record.downloaded))
-                    BarMark(x: .value("Day", day.dayKey), y: .value("Usage", Double(record.uploaded) / scale))
-                        .foregroundStyle(by: .value("Direction", "Uploaded"))
-                        .accessibilityLabel("\(day.date.formatted(date: .abbreviated, time: .omitted)), Uploaded")
-                        .accessibilityValue(formatted(record.uploaded))
-                    if record.combined == 0 {
+                    if showDownloads {
+                        BarMark(x: .value("Day", day.dayKey), y: .value("Usage", Double(record.downloaded) / scale))
+                            .foregroundStyle(by: .value("Direction", "Downloaded"))
+                            .accessibilityLabel("\(day.date.formatted(date: .abbreviated, time: .omitted)), Downloaded")
+                            .accessibilityValue(formatted(record.downloaded))
+                    }
+                    if showUploads {
+                        BarMark(x: .value("Day", day.dayKey), y: .value("Usage", Double(record.uploaded) / scale))
+                            .foregroundStyle(by: .value("Direction", "Uploaded"))
+                            .accessibilityLabel("\(day.date.formatted(date: .abbreviated, time: .omitted)), Uploaded")
+                            .accessibilityValue(formatted(record.uploaded))
+                    }
+                    if (showDownloads || showUploads) && visibleBytes(record) == 0 {
                         PointMark(x: .value("Day", day.dayKey), y: .value("Usage", 0))
                             .symbol(.square).symbolSize(UtilityStyle.History.symbolSize)
                             .foregroundStyle(UtilityStyle.History.downloadColor)
-                            .accessibilityLabel("\(day.dayKey), recorded zero usage")
+                            .accessibilityLabel("\(day.dayKey), \(zeroUsageLabel)")
                     }
-                } else {
+                } else if showDownloads || showUploads {
                     PointMark(x: .value("Day", day.dayKey), y: .value("Usage", 0))
                         .symbol(.circle).symbolSize(UtilityStyle.History.symbolSize)
                         .foregroundStyle(UtilityStyle.History.uploadColor)
@@ -136,7 +152,7 @@ struct UsageHistoryView: View {
             }
             if let day = inspectedDay {
                 RuleMark(x: .value("Selected Day", day.dayKey))
-                    .foregroundStyle(UtilityStyle.History.selectionColor)
+                    .foregroundStyle(UtilityStyle.Chart.selectionColor)
                     .annotation(position: .top, alignment: .center, spacing: UtilityStyle.contentSpacing,
                                 overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
                         tooltip(for: day)
@@ -199,18 +215,25 @@ struct UsageHistoryView: View {
         return days.enumerated().compactMap { index, day in index % stride == 0 ? day.dayKey : nil }
     }
 
+    private var zeroUsageLabel: String {
+        if showDownloads && showUploads { return "recorded zero usage" }
+        return showDownloads ? "recorded zero downloaded usage" : "recorded zero uploaded usage"
+    }
+
     private var legend: some View {
         HStack(spacing: UtilityStyle.contentSpacing) {
-            legendItem("Downloaded", color: UtilityStyle.History.downloadColor)
-            legendItem("Uploaded", color: UtilityStyle.History.uploadColor)
+            legendItem("Downloaded", color: UtilityStyle.History.downloadColor, isVisible: $showDownloads)
+            legendItem("Uploaded", color: UtilityStyle.History.uploadColor, isVisible: $showUploads)
         }.font(UtilityStyle.metadataFont)
     }
 
-    private func legendItem(_ title: String, color: Color) -> some View {
-        HStack(spacing: UtilityStyle.History.metricSpacing) {
-            Rectangle().fill(color).frame(width: UtilityStyle.History.legendSize, height: UtilityStyle.History.legendSize)
-                .accessibilityHidden(true)
-            Text(title)
+    private func legendItem(_ title: String, color: Color, isVisible: Binding<Bool>) -> some View {
+        UtilityChartLegendButton(title: title, isVisible: isVisible) {
+            HStack(spacing: UtilityStyle.History.metricSpacing) {
+                Rectangle().fill(color).frame(width: UtilityStyle.Chart.legendSize, height: UtilityStyle.Chart.legendSize)
+                    .accessibilityHidden(true)
+                Text(title)
+            }
         }
     }
 

@@ -16,14 +16,21 @@ struct Mac_UtilitiesApp: App {
             monitor = UsageMonitor(stateURL: file, startAutomatically: false, readCounters: { [:] })
         } else {
             #if DEBUG
-            if CommandLine.arguments.contains("--usage-preview") {
-                monitor = Self.previewMonitor()
+            if CommandLine.arguments.contains("--usage-preview") || CommandLine.arguments.contains("--stability-preview") {
+                monitor = Self.previewMonitor(verificationOnly: CommandLine.arguments.contains("--stability-preview"))
             } else { monitor = UsageMonitor() }
             #else
             monitor = UsageMonitor()
             #endif
         }
         let diagnostics = ConnectionDiagnostics()
+        #if DEBUG
+        if !testing && CommandLine.arguments.contains("--stability-preview") {
+            diagnostics.showStabilityPreview(
+                unobserved: CommandLine.arguments.contains("--stability-preview-unobserved"),
+                sparse: CommandLine.arguments.contains("--stability-preview-sparse"))
+        }
+        #endif
         _monitor = StateObject(wrappedValue: monitor)
         _diagnostics = StateObject(wrappedValue: diagnostics)
         _utilityWindow = StateObject(wrappedValue: UtilityWindowCoordinator(diagnostics: diagnostics) { coordinator in
@@ -45,14 +52,16 @@ struct Mac_UtilitiesApp: App {
                 .onAppear {
                     appDelegate.utilityWindow = utilityWindow
                     appDelegate.monitor = monitor
+                    appDelegate.diagnostics = diagnostics
                 }
         }
         .menuBarExtraStyle(.window)
     }
 
     #if DEBUG
-    private static func previewMonitor() -> UsageMonitor {
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("usage-history-preview/today-usage.json")
+    private static func previewMonitor(verificationOnly: Bool = false) -> UsageMonitor {
+        let directory = verificationOnly ? "stability-check-preview" : "usage-history-preview"
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("\(directory)/today-usage.json")
         let calendar = UsageHistory.calendar()
         let date = Date()
         var state = PersistedUsage(schemaVersion: 3, localDayKey: UsageHistory.key(for: date), history: [])
@@ -63,6 +72,10 @@ struct Mac_UtilitiesApp: App {
                 firstObservedAt: day, lastObservedAt: day, isIncomplete: true)
         }
         try? UsageStateStore.saveState(state, at: file)
+        if verificationOnly {
+            return UsageMonitor(startAutomatically: false,
+                storagePaths: UsageStoragePaths(stateURL: file, isVerification: true), readCounters: { [:] })
+        }
         return UsageMonitor(stateURL: file, startAutomatically: false, readCounters: { [:] })
     }
     #endif
