@@ -48,6 +48,9 @@ enum UtilityStyle {
     }
 
     enum History {
+        static let summaryValueFont: Font = .title2.weight(.semibold)
+        static let summaryEmphasis = Color.primary.opacity(0.06)
+        static let summaryBorder = Color.primary.opacity(0.08)
         static let metricSpacing: CGFloat = 4
         static let chartHeight: CGFloat = 200
         static let downloadColor = UsageChartPresentation.downloadColor
@@ -155,15 +158,17 @@ struct UtilityScrollContent<Content: View>: View {
 struct UtilityPanel<Content: View>: View {
     let title: String
     let action: AnyView?
+    let subtitle: String?
     let info: String?
     let showsContent: Bool
     let wrapsContent: Bool
     let content: Content
 
-    init(_ title: String, action: AnyView? = nil, info: String? = nil, showsContent: Bool = true,
+    init(_ title: String, subtitle: String? = nil, action: AnyView? = nil, info: String? = nil, showsContent: Bool = true,
          wrapsContent: Bool = true,
          @ViewBuilder content: () -> Content) {
         self.title = title
+        self.subtitle = subtitle
         self.action = action
         self.info = info
         self.showsContent = showsContent
@@ -174,6 +179,9 @@ struct UtilityPanel<Content: View>: View {
     private var panelHeading: some View {
         HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.Tooltip.spacing) {
             Text(title).font(UtilityStyle.headingFont).accessibilityAddTraits(.isHeader)
+            if let subtitle {
+                Text(subtitle).font(UtilityStyle.metadataFont).foregroundStyle(.secondary)
+            }
             if let info {
                 UtilityInfoTooltip(message: info)
             }
