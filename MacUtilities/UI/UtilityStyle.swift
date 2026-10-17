@@ -3,8 +3,8 @@ import SwiftUI
 enum UtilityStyle {
     static let pagePadding: CGFloat = 20
     static let sectionSpacing: CGFloat = 24
-    static let contentSpacing: CGFloat = 12
-    static let cardPadding: CGFloat = 16
+    static let contentSpacing: CGFloat = 10
+    static let cardPadding: CGFloat = 12
     static let cornerRadius: CGFloat = 10
     static let headerHeight: CGFloat = 28
     static let helpWidth: CGFloat = 440
@@ -159,16 +159,18 @@ struct UtilityPanel<Content: View>: View {
     let title: String
     let action: AnyView?
     let subtitle: String?
+    let description: String?
     let info: String?
     let showsContent: Bool
     let wrapsContent: Bool
     let content: Content
 
-    init(_ title: String, subtitle: String? = nil, action: AnyView? = nil, info: String? = nil, showsContent: Bool = true,
+    init(_ title: String, subtitle: String? = nil, action: AnyView? = nil, description: String? = nil, info: String? = nil, showsContent: Bool = true,
          wrapsContent: Bool = true,
          @ViewBuilder content: () -> Content) {
         self.title = title
         self.subtitle = subtitle
+        self.description = description
         self.action = action
         self.info = info
         self.showsContent = showsContent
@@ -204,6 +206,15 @@ struct UtilityPanel<Content: View>: View {
                 }
             }
             .frame(minHeight: UtilityStyle.headerHeight)
+            if let description {
+                Text(description)
+                    .font(UtilityStyle.helpFont)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(UtilityStyle.cardPadding)
+                    .utilityCardBackground()
+            }
             if showsContent {
                 if wrapsContent {
                     panelContent

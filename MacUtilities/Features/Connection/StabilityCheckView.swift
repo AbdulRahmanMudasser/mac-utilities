@@ -9,7 +9,7 @@ struct StabilityCheckView: View {
             UtilityPanel("5-Minute Connection Check", action: AnyView(
                 Button("Start Check") { diagnostics.startStability() }
                     .buttonStyle(.bordered).disabled(diagnostics.isRunning).handPointer()
-            ), info: "Checks two servers every five seconds for five minutes. It shows reply times and missed replies. Short problems may happen between checks. Closing this window stops the check.",
+            ), description: "Checks two servers every five seconds for five minutes. It shows reply times and missed replies. Short problems may happen between checks. Closing this window stops the check.",
                showsContent: diagnostics.stabilitySnapshot != nil, wrapsContent: false) {
                 if let snapshot = diagnostics.stabilitySnapshot {
                     results(for: snapshot)
