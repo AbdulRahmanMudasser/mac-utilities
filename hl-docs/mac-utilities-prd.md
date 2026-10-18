@@ -124,7 +124,7 @@ Use this file for product goals, user needs, feature scope, acceptance expectati
 
 ### Delivery Phases
 
-Detailed phase plans and execution evidence live under `hl-docs/desktop/`.
+The current phase register and delivery status are tracked in the [Desktop Execution Workflow](./desktop/execution-workflow.md). Detailed phase plans and verification evidence live in the corresponding documents under `hl-docs/desktop/`.
 
 1. **Phase 00 - Root Project Foundation:** Establish the root-level Xcode app and local build workflow.
 2. **Phase 01 - Device Usage Counters:** Read interface counters, calculate rates, persist daily totals, and handle local-day boundaries and gaps.
@@ -134,6 +134,10 @@ Detailed phase plans and execution evidence live under `hl-docs/desktop/`.
 6. **Phase 05 - Connection Quality Checks:** Deliver and verify user-started endpoint latency/probe loss and responsiveness under load.
 7. **Phase 06 - Unified Utility Window:** Combine Connection and Settings in one responsive sidebar window with shared UI conventions.
 8. **Phase 07 - Usage History Chart:** Persist observed daily totals and add interactive date ranges and a chart to the shared utility window.
+9. **[Phase 08 - Shared Architecture Foundation](./desktop/phase-08-shared-architecture-foundation.md):** Establish reproducible project generation, clear source ownership, and safe shared usage storage without changing accounting.
+10. **[Phase 09 - Extended Stability Checks](./desktop/phase-09-extended-stability-checks.md):** Add a user-started five-minute connection check that distinguishes endpoint misses from sleep, unavailable paths, and other observation gaps.
+11. **[Phase 10 - Wireless Link Quality (Planned)](./desktop/phase-10-wireless-link-quality.md):** Add read-only Wi-Fi signal, noise, channel, and link-rate readings in Connection; separate implementation approval and environment checks remain required.
+12. **[Phase 11 - Configurable Usage Widget (Planned)](./desktop/phase-11-configurable-usage-widget.md):** Show saved daily usage in configurable medium and large macOS widgets, gated on separate implementation approval and signed extension/container verification.
 
 ## 8. Platform Scope
 
