@@ -21,7 +21,7 @@ Do not use this file for:
 
 * **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md)
 * **Usage History Contract:** The [PRD](../mac-utilities-prd.md) owns the product requirements; [Phase 07](./phase-07-usage-history-chart.md), especially Sections 6–8, records the detailed storage, accounting, interface and verification contracts. Earlier completed phases retain their historical scope.
-* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions. [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) and [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) remain Planned. The PRD records implemented behavior, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
+* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions; [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) is implemented and verified in a signed sandbox preview. [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) remains Planned. The PRD records product behavior and release state, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
 
 ## 3. Platform Baseline
 
@@ -65,16 +65,16 @@ Every completed phase must satisfy all of the following:
 
 ## 6. Current Active Phase
 
-* **Current Phase:** 09 - Extended Stability Checks
-* **Status:** Completed
+* **Current Phase:** 11 - Configurable Usage Widget
+* **Status:** Planned
 * **Owner:** TBD
-* **Linked Phase Doc:** [phase-09-extended-stability-checks.md](./phase-09-extended-stability-checks.md)
-* **Immediate Goal:** Phase 09's implementation, regression, signed runtime, installation and documentation gates are complete. Phase 10 is next in delivery order and remains Planned pending its own implementation approval.
-* **Current Blockers:** No Phase 09 blocker. Phase 11 must separately prove extension access. Per-app attribution remains deferred.
+* **Linked Phase Doc:** [phase-11-configurable-usage-widget.md](./phase-11-configurable-usage-widget.md)
+* **Immediate Goal:** Phase 10 implementation, regression, signed runtime, native layout and documentation gates are complete. Phase 11 is next and remains Planned pending separate implementation approval and signed extension/group verification.
+* **Current Blockers:** Phase 11 requires its own implementation approval and actual extension access proof. Per-app attribution remains deferred.
 
 ## 7. Ready Queue
 
-The current changes complete Phase 09 and apply shared interactive series legends to Usage and Reply Times. Phases 10 and 11 remain Planned, in that order; Wi-Fi and the usage widget do not depend on stability measurement data. Each requires its own implementation approval and environment checks.
+Phase 10 Wireless Link Quality is implemented and verified in a signed sandbox preview; the existing installed app was not replaced. Phase 11 Configurable Usage Widget is next and remains Planned pending its own implementation approval and signed extension/group checks. The widget does not depend on Wi-Fi or stability measurement data.
 
 ## 8. Phase Register
 
@@ -90,14 +90,14 @@ The current changes complete Phase 09 and apply shared interactive series legend
 | 07 | Usage History Chart | Completed | TBD | TBD | Phases 01, 06 | [phase-07-usage-history-chart.md](./phase-07-usage-history-chart.md) | Completed 2026-10-15 |
 | 08 | Shared Architecture Foundation | Completed | TBD | TBD | Phase 07; signed App Group access verified before data cutover | [phase-08-shared-architecture-foundation.md](./phase-08-shared-architecture-foundation.md) | Completed 2026-10-17 |
 | 09 | Extended Stability Checks | Completed | TBD | TBD | Phase 08 | [phase-09-extended-stability-checks.md](./phase-09-extended-stability-checks.md) | Completed 2026-10-17 |
-| 10 | Wireless Link Quality | Planned | TBD | TBD | Phase 08; delivery follows Phase 09 | [phase-10-wireless-link-quality.md](./phase-10-wireless-link-quality.md) | TBD |
+| 10 | Wireless Link Quality | Completed | TBD | TBD | Phase 08; delivery follows Phase 09 | [phase-10-wireless-link-quality.md](./phase-10-wireless-link-quality.md) | Completed 2026-10-20 |
 | 11 | Configurable Usage Widget | Planned | TBD | TBD | Phase 08; delivery follows Phase 10; signed extension/group access | [phase-11-configurable-usage-widget.md](./phase-11-configurable-usage-widget.md) | TBD |
 
 ## 9. Blockers And Risks
 
 ### Active Blockers
 
-- Phases 10–11 have passed planning review but remain unimplemented; readiness depends on their own environment and signed-runtime gates.
+- Phase 11 is the next planned phase and awaits its separate implementation approval and signed extension/group access proof.
 - Host App Group access is verified, and the sole installation's history is in the canonical container. Phase 11 must additionally verify actual extension access before widget rollout.
 
 ### Execution Risks

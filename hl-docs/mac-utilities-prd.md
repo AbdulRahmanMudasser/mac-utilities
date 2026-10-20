@@ -9,10 +9,10 @@ Use this file for product goals, user needs, feature scope, acceptance expectati
 ## 2. Executive Summary
 
 * **Product Name:** Mac Utilities
-* **One-Sentence Summary:** A native macOS menu bar utility for live device-wide network activity, today's data totals, interactive usage history, and user-started connection checks.
-* **Problem Statement:** macOS does not provide the owner with a compact view of current network rates, today's data use, and recent daily usage. The app makes those device-wide measurements available without changing network traffic.
+* **One-Sentence Summary:** A native macOS menu bar utility for live device-wide network activity, today's data totals, interactive usage history, local Wi-Fi link readings, and user-started connection checks.
+* **Problem Statement:** macOS does not provide the owner with a compact view of current network rates, today's data use, recent daily usage and local Wi-Fi reception. The app presents those observations without changing network traffic.
 * **Target Audience:** The owner of the target MacBook, using a personal developer-installed build.
-* **Primary Outcome:** The user can see live network activity and observed daily usage, explore saved daily totals across calendar ranges, and run manual connection-quality checks.
+* **Primary Outcome:** The user can see live network activity and observed daily usage, explore saved daily totals across calendar ranges, inspect local Wi-Fi link quality, and run manual connection checks.
 
 ## 3. Goals And Non-Goals
 
@@ -26,6 +26,7 @@ Use this file for product goals, user needs, feature scope, acceptance expectati
 - Show whether device-counter monitoring is active or unavailable; do not offer a pause/resume control.
 - Persist daily aggregates locally, keep diagnostic results in the current app session, and allow existing connections through normally.
 - Offer manual endpoint latency/probe-loss and responsiveness-under-load checks with clear measurement boundaries and cancellation.
+- Show read-only Wi-Fi signal, noise, channel and link rate in Connection while that section is visible.
 - Keep today's counter reset independent from saved chart history, and let the user clear history separately.
 
 ### Non-Goals
@@ -94,6 +95,7 @@ Use this file for product goals, user needs, feature scope, acceptance expectati
 3. Run Speed Test in Internet Speed While Busy explains in simple English that it sends/receives data, can slow the connection, and contributes to observed usage. Only Start Test begins that traffic.
 4. The window displays Apple's reported baseline latency, median HTTP delays during download/upload, directional RPM, and capacities. Cancel or closing the window stops a running check; results are not retained across an app restart.
 5. 5-Minute Connection Check runs for five minutes with no duration selector. Start Check samples both endpoints every five seconds and shows reply changes, confirmed missed test replies and separately labeled unobserved periods. Navigation preserves work; Cancel or closing the window stops it and retains partial results for this app session.
+6. The Wi-Fi Signal And Link panel shows current signal, noise, channel and Wi-Fi link rate while Connection is visible. Its visible explanation helps the user compare local wireless reception near the router and elsewhere without running an internet speed test or sharing the Wi-Fi name.
 
 ## 7. Feature Scope
 
@@ -109,6 +111,7 @@ Use this file for product goals, user needs, feature scope, acceptance expectati
 - User-started latency/probe-loss checks for Google and Cloudflare, with separate HTTPS fallback results.
 - Explicitly started five-minute connection checks with a live sampled timeline, endpoint summaries and sleep/network/scheduler gaps.
 - Opt-in responsiveness-under-load checks, impact disclosure, cancellation, bounded runtime, and transient results in a compact monochrome window.
+- A passive Wi-Fi Signal And Link panel with optional signal/noise/channel/link-rate readings, a visible reception-comparison purpose and a five-second refresh only while Connection is visible.
 - User-visible section, metric, status, and control labels use Title Case.
 
 ### Out Of Scope
@@ -121,6 +124,7 @@ Use this file for product goals, user needs, feature scope, acceptance expectati
 - Remote dashboards, syncing, sharing, or telemetry upload.
 - A generalized installer, managed fleet deployment, or public app-store release.
 - Support for Macs beyond the named MacBook and its installed macOS version/architecture.
+- Wi-Fi identity, Location permission, network scans or wireless configuration changes.
 
 ### Delivery Phases
 
@@ -136,7 +140,7 @@ The current phase register and delivery status are tracked in the [Desktop Execu
 8. **Phase 07 - Usage History Chart:** Persist observed daily totals and add interactive date ranges and a chart to the shared utility window.
 9. **[Phase 08 - Shared Architecture Foundation](./desktop/phase-08-shared-architecture-foundation.md):** Establish reproducible project generation, clear source ownership, and safe shared usage storage without changing accounting.
 10. **[Phase 09 - Extended Stability Checks](./desktop/phase-09-extended-stability-checks.md):** Add a user-started five-minute connection check that distinguishes endpoint misses from sleep, unavailable paths, and other observation gaps.
-11. **[Phase 10 - Wireless Link Quality (Planned)](./desktop/phase-10-wireless-link-quality.md):** Add read-only Wi-Fi signal, noise, channel, and link-rate readings in Connection; separate implementation approval and environment checks remain required.
+11. **[Phase 10 - Wireless Link Quality (Implemented And Verified; Target Installation Pending)](./desktop/phase-10-wireless-link-quality.md):** Add read-only Wi-Fi signal, noise, channel, and link-rate readings in Connection. Signed sandbox runtime and native layout checks passed; the existing installed app was not replaced.
 12. **[Phase 11 - Configurable Usage Widget (Planned)](./desktop/phase-11-configurable-usage-widget.md):** Show saved daily usage in configurable medium and large macOS widgets, gated on separate implementation approval and signed extension/container verification.
 
 ## 8. Platform Scope
@@ -150,7 +154,7 @@ Use the standard repository root folder names when describing platform surfaces:
 
 * **Backend Service:** None. Monitoring and aggregation are local to the MacBook.
 * **Web Application:** None.
-* **Other Surfaces:** The native macOS menu bar application and popover; a shared Mac Utilities window with Connection, Usage, and Settings sections; a device interface-counter sampler; system diagnostic tools; and local current-day and daily-history storage. Manual checks use public endpoint services; the project operates no backend and installs no Network Extension.
+* **Other Surfaces:** The native macOS menu bar application and popover; a shared Mac Utilities window with Connection, Usage, and Settings sections; device interface-counter sampling; a read-only CoreWLAN client for transient Wi-Fi link readings; system diagnostic tools; and local current-day and daily-history storage. Manual checks use public endpoint services; the project operates no backend and installs no Network Extension.
 
 ## 9. Functional Requirements
 
@@ -162,7 +166,7 @@ Use the standard repository root folder names when describing platform surfaces:
 - **FR-6 Collection State:** Show collection status in a compact row in Settings. Put the current local time zone in General beside Start At Login. Do not provide a Readiness section, monitoring switch, or pause state. Do not display a Partial badge or historical pause/incomplete-collection messages; displayed totals are observed traffic and are not guaranteed full-day coverage.
 - **FR-7 Controls And Preferences:** Provide Start At Login, Mbps or MB/s rate display, and MB/GB or MiB/GiB data display. Reset Today's Counters is in the popover footer, outside the totals card; it resets only today's counters and preserves saved history. Provide a separate, confirmed Clear History action in Usage that leaves today's counters unchanged. About is one icon/name/version row; the Privacy section and Network Activity subtitle are absent. The popover Settings control is labeled `Settings` and opens or foregrounds the shared Mac Utilities window on Settings.
 - **FR-8 App-Level Data Scope:** Do not display per-app rates, totals, rankings, icons, or System/Unattributed values in the initial release. Do not show an attribution placeholder or represent missing app data as zero. Reconsider this scope only after a low-impact, macOS-supported measurement and local handoff path is proven on the target machine.
-- **FR-9 Traffic Behavior And Privacy:** Observe device counters locally without blocking, proxying, or modifying other connections. Persist current-day aggregates, daily history, interface baselines and preferences locally. Manual connection checks send synthetic traffic to test services and keep results in the app session; temporary tool output is removed after processing. Do not collect app identity, browsing payloads, destinations of other apps, or remote telemetry. Test bytes contribute to observed usage while the app is open and collecting.
+- **FR-9 Traffic Behavior And Privacy:** Observe device counters locally without blocking, proxying, or modifying other connections. Persist current-day aggregates, daily history, interface baselines and preferences locally. Manual connection checks send synthetic traffic to test services and keep results in the app session; temporary tool output is removed after processing. Do not collect app identity, browsing payloads, destinations of other apps, or remote telemetry. Test bytes contribute to observed usage while the app is open and collecting. Wi-Fi link readings stay transient in memory; do not collect SSID/BSSID, location, scan results or wireless configuration.
 - **FR-10 Title Case Labels:** Use Title Case for all user-visible section, metric, status, and control labels.
 - **FR-11 Endpoint Latency And Probe Loss:** Run ten ICMP probes per endpoint, one second apart, against Google 8.8.8.8 and Cloudflare 1.1.1.1. Keep the introduction short and refer to the two servers without naming providers; result groups retain endpoint identity. Use matching endpoint cards and rows: Replies combines received and missed counts as `3 of 3 received · 0 missed (0%)`; follow with Typical Reply Time (median RTT), Fastest / Slowest (minimum/maximum RTT, with the unit once) and Reply Time Changes (mean absolute change between adjacent successful RTT samples). Never infer universal internet loss from one destination. When no replies or an ICMP failure occurs, show Web Check and Web Reply Time separately for HTTPS reachability and total request timing.
 - **FR-12 Responsiveness Under Load:** Start Apple's networkQuality check only after the user accepts the short, simple-English disclosure that data use varies, the test can slow the connection, and its traffic counts toward Today's Usage while collection is running. State the one-minute time limit and that the user can cancel. Show Reply Time Before The Test, Reply Time While Downloading/Uploading (median loaded HTTP samples with reading counts), Download/Upload Response Score in RPM, Download/Upload Speed in Mbps, and Network Used. Explain RPM as replies per minute. Keep loaded reply times and reading counts on one line, with counts in smaller secondary text. Resolve Network Used through macOS interface display names; retain `Network Interface (<identifier>)` for unknown identifiers and Not Reported for an absent identifier. Omit generic post-result explanation paragraphs. Unreported metrics remain Not Available; failed measurements never become zero or a success state. Limit the process runtime to one minute.
@@ -170,6 +174,7 @@ Use the standard repository root folder names when describing platform surfaces:
 - **FR-14 Usage History:** Store observed daily download/upload totals locally. This Month runs from the first day of the current local month through today; 30 Days, 15 Days and 7 Days cover that many local calendar days including today. Display downloaded, uploaded and combined range totals above a stacked daily chart, using individually bordered horizontal metric tiles that wrap into two columns at compact widths, without an enclosing summary card. Show the selected date range in parentheses after the Usage Summary heading, using secondary caption text and two-digit years. Include a selection-labeled average of observed combined traffic per calendar day in the selected range (7, 15, 30, or days elapsed this month), with each tile showing its icon and title inline above the figure. Missing days remain unknown on the chart. Hovering a day shows a compact tooltip above the selected bar; clicking pins it, left/right arrow keys change the selected day, and Escape dismisses it. Downloaded and Uploaded legend buttons toggle their chart series; visible directions control chart scaling and selected-day details, while range totals remain complete. Keep the legend visible when both are hidden and replace the plot with “Choose A Series To Show,” without chart axes behind the message. Date labels have no axis tick marks, and there is no permanent selected-day details panel. Show missing days as No Data and distinguish them from recorded zero use. Reset Today's Counters preserves today's accumulated chart history. Clear History requires confirmation, removes saved history, and does not change today's counters. Retain records until the user explicitly clears them; do not set allowances, thresholds, limits, or alerts.
 
 - **FR-15 Extended Stability Checks:** In Connection, offer a fixed 5-Minute Connection Check with one Start Check button and no duration selection. Send at most one bounded ICMP probe per endpoint every five seconds; run no load test or repeated HTTPS fallback. The five-minute limit includes sleep and unavailable-network time. Use matching Google and Cloudflare cards and the shared reply-metric rows: Replies combines received and missed counts, followed by Typical Reply Time, Fastest / Slowest and Reply Time Changes. Count missed replies over completed checks only. Show checks with no result separately from stopped checks when present; do not render “Waiting For Network” as a separate summary row. Missing, interrupted or invalid observations are not packet loss or zero RTT. Distinguish sleep, unavailable paths, observed interface changes and scheduler delays; union overlapping gaps in coverage totals. Place the compact accessible Reply Times chart in its own shared panel, with distinct server markers and a visible miss-marker lane. Its legend toggles endpoint and context series; hidden items are dimmed, excluded from chart inspection/scaling, and can all be hidden without leaving axes behind the empty-state message. Preserve results across navigation/window reopening within the app session. Closing, cancelling or quitting stops and reaps children; termination rejects new starts and waits for cleanup. Keep live elapsed/remaining time, missed duration and Cancel in the fixed footer, with no duplicate elapsed label below the chart. Show the shared Last Checked row after completion. Results describe the tested endpoints and can miss events between samples; they do not prove universal outages or continuous connectivity. The speed test retains its separate one-minute limit. Exact scheduling and coverage rules belong to [Phase 09 Section 6](./desktop/phase-09-extended-stability-checks.md).
+- **FR-16 Wireless Link Quality:** Show current Wi-Fi signal and noise in dBm, channel with available band/width, and interface transmit rate labeled Wi-Fi Link Rate in Mbps. Use the client-vended default interface from one long-lived CoreWLAN client; refresh immediately and every five seconds only while Connection is visible, and stop when it is hidden, closed or the app is terminating. Treat zero measurement sentinels and absent/unknown readings as unavailable; preserve valid partial readings and do not show stale values after failures or interface changes. Keep the readings transient in memory and independent from usage storage and diagnostic activity. Never collect SSID/BSSID or location, scan, associate, or change Wi-Fi configuration, and do not request Location permission. Explain that link rate is not internet transfer speed and that Wi-Fi may not carry the current internet route. Detailed API and lifecycle rules belong to [Phase 10 Section 6](./desktop/phase-10-wireless-link-quality.md).
 
 ## 10. Acceptance Criteria
 
@@ -193,6 +198,8 @@ Use the standard repository root folder names when describing platform surfaces:
 - The signed app runs a real sequential load test and displays reported metrics, including loaded latency sample arrays, without fabricating absent values.
 - Load-test disclosure precedes transfer. Cancellation and closing the window stop the process and prevent late results from replacing cancelled state.
 - Diagnostics use consistent Last Checked rows, retain separate timestamps and do not interrupt device-counter sampling; test traffic contributes to observed totals while the app is open and collecting.
+- Connection shows transient Wi-Fi signal/noise, channel and Wi-Fi Link Rate with explicit units; five-second refresh runs only while the Connection surface is visible.
+- A signed sandboxed build reads current CoreWLAN metrics on the target without a Location prompt; Wi-Fi readings do not enter canonical usage storage or the usage widget projection.
 
 ## 11. Success Metrics
 
@@ -203,6 +210,7 @@ Use the standard repository root folder names when describing platform surfaces:
   - Range totals and chart details agree with the locally saved daily records; resetting today does not erase history.
   - Rates respond to inbound and outbound byte-counter deltas with no fabricated app attribution.
   - Manual checks expose interpretable endpoint results and measured responsiveness with working cancellation and explicit unavailable measurements.
+  - The signed sandboxed build displays optional local Wi-Fi link readings without collecting Wi-Fi identity or requesting location access.
 * **Measurement Window:** Functional verification during local development and personal use on the target MacBook. No analytics telemetry is collected.
 
 ## 12. Assumptions
@@ -223,6 +231,7 @@ Use the standard repository root folder names when describing platform surfaces:
 - Device-level interface counters accessible to the app on the target macOS version.
 - Writable App Group storage, authorized by a matching local development signature, for the current-day totals and daily history snapshot. XcodeGen 2.46.0 and the ignored local signing configuration reproduce the personal build.
 - System ping/networkQuality tools, the app's network client/server sandbox entitlements for sending tests and receiving datagram replies, and reachable public test services. The app opens no listening service.
+- Apple's CoreWLAN framework for local, read-only Wi-Fi link measurements; the supported client-vended access path requires no Location permission or Wi-Fi identity collection.
 - A macOS-supported flow-report handoff and source-app identity method are future prerequisites only if app attribution is reconsidered.
 
 ## 14. Risks And Open Questions
