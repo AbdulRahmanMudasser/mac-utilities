@@ -47,6 +47,23 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
     @Published var selection: UtilitySection = .connection {
         didSet { updateWiFiVisibility() }
     }
+    @Published private(set) var usageRequest: UsagePresentationRequest?
+
+    struct UsagePresentationRequest: Equatable {
+        let range: UsageHistoryRange
+        let generation: UUID
+    }
+
+    func consumeUsageRequest(_ generation: UUID) {
+        if usageRequest?.generation == generation { usageRequest = nil }
+    }
+
+    func presentUsage(range: UsageHistoryRange) {
+        guard !hasShutDown else { return }
+        usageRequest = UsagePresentationRequest(range: range, generation: UUID())
+        present(.usage)
+    }
+
     weak var menuBarPopoverWindow: NSWindow?
     private(set) var window: NSWindow?
     private let diagnostics: ConnectionDiagnostics

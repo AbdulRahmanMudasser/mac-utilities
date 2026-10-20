@@ -20,6 +20,15 @@ nonisolated enum UsageHistoryRange: String, CaseIterable, Identifiable, Sendable
 
     var id: Self { self }
 
+    var averageTitle: String {
+        switch self {
+        case .thisMonth: "Month Average"
+        case .sevenDays: "7 Day Average"
+        case .fifteenDays: "15 Day Average"
+        case .thirtyDays: "30 Day Average"
+        }
+    }
+
     func dates(through now: Date, calendar: Calendar = UsageHistory.calendar()) -> [Date] {
         let today = calendar.startOfDay(for: now)
         let count: Int

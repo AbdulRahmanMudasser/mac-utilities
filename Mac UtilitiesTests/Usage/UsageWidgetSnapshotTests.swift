@@ -19,6 +19,23 @@ struct UsageWidgetSnapshotTests {
             uploaded: uploaded, firstObservedAt: day.addingTimeInterval(-10), lastObservedAt: day, isIncomplete: false)
     }
 
+    @Test func nearLimitEnvelopeReadsOnlyProjection() throws {
+        let snapshot = try UsageSnapshotPublisher.snapshot(for: PersistedUsage(schemaVersion: 3,
+            localDayKey: "2026-10-17", history: [record(offset: 0)]), at: date, unit: .decimal, calendar: calendar)
+        var envelope = PersistedUsage(schemaVersion: 3, localDayKey: "2026-10-17",
+            timeZoneIdentifier: "GMT", incompleteReason: "", history: snapshot.records, widgetSnapshot: snapshot)
+        let overhead = try UsageStateStore.encoded(envelope).count
+        envelope.incompleteReason = String(repeating: "x", count: UsageStorageLimits.maximumEnvelopeBytes - overhead)
+        let data = try UsageStateStore.encoded(envelope)
+        #expect(data.count == UsageStorageLimits.maximumEnvelopeBytes)
+        #expect(try UsageWidgetSnapshotReader.decode(data) == snapshot)
+        let directory = try fixtureDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("near-limit.json")
+        try UsageStateStore.saveState(envelope, at: file)
+        #expect(try UsageWidgetSnapshotReader.read(at: file) == snapshot)
+    }
+
     @Test func boundedProjectionUsesCurrentCalendarWindowAndKeepsObservedZero() throws {
         let records = (-40...4).map { record(offset: $0, downloaded: $0 == -1 ? 0 : 100, uploaded: 0) }
         let state = PersistedUsage(schemaVersion: 3, localDayKey: "2026-10-17", history: records)
@@ -133,6 +150,11 @@ struct UsageWidgetSnapshotTests {
         state.schemaVersion = 99
         #expect(throws: (any Error).self) { try UsageWidgetSnapshotReader.decode(UsageStateStore.encoded(state)) }
         var invalid = good
+        invalid.lastObservedAt = nil
+        #expect(throws: (any Error).self) { try invalid.validate() }
+        invalid.lastObservedAt = date.addingTimeInterval(-1)
+        #expect(throws: (any Error).self) { try invalid.validate() }
+        invalid = good
         invalid.records += invalid.records
         #expect(throws: (any Error).self) { try invalid.validate() }
         invalid = good

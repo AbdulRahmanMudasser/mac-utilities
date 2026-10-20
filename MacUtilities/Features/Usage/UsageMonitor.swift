@@ -38,6 +38,8 @@ final class UsageMonitor: ObservableObject {
     @Published var dataUnit: DataDisplayUnit {
         didSet {
             preferences.set(dataUnit.rawValue, forKey: Self.dataUnitKey)
+            guard oldValue != dataUnit else { return }
+            requestImmediateSnapshotCommit(.dataUnitChanged)
             saveState(force: true)
         }
     }
@@ -50,6 +52,9 @@ final class UsageMonitor: ObservableObject {
     private let loginItems: LoginItemService
     private let preferences: UserDefaults
     var onSnapshotCommitted: ((UsageWidgetSnapshot) -> Void)?
+    var onSnapshotCommittedWithReason: ((UsageWidgetSnapshot, WidgetReloadReason) -> Void)?
+    private var pendingSnapshotCommitReason: WidgetReloadReason?
+    private var lastCommittedWidgetRecords: [DailyUsageRecord]?
     private var persisted: PersistedUsage
     private var timer: Timer?
     private var lastRateSampleUptime: TimeInterval?
@@ -63,10 +68,12 @@ final class UsageMonitor: ObservableObject {
          stateStore: UsageStateStore? = nil, loginItems: LoginItemService? = nil,
          preferences: UserDefaults? = nil,
          storagePaths: UsageStoragePaths? = nil,
+         onSnapshotCommittedWithReason: ((UsageWidgetSnapshot, WidgetReloadReason) -> Void)? = nil,
          now: @escaping @MainActor () -> Date = Date.init,
          calendar: @escaping @MainActor () -> Calendar = { UsageHistory.calendar() },
          readCounters: @escaping @MainActor () throws -> [String: InterfaceByteCount] = InterfaceCounterReader.read,
          bootIdentifier: @escaping @MainActor () -> String = UsageMonitor.systemBootIdentifier) {
+        self.onSnapshotCommittedWithReason = onSnapshotCommittedWithReason
         self.now = now
         calendarProvider = calendar
         self.readCounters = readCounters
@@ -108,6 +115,10 @@ final class UsageMonitor: ObservableObject {
             historyError = "Saved Usage Could Not Be Opened. " + error.localizedDescription
             counterError = "Usage Storage Is Unavailable."
         }
+        lastCommittedWidgetRecords = persisted.widgetSnapshot?.records
+        let savedDay = persisted.localDayKey
+        let savedZone = persisted.timeZoneIdentifier
+        let savedUnit = persisted.widgetSnapshot?.dataUnit
         persisted.schemaVersion = 3
         if canSample {
             let counters = try? readCounters()
@@ -116,6 +127,13 @@ final class UsageMonitor: ObservableObject {
             lastRateSampleUptime = ProcessInfo.processInfo.systemUptime
         }
         publish()
+        if savedDay != persisted.localDayKey {
+            requestImmediateSnapshotCommit(.localDayChanged)
+        } else if savedZone != persisted.timeZoneIdentifier {
+            requestImmediateSnapshotCommit(.timeZoneChanged)
+        } else if savedUnit != nil && savedUnit != dataUnit {
+            requestImmediateSnapshotCommit(.dataUnitChanged)
+        }
         if canSample { saveState(force: true) }
         if startAutomatically && canSample { startSampling() }
     }
@@ -171,6 +189,7 @@ final class UsageMonitor: ObservableObject {
         sample()
         persisted.history = []
         historyRecords = []
+        requestImmediateSnapshotCommit(.historyCleared)
         saveState(force: true)
     }
 
@@ -226,7 +245,14 @@ final class UsageMonitor: ObservableObject {
             uploadBytesPerSecond = 0
         }
         lastRateSampleUptime = counters == nil ? nil : uptime
-        saveState(force: previousDay != persisted.localDayKey || previousZone != persisted.timeZoneIdentifier)
+        let dayChanged = previousDay != persisted.localDayKey
+        let timeZoneChanged = previousZone != persisted.timeZoneIdentifier
+        if dayChanged {
+            requestImmediateSnapshotCommit(.localDayChanged)
+        } else if timeZoneChanged {
+            requestImmediateSnapshotCommit(.timeZoneChanged)
+        }
+        saveState(force: dayChanged || timeZoneChanged)
     }
 
     private func publish() {
@@ -333,7 +359,16 @@ final class UsageMonitor: ObservableObject {
         do {
             persisted.widgetSnapshot = try UsageSnapshotPublisher.snapshot(for: persisted, at: now, unit: dataUnit, calendar: calendarProvider())
             try store.save(persisted)
-            if let snapshot = persisted.widgetSnapshot { onSnapshotCommitted?(snapshot) }
+            if let snapshot = persisted.widgetSnapshot {
+                let reason = pendingSnapshotCommitReason ?? .ordinary
+                let shouldNotifyReasonedCommit = reason.isImmediate || lastCommittedWidgetRecords != snapshot.records
+                lastCommittedWidgetRecords = snapshot.records
+                pendingSnapshotCommitReason = nil
+                onSnapshotCommitted?(snapshot)
+                if shouldNotifyReasonedCommit {
+                    onSnapshotCommittedWithReason?(snapshot, reason)
+                }
+            }
             lastStateWriteDate = now
             historyError = nil
         } catch {
@@ -342,6 +377,12 @@ final class UsageMonitor: ObservableObject {
             persisted.incompleteReason = "Today's Usage Could Not Be Saved Locally."
             isIncomplete = true
             incompleteReason = persisted.incompleteReason
+        }
+    }
+
+    private func requestImmediateSnapshotCommit(_ reason: WidgetReloadReason) {
+        if pendingSnapshotCommitReason == nil {
+            pendingSnapshotCommitReason = reason
         }
     }
 

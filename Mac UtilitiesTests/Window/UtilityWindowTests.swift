@@ -12,6 +12,31 @@ private final class UtilityWindowVisibilityState {
 @Suite(.serialized)
 @MainActor
 struct UtilityWindowTests {
+    @Test func queuedAndRepeatedUsageRoutesReuseWindow() throws {
+        let diagnostics = ConnectionDiagnostics()
+        let coordinator = UtilityWindowCoordinator(diagnostics: diagnostics,
+            setActivationPolicy: { _ in }, activateApplication: {}) { _ in AnyView(Text("Fixture")) }
+        defer { coordinator.shutdown() }
+        let delegate = AppDelegate()
+        delegate.application(NSApp, open: [UsageRoute.url(for: .sevenDays)])
+        #expect(coordinator.window == nil)
+        delegate.utilityWindow = coordinator
+        #expect(coordinator.window == nil)
+        delegate.markWindowRoutingReady()
+        let first = try #require(coordinator.window)
+        #expect(coordinator.selection == .usage)
+        #expect(coordinator.usageRequest?.range == .sevenDays)
+        let generation = coordinator.usageRequest?.generation
+        coordinator.selection = .connection
+        first.miniaturize(nil)
+        delegate.application(NSApp, open: [UsageRoute.url(for: .sevenDays)])
+        #expect(coordinator.window === first)
+        #expect(!first.isMiniaturized)
+        #expect(coordinator.selection == .usage)
+        #expect(coordinator.usageRequest?.generation != generation)
+        #expect(!diagnostics.isRunning)
+    }
+
     #if DEBUG
     @Test func realStabilityViewsKeepSharedBoundsAcrossSizesAppearancesAndEmptyStates() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("stability-window-\(UUID().uuidString)")

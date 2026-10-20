@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import WidgetKit
 
 @main
 struct Mac_UtilitiesApp: App {
@@ -11,6 +12,11 @@ struct Mac_UtilitiesApp: App {
 
     init() {
         let testing = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil || NSClassFromString("XCTestCase") != nil
+        let reloadCoordinator = testing ? nil : WidgetReloadCoordinator(widgetKind: "UsageHistoryWidget",
+            reloadTimelines: { WidgetCenter.shared.reloadTimelines(ofKind: $0) })
+        let didCommit: ((UsageWidgetSnapshot, WidgetReloadReason) -> Void)? = { [weak reloadCoordinator] _, reason in
+            reloadCoordinator?.requestReload(for: reason)
+        }
         let monitor: UsageMonitor
         if testing {
             let file = FileManager.default.temporaryDirectory.appendingPathComponent("usage-history-tests-\(ProcessInfo.processInfo.processIdentifier)/today-usage.json")
@@ -19,9 +25,9 @@ struct Mac_UtilitiesApp: App {
             #if DEBUG
             if CommandLine.arguments.contains("--usage-preview") || CommandLine.arguments.contains("--stability-preview") {
                 monitor = Self.previewMonitor(verificationOnly: CommandLine.arguments.contains("--stability-preview"))
-            } else { monitor = UsageMonitor() }
+            } else { monitor = UsageMonitor(onSnapshotCommittedWithReason: didCommit) }
             #else
-            monitor = UsageMonitor()
+            monitor = UsageMonitor(onSnapshotCommittedWithReason: didCommit)
             #endif
         }
         let diagnostics = ConnectionDiagnostics()
@@ -36,7 +42,7 @@ struct Mac_UtilitiesApp: App {
         _monitor = StateObject(wrappedValue: monitor)
         _diagnostics = StateObject(wrappedValue: diagnostics)
         _wifiQualityMonitor = StateObject(wrappedValue: wifiQualityMonitor)
-        _utilityWindow = StateObject(wrappedValue: UtilityWindowCoordinator(
+        let coordinator = UtilityWindowCoordinator(
             diagnostics: diagnostics,
             wifiQualityMonitor: wifiQualityMonitor
         ) { coordinator in
@@ -45,7 +51,19 @@ struct Mac_UtilitiesApp: App {
                 .environmentObject(diagnostics)
                 .environmentObject(wifiQualityMonitor)
                 .environmentObject(coordinator))
-        })
+        }
+        _utilityWindow = StateObject(wrappedValue: coordinator)
+        #if DEBUG
+        if (CommandLine.arguments.contains("--usage-preview") || CommandLine.arguments.contains("--stability-preview")),
+           (try? UsageStoragePaths.resolve().isVerification) == true, monitor.historyError == nil {
+            reloadCoordinator?.requestReload(for: .ordinary)
+        }
+        #endif
+        appDelegate.widgetReloadCoordinator = reloadCoordinator
+        appDelegate.monitor = monitor
+        appDelegate.diagnostics = diagnostics
+        appDelegate.wifiQualityMonitor = wifiQualityMonitor
+        appDelegate.utilityWindow = coordinator
     }
 
     var body: some Scene {
@@ -56,12 +74,6 @@ struct Mac_UtilitiesApp: App {
         } label: {
             MenuBarStatusLabel(text: monitor.menuBarText, status: monitor.collectionStatus)
                 .environmentObject(utilityWindow)
-                .onAppear {
-                    appDelegate.utilityWindow = utilityWindow
-                    appDelegate.monitor = monitor
-                    appDelegate.diagnostics = diagnostics
-                    appDelegate.wifiQualityMonitor = wifiQualityMonitor
-                }
         }
         .menuBarExtraStyle(.window)
     }
@@ -69,7 +81,10 @@ struct Mac_UtilitiesApp: App {
     #if DEBUG
     private static func previewMonitor(verificationOnly: Bool = false) -> UsageMonitor {
         let directory = verificationOnly ? "stability-check-preview" : "usage-history-preview"
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("\(directory)/today-usage.json")
+        let verificationPaths = try? UsageStoragePaths.resolve()
+        let sharedFixturePaths = verificationPaths.flatMap { $0.isVerification ? $0 : nil }
+        let file = sharedFixturePaths?.stateURL ?? FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(directory)/today-usage.json")
         let calendar = UsageHistory.calendar()
         let date = Date()
         var state = PersistedUsage(schemaVersion: 3, localDayKey: UsageHistory.key(for: date), history: [])
@@ -79,8 +94,15 @@ struct Mac_UtilitiesApp: App {
                 uploaded: UInt64(offset == 8 ? 0 : 1 + offset % 3) * 500_000_000,
                 firstObservedAt: day, lastObservedAt: day, isIncomplete: true)
         }
+        state.widgetSnapshot = try? UsageSnapshotPublisher.snapshot(for: state, at: date, unit: .decimal, calendar: calendar)
+        if sharedFixturePaths != nil && CommandLine.arguments.contains("--usage-preview-large-envelope") {
+            state.incompleteReason = ""
+            if let overhead = try? UsageStateStore.encoded(state).count {
+                state.incompleteReason = String(repeating: "x", count: max(0, UsageStorageLimits.maximumEnvelopeBytes - overhead))
+            }
+        }
         try? UsageStateStore.saveState(state, at: file)
-        if verificationOnly {
+        if verificationOnly || sharedFixturePaths != nil {
             return UsageMonitor(startAutomatically: false,
                 storagePaths: UsageStoragePaths(stateURL: file, isVerification: true), readCounters: { [:] })
         }

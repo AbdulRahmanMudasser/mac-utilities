@@ -22,10 +22,15 @@ targets:
     platform: macOS
     dependencies:
       - sdk: CoreWLAN.framework
+      - target: Mac UtilitiesWidgets
+        embed: true
+        codeSign: true
+        link: false
     sources:
       - path: MacUtilities
         excludes:
           - "**/.DS_Store"
+      - path: MacUtilitiesWidgets/UsageWidgetConfigurationIntent.swift
       - path: Shared
         excludes:
           - "**/.DS_Store"
@@ -75,6 +80,46 @@ targets:
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Mac Utilities.app/Contents/MacOS/Mac Utilities"
         STRING_CATALOG_GENERATE_SYMBOLS: "NO"
         SWIFT_EMIT_LOC_STRINGS: "NO"
+
+  Mac UtilitiesWidgets:
+    type: app-extension
+    platform: macOS
+    dependencies:
+      - sdk: AppIntents.framework
+      - sdk: Charts.framework
+      - sdk: WidgetKit.framework
+    sources:
+      - path: MacUtilitiesWidgets
+        excludes:
+          - "**/.DS_Store"
+      - path: Shared/Usage/UsageBytes.swift
+      - path: Shared/Usage/UsageHistory.swift
+      - path: Shared/Usage/UsageFormatting.swift
+      - path: Shared/Usage/UsageWidgetSnapshot.swift
+      - path: Shared/Usage/UsageRoute.swift
+      - path: Shared/Usage/UsageWidgetPresentation.swift
+      - path: Shared/Storage/UsageStorageLimits.swift
+      - path: Shared/Storage/UsageStoragePaths.swift
+      - path: Shared/Storage/UsageWidgetSnapshotReader.swift
+      - path: Shared/Presentation/UsageChartPresentation.swift
+    settings:
+      base:
+        APPLICATION_EXTENSION_API_ONLY: "YES"
+        CODE_SIGN_ENTITLEMENTS: Configuration/MacUtilitiesWidgets.entitlements
+        ENABLE_APP_SANDBOX: "YES"
+        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_FILE: Configuration/MacUtilitiesWidgets-Info.plist
+        INFOPLIST_PREPROCESS: "YES"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+        PRODUCT_BUNDLE_IDENTIFIER: com.abdulrahman.mac-utilities.widgets
+        PRODUCT_NAME: "$(TARGET_NAME)"
+        REGISTER_APP_GROUPS: "NO"
+        SKIP_INSTALL: "YES"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_EMIT_LOC_STRINGS: "YES"
+      configs:
+        Debug:
+          INFOPLIST_PREPROCESSOR_DEFINITIONS: DEBUG=1
 
 schemes:
   Mac Utilities:

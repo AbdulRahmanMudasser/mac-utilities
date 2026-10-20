@@ -2,6 +2,7 @@ import Charts
 import SwiftUI
 
 struct UsageHistoryView: View {
+    @EnvironmentObject private var utilityWindow: UtilityWindowCoordinator
     @EnvironmentObject private var monitor: UsageMonitor
     @State private var range: UsageHistoryRange = .thisMonth
     @State private var selectedKey: String?
@@ -73,7 +74,17 @@ struct UsageHistoryView: View {
         .onChange(of: days.map(\.dayKey)) { _, _ in resetSelectionIfNeeded() }
         .onChange(of: showDownloads) { _, _ in resetSelectionIfNeeded() }
         .onChange(of: showUploads) { _, _ in resetSelectionIfNeeded() }
+        .onAppear { applyUsageRequest() }
+        .onChange(of: utilityWindow.usageRequest) { _, _ in applyUsageRequest() }
         .sheet(isPresented: $confirmClear) { clearConfirmation }
+    }
+
+    private func applyUsageRequest() {
+        guard let request = utilityWindow.usageRequest else { return }
+        range = request.range
+        selectedKey = nil
+        hoveredKey = nil
+        utilityWindow.consumeUsageRequest(request.generation)
     }
 
     private var summaryRange: String? {
@@ -81,15 +92,6 @@ struct UsageHistoryView: View {
         let format = Date.FormatStyle(calendar: monitor.historyCalendar, timeZone: monitor.historyCalendar.timeZone)
             .month(.abbreviated).day().year(.twoDigits)
         return "(\(first.date.formatted(format)) – \(last.date.formatted(format)))"
-    }
-
-    private var averageTitle: String {
-        switch range {
-        case .thisMonth: "Month Average"
-        case .sevenDays: "7 Day Average"
-        case .fifteenDays: "15 Day Average"
-        case .thirtyDays: "30 Day Average"
-        }
     }
 
     private var summaryMetrics: some View {
@@ -109,7 +111,7 @@ struct UsageHistoryView: View {
         summaryMetric("Uploaded", value: formatted(totals.uploaded), symbol: "arrow.up")
         summaryMetric("Combined", value: formatted(UsageHistory.add(totals.downloaded, totals.uploaded)),
                       symbol: "arrow.up.arrow.down", emphasized: true)
-        summaryMetric(averageTitle, value: formatted(UsageHistory.average(days) ?? 0),
+        summaryMetric(range.averageTitle, value: formatted(UsageHistory.average(days) ?? 0),
                       symbol: "chart.bar.xaxis")
     }
 
