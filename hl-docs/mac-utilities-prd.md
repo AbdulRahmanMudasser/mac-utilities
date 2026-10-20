@@ -141,7 +141,7 @@ The current phase register and delivery status are tracked in the [Desktop Execu
 9. **[Phase 08 - Shared Architecture Foundation](./desktop/phase-08-shared-architecture-foundation.md):** Establish reproducible project generation, clear source ownership, and safe shared usage storage without changing accounting.
 10. **[Phase 09 - Extended Stability Checks](./desktop/phase-09-extended-stability-checks.md):** Add a user-started five-minute connection check that distinguishes endpoint misses from sleep, unavailable paths, and other observation gaps.
 11. **[Phase 10 - Wireless Link Quality (Implemented, Verified And Included In Installed Release 1.3.0)](./desktop/phase-10-wireless-link-quality.md):** Add read-only Wi-Fi signal, noise, channel, and link-rate readings in Connection. Signed sandbox runtime and native layout checks passed; the feature is included in installed version 1.3.0 (build 15).
-12. **[Phase 11 - Configurable Usage Widget (Planned)](./desktop/phase-11-configurable-usage-widget.md):** Show saved daily usage in configurable medium and large macOS widgets, approved for implementation, with rollout gated on signed extension/container verification.
+12. **[Phase 11 - Configurable Usage Widget (Completed, First Included In Release 1.4.0)](./desktop/phase-11-configurable-usage-widget.md):** Medium and large widgets show saved daily usage with independent history ranges. Signed extension/container access, configuration and Usage routing were verified in Release 1.4.0 (build 16); the current installed version is tracked in the execution workflow.
 
 ## 8. Platform Scope
 

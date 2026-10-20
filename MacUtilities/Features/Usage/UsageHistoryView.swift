@@ -267,6 +267,22 @@ struct UsageHistoryView: View {
         }
         .onExitCommand { hoveredKey = nil; selectedKey = nil }
         .accessibilityLabel("Daily Download And Upload Usage")
+        .accessibilityValue(selectionAccessibilityValue)
+        .accessibilityHint("Use the left and right arrow keys, or Previous Day and Next Day actions, to inspect daily usage.")
+        .accessibilityAction(named: Text("Previous Day")) { moveSelection(-1) }
+        .accessibilityAction(named: Text("Next Day")) { moveSelection(1) }
+    }
+
+    private var selectionAccessibilityValue: String {
+        guard let day = inspectedDay else { return "No day selected" }
+        guard let record = day.record else { return "\(dateLabel(day.date)), No Data" }
+        var values = [dateLabel(day.date)]
+        if showDownloads { values.append("Downloaded \(formatted(record.downloaded))") }
+        if showUploads { values.append("Uploaded \(formatted(record.uploaded))") }
+        if showDownloads && showUploads {
+            values.append("Combined \(formatted(visibleBytes(record)))")
+        }
+        return values.joined(separator: ", ")
     }
 
     private var axisKeys: [String] {
