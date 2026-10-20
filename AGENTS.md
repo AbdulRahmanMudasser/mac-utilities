@@ -45,6 +45,7 @@ Resolve conflicts using explicit user decisions and current verified evidence. C
 ## Documentation And Git
 
 - Update the existing canonical section in place. Development standards own technical/UI conventions; the PRD owns product intent. Preserve chronological logs and completed historical records. Use the requested documentation skill without duplicating its instructions here.
+- Keep current delivery status in `hl-docs/desktop/execution-workflow.md`, dated decisions in `hl-docs/desktop/decision-log.md`, and chronological delivery evidence in `hl-docs/desktop/execution-log.md`. Read the separate logs only when relevant; preserve historical entries and append only when authorized. Keep the workflow's log sections as links rather than copying history back into the tracker.
 - Use lowercase branches such as `feature/expandable-panel-descriptions`, with an approved `feature/`, `fix/`, `refactor/`, `docs/` or `chore/` prefix. Do not include phase numbers or tool names in branch names.
 - Follow the explicitly invoked commit skill for commits, pushes and PRs. Keep Conventional Commit messages and PR text lowercase, group work logically, and honor the user's requested commit count. Verify the actual default branch rather than guessing it.
 - Finish with the changed behavior, checks performed and any material limitation. Distinguish source changes, previews, installed builds and merged releases.
