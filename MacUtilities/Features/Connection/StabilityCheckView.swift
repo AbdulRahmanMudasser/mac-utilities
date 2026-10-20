@@ -5,22 +5,34 @@ struct StabilityCheckView: View {
     @EnvironmentObject private var diagnostics: ConnectionDiagnostics
 
     var body: some View {
-        VStack(alignment: .leading, spacing: UtilityStyle.sectionSpacing) {
-            UtilityPanel("5-Minute Connection Check", action: AnyView(
-                Button("Start Check") { diagnostics.startStability() }
-                    .buttonStyle(.bordered).disabled(diagnostics.isRunning).handPointer()
-            ), description: "Checks two servers every five seconds for five minutes. It shows reply times and missed replies. Short problems may happen between checks. Closing this window stops the check.",
-               showsContent: diagnostics.stabilitySnapshot != nil, wrapsContent: false) {
-                if let snapshot = diagnostics.stabilitySnapshot {
+        UtilityPanel("5-Minute Connection Check", action: AnyView(
+            Button("Start Check") { diagnostics.startStability() }
+                .buttonStyle(.bordered).disabled(diagnostics.isRunning).handPointer()
+        ), description: checkDescription,
+           showsContent: diagnostics.stabilitySnapshot != nil, wrapsContent: false) {
+            if let snapshot = diagnostics.stabilitySnapshot {
+                VStack(alignment: .leading, spacing: UtilityStyle.sectionSpacing) {
                     results(for: snapshot)
-                }
-            }
-            if let snapshot = diagnostics.stabilitySnapshot, snapshot.hasCompletedChecks {
-                UtilityPanel("Reply Times", info: "Lines show reply times for each server. Marks along the bottom show missed replies. Shaded areas show when checks could not run.") {
-                    StabilityTimelineChart(snapshot: snapshot)
+                    VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
+                        if snapshot.hasCompletedChecks {
+                            UtilityPanel("Reply Times", description: "Shows each server’s reply time during the five-minute check. Bottom marks show missed replies. Shaded areas show when checks could not run.") {
+                                StabilityTimelineChart(snapshot: snapshot)
+                            }
+                        }
+                        checkTimestamp(for: snapshot)
+                    }
                 }
             }
         }
+    }
+
+    private var checkDescription: String {
+        #if DEBUG
+        if diagnostics.isStabilityPreview {
+            return "Synthetic preview data. No live check ran."
+        }
+        #endif
+        return "Checks two servers every five seconds for five minutes. It shows reply times and missed replies. Short problems may happen between checks. Closing this window stops the check."
     }
 
     private func results(for snapshot: StabilitySnapshot) -> some View {
@@ -37,13 +49,16 @@ struct StabilityCheckView: View {
                     .frame(maxWidth: UtilityStyle.helpWidth, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            ConnectionCheckTimestamp(date: snapshot.finishedAt ?? snapshot.startedAt,
-                title: snapshot.status == .completed ? "Last Checked" : snapshot.status.rawValue,
-                symbol: snapshot.status == .completed && !snapshot.hasCompletedChecks
-                    ? "exclamationmark.circle.fill" : statusSymbol(for: snapshot.status),
-                color: snapshot.status == .completed
-                    ? (snapshot.hasCompletedChecks ? UtilityStyle.successColor : UtilityStyle.warningColor) : .secondary)
         }
+    }
+
+    private func checkTimestamp(for snapshot: StabilitySnapshot) -> some View {
+        ConnectionCheckTimestamp(date: snapshot.finishedAt ?? snapshot.startedAt,
+            title: snapshot.status == .completed ? "Last Checked" : snapshot.status.rawValue,
+            symbol: snapshot.status == .completed && !snapshot.hasCompletedChecks
+                ? "exclamationmark.circle.fill" : statusSymbol(for: snapshot.status),
+            color: snapshot.status == .completed
+                ? (snapshot.hasCompletedChecks ? UtilityStyle.successColor : UtilityStyle.warningColor) : .secondary)
     }
 
     private func targetSummary(_ target: ProbeTarget, snapshot: StabilitySnapshot,

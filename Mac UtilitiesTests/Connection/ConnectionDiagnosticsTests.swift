@@ -4,6 +4,41 @@ import Testing
 
 @MainActor
 struct ConnectionDiagnosticsTests {
+    #if DEBUG
+    @Test func stabilityPreviewUsesSharedCompletionStatusAndCurrentTimestamp() throws {
+        let diagnostics = ConnectionDiagnostics()
+        diagnostics.showStabilityPreview()
+
+        let snapshot = try #require(diagnostics.stabilitySnapshot)
+        let finishedAt = try #require(snapshot.finishedAt)
+        #expect(diagnostics.isStabilityPreview)
+        #expect(diagnostics.message == "Check Done")
+        #expect(abs(Date().timeIntervalSince(finishedAt)) < 2)
+        #expect(snapshot.unobservedDuration == 20)
+    }
+    @Test func realStabilityCheckClearsPreviewStateAndResults() async {
+        let clock = StabilityTestClock()
+        clock.advancesAutomatically = false
+        let events = FakeStabilityEventSource()
+        let diagnostics = ConnectionDiagnostics(processOperation: { _, _, _ in stabilityReplyOutput() },
+            stabilityClock: clock.makeClock(), stabilityEvents: { events })
+        #expect(!diagnostics.isStabilityPreview)
+        diagnostics.showStabilityPreview()
+        let previewID = diagnostics.stabilitySnapshot?.id
+
+        diagnostics.startStability()
+        #expect(!diagnostics.isStabilityPreview)
+        #expect(diagnostics.stabilitySnapshot == nil)
+        diagnostics.cancel()
+        await diagnostics.waitUntilStopped()
+
+        #expect(diagnostics.stabilitySnapshot?.id != previewID)
+        #expect(diagnostics.stabilitySnapshot?.status == .cancelled)
+        #expect(!diagnostics.isRunning)
+        #expect(events.stopCount == 1)
+    }
+    #endif
+
     @Test func networkNamesUseSystemMappingWithoutAssumingWiFi() {
         #expect(NetworkInterfaceLabel.displayName("en0", names: ["en0": "Wi-Fi"]) == "Wi-Fi")
         #expect(NetworkInterfaceLabel.displayName("en0", names: ["en0": "Ethernet"]) == "Ethernet")
@@ -276,7 +311,7 @@ struct ConnectionDiagnosticsTests {
         #expect(diagnostics.quality == nil)
         #expect(diagnostics.probes.isEmpty)
         #expect(diagnostics.qualityCompletedAt == nil)
-        #expect(diagnostics.message == "Check Cancelled.")
+        #expect(diagnostics.message == "Check Cancelled")
     }
 
     @Test func controllerShowsFailedMeasurementWithoutFakeValues() async throws {
@@ -287,7 +322,7 @@ struct ConnectionDiagnosticsTests {
         try await waitUntilIdle(diagnostics)
         #expect(diagnostics.quality == nil)
         #expect(diagnostics.qualityError?.contains("Error code 8") == true)
-        #expect(diagnostics.message == "The Check Could Not Finish.")
+        #expect(diagnostics.message == "The Check Could Not Finish")
     }
 
 }
