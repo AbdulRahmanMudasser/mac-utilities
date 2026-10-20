@@ -6,8 +6,11 @@ final class ConnectionDiagnostics: ObservableObject {
     enum Activity: Equatable { case idle, latency, load, stability }
     @Published private(set) var activity: Activity = .idle
     @Published private(set) var lastStartedActivity: Activity = .idle
+    #if DEBUG
+    @Published private(set) var isStabilityPreview = false
+    #endif
     @Published private(set) var isStopping = false
-    @Published private(set) var message = "Choose A Check To Start."
+    @Published private(set) var message = "Choose A Check To Start"
     @Published private(set) var probes: [ProbeResult] = []
     @Published private(set) var quality: QualityResult?
     @Published private(set) var qualityNetworkName = "Not Reported"
@@ -129,6 +132,9 @@ final class ConnectionDiagnostics: ObservableObject {
     func startStability() {
         guard !hasShutDown, !isRunning else { return }
         lastStartedActivity = .stability
+        #if DEBUG
+        isStabilityPreview = false
+        #endif
         isStopping = false
         runID = UUID()
         let id = runID
@@ -155,7 +161,7 @@ final class ConnectionDiagnostics: ObservableObject {
             guard runID == id else { return }
             stabilitySnapshot = result
             stabilitySession = nil
-            message = result.status == .cancelled ? "Check Cancelled." : "Check Done."
+            message = result.status == .cancelled ? "Check Cancelled" : "Check Done"
             activity = .idle
             isStopping = false
             task = nil
@@ -176,7 +182,8 @@ final class ConnectionDiagnostics: ObservableObject {
         guard !hasShutDown, !isRunning else { return }
         lastStartedActivity = .stability
         let id = UUID()
-        let date = Date(timeIntervalSince1970: 1_792_238_400)
+        let finishedAt = Date()
+        let date = finishedAt.addingTimeInterval(-StabilityCheckLimits.duration)
         probes = ProbeTarget.defaults.enumerated().map { index, target in
             let samples = (0..<10).map { Double(20 + ($0 * 3 + index * 5) % 15) }
             return ProbeResult(target: target,
@@ -203,20 +210,21 @@ final class ConnectionDiagnostics: ObservableObject {
             gaps: unobserved ? [StabilityGap(start: 0, end: StabilityCheckLimits.duration, reason: .sleep)]
                 : [StabilityGap(start: 50, end: 70, reason: .sleep)],
             transitions: unobserved ? [] : [StabilityTransition(elapsed: 180, epoch: 2)])
-        message = "Synthetic Stability Preview · No Checks Are Running."
-        stabilitySnapshot?.finishedAt = date.addingTimeInterval(StabilityCheckLimits.duration)
+        isStabilityPreview = true
+        message = "Check Done"
+        stabilitySnapshot?.finishedAt = finishedAt
     }
     #endif
 
     private func finish(id: UUID) {
         guard id == runID else { return }
         if Task.isCancelled {
-            message = "Check Cancelled."
+            message = "Check Cancelled"
         } else if activity == .load {
-            message = qualityError == nil ? "Check Done." : "The Check Could Not Finish."
+            message = qualityError == nil ? "Check Done" : "The Check Could Not Finish"
             qualityCompletedAt = Date()
         } else {
-            message = probes.contains(where: { $0.error != nil }) ? "Some Results Are Not Available." : "Check Done."
+            message = probes.contains(where: { $0.error != nil }) ? "Some Results Are Not Available" : "Check Done"
             latencyCompletedAt = Date()
         }
         activity = .idle

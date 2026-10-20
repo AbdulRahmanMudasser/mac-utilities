@@ -44,23 +44,47 @@ struct MenuBarPopoverWindowAccessor: NSViewRepresentable {
 @MainActor
 final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelegate {
     static let minimumContentSize = UtilityStyle.Window.minimumSize
-    @Published var selection: UtilitySection = .connection
+    @Published var selection: UtilitySection = .connection {
+        didSet { updateWiFiVisibility() }
+    }
     weak var menuBarPopoverWindow: NSWindow?
     private(set) var window: NSWindow?
     private let diagnostics: ConnectionDiagnostics
+    private let wifiQualityMonitor: WiFiQualityMonitor?
     private let setActivationPolicy: @MainActor (NSApplication.ActivationPolicy) -> Void
     private let activateApplication: @MainActor () -> Void
+    private let isApplicationHidden: @MainActor () -> Bool
+    private let isWindowDisplayable: @MainActor (NSWindow) -> Bool
     private let content: (UtilityWindowCoordinator) -> AnyView
+    private var wakeObserver: NSObjectProtocol?
+    private var hasShutDown = false
 
     init(diagnostics: ConnectionDiagnostics,
+         wifiQualityMonitor: WiFiQualityMonitor? = nil,
          setActivationPolicy: @escaping @MainActor (NSApplication.ActivationPolicy) -> Void = { NSApp.setActivationPolicy($0) },
          activateApplication: @escaping @MainActor () -> Void = { NSApp.activate() },
+         isApplicationHidden: @escaping @MainActor () -> Bool = { NSApp.isHidden },
+         isWindowDisplayable: @escaping @MainActor (NSWindow) -> Bool = { window in
+             window.isVisible && !window.isMiniaturized && window.occlusionState.contains(.visible)
+         },
          content: @escaping (UtilityWindowCoordinator) -> AnyView) {
         self.diagnostics = diagnostics
+        self.wifiQualityMonitor = wifiQualityMonitor
         self.setActivationPolicy = setActivationPolicy
         self.activateApplication = activateApplication
+        self.isApplicationHidden = isApplicationHidden
+        self.isWindowDisplayable = isWindowDisplayable
         self.content = content
         super.init()
+        NotificationCenter.default.addObserver(self, selector: #selector(applicationVisibilityDidChange(_:)),
+            name: NSApplication.didHideNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(applicationVisibilityDidChange(_:)),
+            name: NSApplication.didUnhideNotification, object: nil)
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: nil
+        ) { [weak self] _ in
+            self?.deliverWorkspaceWake()
+        }
     }
 
     func present(_ section: UtilitySection) {
@@ -80,6 +104,7 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
             target.delegate = self
             target.center()
             window = target
+            observeVisibility(for: target)
         }
         if target.contentViewController == nil {
             let frame = target.frame
@@ -121,6 +146,7 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
         if target.isMiniaturized { target.deminiaturize(nil) }
         target.makeKeyAndOrderFront(nil)
         activateApplication()
+        updateWiFiVisibility()
     }
 
     func windowDidResize(_ notification: Notification) {
@@ -136,12 +162,64 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
     func windowWillClose(_ notification: Notification) {
         guard let closing = notification.object as? NSWindow, closing === window else { return }
         diagnostics.cancel()
+        wifiQualityMonitor?.setVisible(false)
         // Rebuild transient view state on reopen; measurement results remain in the controller.
         closing.contentViewController = nil
         setActivationPolicy(.accessory)
     }
 
+    @objc private func applicationVisibilityDidChange(_ notification: Notification) {
+        guard let application = notification.object as? NSApplication, application === NSApp else { return }
+        updateWiFiVisibility()
+    }
+
+    @objc private func windowVisibilityDidChange(_ notification: Notification) {
+        guard let changedWindow = notification.object as? NSWindow, changedWindow === window else { return }
+        updateWiFiVisibility()
+    }
+
+    private func observeVisibility(for target: NSWindow) {
+        let center = NotificationCenter.default
+        for name in [NSWindow.didMiniaturizeNotification,
+                     NSWindow.didDeminiaturizeNotification,
+                     NSWindow.didChangeOcclusionStateNotification] {
+            center.addObserver(self, selector: #selector(windowVisibilityDidChange(_:)), name: name, object: target)
+        }
+    }
+
+    private func updateWiFiVisibility() {
+        wifiQualityMonitor?.setVisible(isConnectionSurfaceVisible)
+    }
+
+    private var isConnectionSurfaceVisible: Bool {
+        guard !hasShutDown, selection == .connection, let window else { return false }
+        return !isApplicationHidden() && isWindowDisplayable(window)
+    }
+
+    private nonisolated func deliverWorkspaceWake() {
+        if Thread.isMainThread {
+            MainActor.assumeIsolated { refreshAfterWake() }
+        } else {
+            DispatchQueue.main.sync {
+                MainActor.assumeIsolated { refreshAfterWake() }
+            }
+        }
+    }
+
+    private func refreshAfterWake() {
+        guard !hasShutDown else { return }
+        wifiQualityMonitor?.refreshAfterWake(isVisible: isConnectionSurfaceVisible)
+    }
+
     func shutdown() {
+        guard !hasShutDown else { return }
+        hasShutDown = true
+        wifiQualityMonitor?.shutdown()
+        NotificationCenter.default.removeObserver(self)
+        if let wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
+        }
+        wakeObserver = nil
         diagnostics.shutdown()
         window?.delegate = nil
         window?.orderOut(nil)

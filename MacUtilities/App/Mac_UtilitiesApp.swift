@@ -6,6 +6,7 @@ struct Mac_UtilitiesApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var monitor: UsageMonitor
     @StateObject private var diagnostics: ConnectionDiagnostics
+    @StateObject private var wifiQualityMonitor: WiFiQualityMonitor
     @StateObject private var utilityWindow: UtilityWindowCoordinator
 
     init() {
@@ -24,6 +25,7 @@ struct Mac_UtilitiesApp: App {
             #endif
         }
         let diagnostics = ConnectionDiagnostics()
+        let wifiQualityMonitor = WiFiQualityMonitor()
         #if DEBUG
         if !testing && CommandLine.arguments.contains("--stability-preview") {
             diagnostics.showStabilityPreview(
@@ -33,10 +35,15 @@ struct Mac_UtilitiesApp: App {
         #endif
         _monitor = StateObject(wrappedValue: monitor)
         _diagnostics = StateObject(wrappedValue: diagnostics)
-        _utilityWindow = StateObject(wrappedValue: UtilityWindowCoordinator(diagnostics: diagnostics) { coordinator in
+        _wifiQualityMonitor = StateObject(wrappedValue: wifiQualityMonitor)
+        _utilityWindow = StateObject(wrappedValue: UtilityWindowCoordinator(
+            diagnostics: diagnostics,
+            wifiQualityMonitor: wifiQualityMonitor
+        ) { coordinator in
             AnyView(UtilityWindowView()
                 .environmentObject(monitor)
                 .environmentObject(diagnostics)
+                .environmentObject(wifiQualityMonitor)
                 .environmentObject(coordinator))
         })
     }
@@ -53,6 +60,7 @@ struct Mac_UtilitiesApp: App {
                     appDelegate.utilityWindow = utilityWindow
                     appDelegate.monitor = monitor
                     appDelegate.diagnostics = diagnostics
+                    appDelegate.wifiQualityMonitor = wifiQualityMonitor
                 }
         }
         .menuBarExtraStyle(.window)

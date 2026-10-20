@@ -5,9 +5,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var utilityWindow: UtilityWindowCoordinator?
     weak var monitor: UsageMonitor?
     weak var diagnostics: ConnectionDiagnostics?
+    weak var wifiQualityMonitor: WiFiQualityMonitor?
     var replyToTermination: @MainActor (Bool) -> Void = { NSApp.reply(toApplicationShouldTerminate: $0) }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        wifiQualityMonitor?.shutdown()
         guard let diagnostics, diagnostics.isRunning else { return .terminateNow }
         diagnostics.shutdown()
         Task { [weak self] in
@@ -19,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         utilityWindow?.shutdown()
+        wifiQualityMonitor?.shutdown()
         monitor?.shutdown()
     }
 

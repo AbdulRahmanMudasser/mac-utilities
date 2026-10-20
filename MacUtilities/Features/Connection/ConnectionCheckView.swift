@@ -7,6 +7,7 @@ struct ConnectionCheckView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             UtilityScrollContent {
+                WiFiQualityView()
                 UtilityPanel("Reply Time And Missed Replies", action: AnyView(
                     Button("Check Now") { diagnostics.startLatency() }
                         .buttonStyle(.bordered).disabled(diagnostics.isRunning).handPointer()
