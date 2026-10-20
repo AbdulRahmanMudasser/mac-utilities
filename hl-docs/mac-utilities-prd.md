@@ -140,7 +140,7 @@ The current phase register and delivery status are tracked in the [Desktop Execu
 8. **Phase 07 - Usage History Chart:** Persist observed daily totals and add interactive date ranges and a chart to the shared utility window.
 9. **[Phase 08 - Shared Architecture Foundation](./desktop/phase-08-shared-architecture-foundation.md):** Establish reproducible project generation, clear source ownership, and safe shared usage storage without changing accounting.
 10. **[Phase 09 - Extended Stability Checks](./desktop/phase-09-extended-stability-checks.md):** Add a user-started five-minute connection check that distinguishes endpoint misses from sleep, unavailable paths, and other observation gaps.
-11. **[Phase 10 - Wireless Link Quality (Implemented And Verified; Target Installation Pending)](./desktop/phase-10-wireless-link-quality.md):** Add read-only Wi-Fi signal, noise, channel, and link-rate readings in Connection. Signed sandbox runtime and native layout checks passed; the existing installed app was not replaced.
+11. **[Phase 10 - Wireless Link Quality (Implemented, Verified And Included In Installed Release 1.3.0)](./desktop/phase-10-wireless-link-quality.md):** Add read-only Wi-Fi signal, noise, channel, and link-rate readings in Connection. Signed sandbox runtime and native layout checks passed; the feature is included in installed version 1.3.0 (build 15).
 12. **[Phase 11 - Configurable Usage Widget (Planned)](./desktop/phase-11-configurable-usage-widget.md):** Show saved daily usage in configurable medium and large macOS widgets, gated on separate implementation approval and signed extension/container verification.
 
 ## 8. Platform Scope
@@ -266,6 +266,6 @@ Use the standard repository root folder names when describing platform surfaces:
 
 ## 17. Release And Rollout Notes
 
-* **Release Strategy:** Current installed personal release: 1.0.7 (build 9), including extended stability checks. Use a developer-installed local build on the target MacBook; public binary distribution is not in scope.
+* **Release Strategy:** Current installed personal release: 1.3.0 (build 15), including extended stability checks, Wi-Fi link readings and expandable utility panel descriptions. Use a developer-installed local build on the target MacBook; public binary distribution is not in scope.
 * **Rollback Strategy:** The user can quit or remove the local app, or restore a previous build. The app does not install a network filter or change system traffic configuration.
 * **Support Readiness:** Verify menu bar rates, observed totals, persistence, local-day rollover, schema compatibility, history ranges/reset/clear behavior, Settings status and preferences, and diagnostic controls/results in the signed app. Check sandbox entitlement behavior, public endpoint responses, system-tool output, cancellation, close/quit cleanup and absent/error measurements. Verify the shared monochrome layout and accessible controls. The UI omits app-attribution rows, Partial badges, pause controls and historical pause messages.

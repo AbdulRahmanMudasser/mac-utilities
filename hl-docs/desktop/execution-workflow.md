@@ -28,7 +28,7 @@ Do not use this file for:
 * **Platform Name:** Desktop
 * **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an Apple Development signed personal build with verified App Group access
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.1.1 (build 12), including the shared foundation, extended stability checks, responsive usage-summary cards with selection-based averages, and compact connection guidance cards. No public binary distribution target.
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.3.0 (build 15), including the shared foundation, extended stability checks, responsive usage-summary cards, Wi-Fi link readings, compact connection guidance cards and expandable panel descriptions. No public binary distribution target.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
   - `xcodegen generate --spec project.yml` using XcodeGen 2.46.0; configure ignored local signing before a signed build. See [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
@@ -74,7 +74,7 @@ Every completed phase must satisfy all of the following:
 
 ## 7. Ready Queue
 
-Phase 10 Wireless Link Quality is implemented and verified in a signed sandbox preview; the existing installed app was not replaced. Phase 11 Configurable Usage Widget is next and remains Planned pending its own implementation approval and signed extension/group checks. The widget does not depend on Wi-Fi or stability measurement data.
+Phase 10 Wireless Link Quality is implemented and verified in a signed sandbox preview, and is included in the installed 1.3.0 (build 15) Release. Phase 11 Configurable Usage Widget is next and remains Planned pending its own implementation approval and signed extension/group checks. The widget does not depend on Wi-Fi or stability measurement data.
 
 ## 8. Phase Register
 
@@ -200,6 +200,11 @@ Phase 10 Wireless Link Quality is implemented and verified in a signed sandbox p
 - **Status Change:** Installed version 1.1.0 (build 11) -> 1.1.1 (build 12)
 - **Summary:** Released the compact connection guidance cards and reduced shared content and card padding in the signed local app.
 - **Evidence:** The arm64 Release build succeeded and passed strict code-signature verification with the existing team and App Group. The prior app bundle and canonical usage ledger were backed up before replacement; the ledger backup hash matched the original. Version 1.1.1 (build 12) was installed, signature-verified and launched, and the canonical ledger remained readable.
+
+### 2026-10-20 - Local Release / Version 1.3.0
+- **Status Change:** Installed version 1.2.0 (build 14) -> 1.3.0 (build 15)
+- **Summary:** Released expandable descriptions for shared utility panels and installed the Wi-Fi link-quality implementation in the signed local app.
+- **Evidence:** The arm64 Release build succeeded and passed strict code-signature verification with the same team and App Group as the prior app. The previous app bundle and canonical usage ledger were preserved in a local rollback backup; the ledger copy matched before replacement. Version 1.3.0 (build 15) was installed and launched, and the canonical ledger remained valid JSON.
 
 ## 12. Workflow Rules
 
