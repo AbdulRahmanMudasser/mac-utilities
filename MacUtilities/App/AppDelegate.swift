@@ -2,7 +2,31 @@ import AppKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    weak var utilityWindow: UtilityWindowCoordinator?
+    weak var utilityWindow: UtilityWindowCoordinator? {
+        didSet { deliverPendingRoute() }
+    }
+    private var pendingRoute: UsageRoute?
+    private var windowRoutingReady = false
+
+    func markWindowRoutingReady() {
+        windowRoutingReady = true
+        deliverPendingRoute()
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            guard let route = UsageRoute(url: url) else { continue }
+            pendingRoute = route
+            deliverPendingRoute()
+        }
+    }
+
+    private func deliverPendingRoute() {
+        guard windowRoutingReady, let utilityWindow, let route = pendingRoute else { return }
+        pendingRoute = nil
+        utilityWindow.presentUsage(range: route.range)
+    }
+    var widgetReloadCoordinator: WidgetReloadCoordinator?
     weak var monitor: UsageMonitor?
     weak var diagnostics: ConnectionDiagnostics?
     weak var wifiQualityMonitor: WiFiQualityMonitor?
@@ -23,6 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         utilityWindow?.shutdown()
         wifiQualityMonitor?.shutdown()
         monitor?.shutdown()
+        widgetReloadCoordinator?.shutdown()
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -34,14 +59,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.applicationIconImage = AppBrand.icon
         NSApp.setActivationPolicy(.accessory)
+        markWindowRoutingReady()
         #if DEBUG
         if CommandLine.arguments.contains("--stability-preview") || CommandLine.arguments.contains("--usage-preview") {
-            Task { [weak self] in
-                for _ in 0..<40 where self?.utilityWindow == nil {
-                    try? await Task.sleep(for: .milliseconds(50))
-                }
-                self?.utilityWindow?.present(CommandLine.arguments.contains("--usage-preview") ? .usage : .connection)
-            }
+            utilityWindow?.present(CommandLine.arguments.contains("--usage-preview") ? .usage : .connection)
         }
         #endif
     }

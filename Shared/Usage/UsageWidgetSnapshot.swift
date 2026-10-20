@@ -30,6 +30,7 @@ nonisolated struct UsageWidgetSnapshot: Codable, Equatable, Sendable {
                   record.firstObservedAt.timeIntervalSince1970.isFinite,
                   record.lastObservedAt.timeIntervalSince1970.isFinite,
                   record.firstObservedAt <= record.lastObservedAt,
+                  lastObservedAt.map({ $0 >= record.lastObservedAt }) == true,
                   !record.downloaded.addingReportingOverflow(record.uploaded).overflow else {
                 throw ValidationError.invalidProjection
             }
