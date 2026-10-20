@@ -3,6 +3,12 @@ import SwiftUI
 import Testing
 @testable import Mac_Utilities
 
+@MainActor
+private final class UtilityWindowVisibilityState {
+    var appHidden = false
+    var displayable = true
+}
+
 @Suite(.serialized)
 @MainActor
 struct UtilityWindowTests {
@@ -15,9 +21,11 @@ struct UtilityWindowTests {
         let monitor = UsageMonitor(startAutomatically: false,
             storagePaths: UsageStoragePaths(stateURL: file, isVerification: true))
         let diagnostics = ConnectionDiagnostics()
-        let subject = UtilityWindowCoordinator(diagnostics: diagnostics,
+        let wifiQualityMonitor = WiFiQualityMonitor(reader: ImmediateWiFiQualityReader([sampleWiFiSnapshot()]))
+        let subject = UtilityWindowCoordinator(diagnostics: diagnostics, wifiQualityMonitor: wifiQualityMonitor,
             setActivationPolicy: { _ in }, activateApplication: {}) { coordinator in
-            AnyView(UtilityWindowView().environmentObject(monitor).environmentObject(diagnostics).environmentObject(coordinator))
+            AnyView(UtilityWindowView().environmentObject(monitor).environmentObject(diagnostics)
+                .environmentObject(wifiQualityMonitor).environmentObject(coordinator))
         }
         defer { subject.shutdown(); monitor.shutdown(); try? FileManager.default.removeItem(at: directory) }
         subject.present(.connection)
@@ -46,6 +54,83 @@ struct UtilityWindowTests {
                                  setActivationPolicy: { _ in }, activateApplication: {}) { _ in
             AnyView(Text("Window Test"))
         }
+    }
+
+    @Test func wifiSamplingFollowsConnectionSurfaceVisibilityAndWake() async {
+        let reader = ImmediateWiFiQualityReader([sampleWiFiSnapshot(), sampleWiFiSnapshot(signal: -53)])
+        let wifiQualityMonitor = WiFiQualityMonitor(reader: reader, refreshInterval: .seconds(30))
+        let visibility = UtilityWindowVisibilityState()
+        let subject = UtilityWindowCoordinator(
+            diagnostics: ConnectionDiagnostics(), wifiQualityMonitor: wifiQualityMonitor,
+            setActivationPolicy: { _ in }, activateApplication: {},
+            isApplicationHidden: { visibility.appHidden }, isWindowDisplayable: { _ in visibility.displayable }
+        ) { _ in AnyView(Text("Window Test")) }
+        let unrelated = NSWindow()
+        defer { subject.shutdown(); unrelated.orderOut(nil) }
+
+        subject.present(.connection)
+        await waitForWiFiReads(1, from: reader)
+        #expect(wifiQualityMonitor.isVisible)
+
+        subject.selection = .usage
+        #expect(!wifiQualityMonitor.isVisible)
+        subject.selection = .connection
+        #expect(wifiQualityMonitor.isVisible)
+
+        visibility.appHidden = true
+        NotificationCenter.default.post(name: NSApplication.didHideNotification, object: NSApp)
+        #expect(!wifiQualityMonitor.isVisible)
+        visibility.appHidden = false
+        NotificationCenter.default.post(name: NSApplication.didUnhideNotification, object: NSApp)
+        #expect(wifiQualityMonitor.isVisible)
+
+        visibility.displayable = false
+        NotificationCenter.default.post(name: NSWindow.didMiniaturizeNotification, object: subject.window)
+        #expect(!wifiQualityMonitor.isVisible)
+        visibility.displayable = true
+        NotificationCenter.default.post(name: NSWindow.didDeminiaturizeNotification, object: subject.window)
+        #expect(wifiQualityMonitor.isVisible)
+
+        visibility.displayable = false
+        NotificationCenter.default.post(name: NSWindow.didChangeOcclusionStateNotification, object: subject.window)
+        #expect(!wifiQualityMonitor.isVisible)
+        NotificationCenter.default.post(name: NSWindow.didChangeOcclusionStateNotification, object: unrelated)
+        #expect(!wifiQualityMonitor.isVisible)
+        visibility.displayable = true
+        NotificationCenter.default.post(name: NSWindow.didDeminiaturizeNotification, object: subject.window)
+        #expect(wifiQualityMonitor.isVisible)
+
+        let readsBeforeWake = await reader.readCount()
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.didWakeNotification, object: nil)
+        await waitForWiFiReads(readsBeforeWake + 1, from: reader)
+        for _ in 0..<2_000 where wifiQualityMonitor.snapshot?.sampledAt != Date(timeIntervalSince1970: 1_797_000_000) {
+            await Task.yield()
+        }
+        #expect(wifiQualityMonitor.snapshot?.sampledAt == Date(timeIntervalSince1970: 1_797_000_000))
+
+        subject.window?.close()
+        #expect(!wifiQualityMonitor.isVisible)
+        subject.shutdown()
+        #expect(wifiQualityMonitor.snapshot == nil)
+    }
+
+    @Test func windowCloseRejectsAnInFlightWiFiSnapshot() async {
+        let reader = DeferredWiFiQualityReader()
+        let wifiQualityMonitor = WiFiQualityMonitor(reader: reader, refreshInterval: .seconds(30))
+        let subject = UtilityWindowCoordinator(
+            diagnostics: ConnectionDiagnostics(), wifiQualityMonitor: wifiQualityMonitor,
+            setActivationPolicy: { _ in }, activateApplication: {}, isApplicationHidden: { false },
+            isWindowDisplayable: { _ in true }
+        ) { _ in AnyView(Text("Window Test")) }
+        defer { subject.shutdown() }
+
+        subject.present(.connection)
+        await waitForWiFiReads(1, from: reader)
+        subject.window?.close()
+        #expect(!wifiQualityMonitor.isVisible)
+        await reader.resolveNext(with: sampleWiFiSnapshot(signal: -39))
+        for _ in 0..<2_000 { await Task.yield() }
+        #expect(wifiQualityMonitor.snapshot == nil)
     }
 
     @Test func activationRequestsRestoreAccessoryModeWithoutChangingTestHostPolicy() {
@@ -171,7 +256,7 @@ struct UtilityWindowTests {
             try? await Task.sleep(for: .milliseconds(5))
         }
         #expect(!diagnostics.isRunning)
-        #expect(diagnostics.message == "Check Cancelled.")
+        #expect(diagnostics.message == "Check Cancelled")
     }
 
     @Test func shutdownReleasesWindowAndStopsWork() async {
@@ -196,10 +281,17 @@ struct UtilityWindowTests {
         let events = FakeStabilityEventSource()
         let diagnostics = ConnectionDiagnostics(processOperation: { _, _, _ in stabilityReplyOutput() },
             stabilityClock: clock.makeClock(), stabilityEvents: { events })
-        let subject = coordinator(diagnostics)
-        defer { subject.shutdown() }
+        let initialWiFiSnapshot = sampleWiFiSnapshot()
+        let wifiReader = ImmediateWiFiQualityReader([initialWiFiSnapshot, sampleWiFiSnapshot(signal: -56)])
+        let wifiQualityMonitor = WiFiQualityMonitor(reader: wifiReader, refreshInterval: .seconds(30))
+        let subject = UtilityWindowCoordinator(diagnostics: diagnostics, wifiQualityMonitor: wifiQualityMonitor,
+            setActivationPolicy: { _ in }, activateApplication: {}, isApplicationHidden: { false },
+            isWindowDisplayable: { _ in true }) { _ in AnyView(Text("Window Test")) }
+        defer { subject.shutdown(); wifiQualityMonitor.shutdown() }
 
         subject.present(.connection)
+        await waitForWiFiReads(1, from: wifiReader)
+        await waitForWiFiSnapshot(initialWiFiSnapshot, from: wifiQualityMonitor)
         diagnostics.startStability()
         for _ in 0..<10_000 where (diagnostics.stabilitySnapshot?.observations.count ?? 0) < 2 {
             await Task.yield()
@@ -207,10 +299,12 @@ struct UtilityWindowTests {
         let initialID = diagnostics.stabilitySnapshot?.id
         #expect(initialID != nil)
         #expect(diagnostics.activity == .stability)
+        #expect(wifiQualityMonitor.isVisible)
 
         subject.present(.usage)
         subject.present(.settings)
         #expect(diagnostics.activity == .stability)
+        #expect(!wifiQualityMonitor.isVisible)
         #expect(diagnostics.stabilitySnapshot?.id == initialID)
 
         let originalWindow = subject.window
@@ -220,9 +314,11 @@ struct UtilityWindowTests {
         #expect(diagnostics.stabilitySnapshot?.observations.count == 2)
 
         subject.present(.connection)
+        await waitForWiFiReads(2, from: wifiReader)
         #expect(subject.window === originalWindow)
         #expect(subject.selection == .connection)
         #expect(subject.window?.isVisible == true)
+        #expect(wifiQualityMonitor.isVisible)
         #expect(diagnostics.stabilitySnapshot?.id == initialID)
         #expect(diagnostics.stabilitySnapshot?.observations.count == 2)
         #expect(events.stopCount == 1)
@@ -264,12 +360,22 @@ struct UtilityWindowTests {
             await Task.yield()
         }
 
+        let wifiSnapshot = sampleWiFiSnapshot()
+        let wifiReader = ImmediateWiFiQualityReader([wifiSnapshot])
+        let wifiQualityMonitor = WiFiQualityMonitor(reader: wifiReader, refreshInterval: .seconds(30))
+        wifiQualityMonitor.setVisible(true)
+        await waitForWiFiReads(1, from: wifiReader)
+        await waitForWiFiSnapshot(wifiSnapshot, from: wifiQualityMonitor)
+
         let delegate = AppDelegate()
         delegate.diagnostics = diagnostics
+        delegate.wifiQualityMonitor = wifiQualityMonitor
         var replies: [Bool] = []
         delegate.replyToTermination = { replies.append($0) }
 
         #expect(delegate.applicationShouldTerminate(NSApp) == .terminateLater)
+        #expect(!wifiQualityMonitor.isVisible)
+        #expect(wifiQualityMonitor.snapshot == nil)
         #expect(replies.isEmpty)
         #expect(diagnostics.isStopping)
 
@@ -277,6 +383,7 @@ struct UtilityWindowTests {
         for _ in 0..<10_000 where replies.isEmpty { await Task.yield() }
 
         #expect(replies == [true])
+        wifiQualityMonitor.shutdown()
         #expect(diagnostics.stabilitySnapshot?.status == .cancelled)
         #expect(events.stopCount == 1)
     }
@@ -424,9 +531,11 @@ struct UtilityWindowTests {
         let monitor = UsageMonitor(stateURL: url, startAutomatically: false, now: { date },
                                    calendar: { calendar }, readCounters: { [:] })
         let diagnostics = ConnectionDiagnostics()
-        let subject = UtilityWindowCoordinator(diagnostics: diagnostics,
+        let wifiQualityMonitor = WiFiQualityMonitor(reader: ImmediateWiFiQualityReader([sampleWiFiSnapshot()]))
+        let subject = UtilityWindowCoordinator(diagnostics: diagnostics, wifiQualityMonitor: wifiQualityMonitor,
             setActivationPolicy: { _ in }, activateApplication: {}) { coordinator in
-            AnyView(UtilityWindowView().environmentObject(monitor).environmentObject(diagnostics).environmentObject(coordinator))
+            AnyView(UtilityWindowView().environmentObject(monitor).environmentObject(diagnostics)
+                .environmentObject(wifiQualityMonitor).environmentObject(coordinator))
         }
         defer { subject.shutdown(); try? FileManager.default.removeItem(at: directory) }
         subject.present(.usage)

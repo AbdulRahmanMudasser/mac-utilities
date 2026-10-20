@@ -20,6 +20,8 @@ targets:
   Mac Utilities:
     type: application
     platform: macOS
+    dependencies:
+      - sdk: CoreWLAN.framework
     sources:
       - path: MacUtilities
         excludes:
