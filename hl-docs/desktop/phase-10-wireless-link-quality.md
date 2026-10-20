@@ -104,7 +104,7 @@ Add read-only Wi-Fi link readings to the existing Connection section so the user
 - **Exact Command:** `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -quiet -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-phase10-audit CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES test`
 - **Targeted Tests:** WiFiQualityTests and UtilityWindowTests, followed by the existing suite once after integration. Tests use injected temporary storage from Phase 08 and a fake Wi-Fi reader.
 - **Signed Build:** Same project/scheme/destination with `-configuration Release build` and Phase 08's verified local signing configuration; omit ad-hoc overrides for production group access. Inspect signature/entitlements and test the actual signed sandboxed app.
-- **Result:** Full arm64 suite passed on macOS 26.6.2: 144 passed, 2 existing opt-in signed stability tests skipped, 0 failed. The final focused `UtilityWindowTests` run passed. Signed Debug preview and Release builds passed strict signature verification with App Sandbox and the configured App Group. Release contains no preview route or synthetic preview text, verification namespace, Location usage description or Location entitlement; CoreWLAN is linked. Release was not installed or launched.
+- **Result:** Full arm64 suite passed on macOS 26.6.2: 144 passed, 2 existing opt-in signed stability tests skipped, 0 failed. The final focused `UtilityWindowTests` run passed. Signed Debug preview and Release builds passed strict signature verification with App Sandbox and the configured App Group. Release contains no preview route or synthetic preview text, verification namespace, Location usage description or Location entitlement; CoreWLAN is linked. The later 1.3.0 (build 15) Release was installed and launched with the same team and App Group; the canonical usage ledger remained valid.
 
 ### B. Functional Verification Matrix
 
@@ -130,4 +130,4 @@ Add read-only Wi-Fi link readings to the existing Connection section so the user
 - **Started At:** 2026-10-20
 - **Completed At:** 2026-10-20
 - **Blockers Encountered:** None.
-- **Notes:** The signed preview ran from `/tmp` with isolated temporary usage storage; no installation or production usage data was changed. The previously installed app remains on its existing version. Wi-Fi identity and Location permission remain out of scope.
+- **Notes:** The signed preview ran from `/tmp` with isolated temporary usage storage. Release 1.3.0 (build 15) was later installed at `~/Applications/Mac Utilities.app` after preserving the previous app bundle and canonical usage ledger. Wi-Fi identity and Location permission remain out of scope.
