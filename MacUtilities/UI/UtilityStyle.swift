@@ -160,17 +160,19 @@ struct UtilityPanel<Content: View>: View {
     let action: AnyView?
     let subtitle: String?
     let description: String?
+    let descriptionLineLimit: Int?
     let info: String?
     let showsContent: Bool
     let wrapsContent: Bool
     let content: Content
 
     init(_ title: String, subtitle: String? = nil, action: AnyView? = nil, description: String? = nil, info: String? = nil, showsContent: Bool = true,
-         wrapsContent: Bool = true,
+         wrapsContent: Bool = true, descriptionLineLimit: Int? = 2,
          @ViewBuilder content: () -> Content) {
         self.title = title
         self.subtitle = subtitle
         self.description = description
+        self.descriptionLineLimit = descriptionLineLimit
         self.action = action
         self.info = info
         self.showsContent = showsContent
@@ -207,7 +209,7 @@ struct UtilityPanel<Content: View>: View {
             }
             .frame(minHeight: UtilityStyle.headerHeight)
             if let description {
-                Text(description)
+                UtilityPanelDescription(text: description, lineLimit: descriptionLineLimit)
                     .font(UtilityStyle.helpFont)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -231,6 +233,50 @@ struct UtilityPanel<Content: View>: View {
         VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) { content }
             .font(UtilityStyle.bodyFont)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct UtilityPanelDescription: View {
+    let text: String
+    let lineLimit: Int?
+    @State private var isExpanded = false
+    @State private var fullHeight: CGFloat = 0
+    @State private var collapsedHeight: CGFloat = 0
+
+    private var hasMore: Bool { fullHeight > collapsedHeight + 1 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
+            Text(text)
+                .lineLimit(isExpanded ? nil : lineLimit)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background {
+                    if let lineLimit {
+                        Text(text)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fullHeight = $0 }
+                            .hidden()
+                            .accessibilityHidden(true)
+                        Text(text)
+                            .lineLimit(lineLimit)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { collapsedHeight = $0 }
+                            .hidden()
+                            .accessibilityHidden(true)
+                    }
+                }
+            if lineLimit != nil && hasMore {
+                Button(isExpanded ? "Read Less" : "Read More") {
+                    isExpanded.toggle()
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.tint)
+                .handPointer()
+                .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
     }
 }
 
