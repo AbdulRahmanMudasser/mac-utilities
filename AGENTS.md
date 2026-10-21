@@ -16,11 +16,11 @@ Resolve conflicts using explicit user decisions and current verified evidence. C
 | Location | Ownership |
 | --- | --- |
 | `MacUtilities/App/` | Composition, delegate and singleton utility-window lifecycle |
-| `MacUtilities/Features/` | Connection, Usage, Settings and popover behavior |
-| `MacUtilities/Platform/` | macOS adapters, networking, processes, login items and canonical storage |
+| `MacUtilities/Features/` | Connection, Keep Awake, Usage, Settings and popover behavior |
+| `MacUtilities/Platform/` | macOS adapters, networking, power assertions, processes, login items and canonical storage |
 | `MacUtilities/UI/` | Shared styles, panels, controls, cards and tooltips |
 | `Shared/` | Shared values, formatting, calendar calculations and bounded projection reading |
-| `Mac UtilitiesTests/` | Usage, Connection and Window regression suites |
+| `Mac UtilitiesTests/` | Usage, Connection, Keep Awake and Window regression suites |
 
 ## Implementation Rules
 
@@ -35,7 +35,7 @@ Resolve conflicts using explicit user decisions and current verified evidence. C
 - Use scheme `Mac Utilities`, destination `platform=macOS,arch=arm64` and `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`. Standards §5 contains the supported build/test/signing commands. Use a task-specific derived-data directory under `/tmp`.
 - Version/build live in `Configuration/Version.xcconfig`. Local signing lives in ignored `Configuration/Signing.local.xcconfig`; do not expose or commit its contents. Ad-hoc tests do not prove App Group authorization.
 - Bump the version only when requested or required by an explicitly authorized release workflow. Read the current values first, use the user's requested marketing version and increment `CURRENT_PROJECT_VERSION` for the new release. A preview alone does not require a bump. Verify the resulting version/build in the built bundle's Info.plist; do not rely on source values alone.
-- A preview means a separate signed Debug build, launched with `open -n` and the existing `--stability-preview` or `--usage-preview` arguments. These isolate usage storage and disable production collection; stability results are synthetic while Wi-Fi readings remain passive live reads. See Standards §6 for appearance/size variants. Keep preview routes Debug-only.
+- A preview means a separate signed Debug build, launched with `open -n` and the documented `--stability-preview`, `--usage-preview` or `--keep-awake-preview` arguments. These isolate usage storage and preferences and disable production collection; diagnostic and Keep Awake preview state is synthetic while Wi-Fi readings remain passive live reads. See Standards §6 for appearance/size variants. Keep preview routes Debug-only.
 - Installation targets `~/Applications/Mac Utilities.app` and is a separate action from previewing. Verify signature, sandbox/group configuration and requested version before replacing an installed bundle.
 - A production/installed build uses the signed `Release` configuration and normal launch, without preview arguments or synthetic fixtures. Verify the Release bundle excludes Debug preview routes and the verification namespace, and preserves the existing sandbox/App Group contract. A successful Debug preview does not replace Release verification.
 - When installation is requested, gracefully quit the installed app and task-owned previews, replace the app bundle while preserving usage data, then launch and verify the installed path and version/build. Preview requests leave the installed app bundle in place. Keep any rollback copies outside Git and clean up identified backups/build outputs when the user requests it.
