@@ -24,6 +24,33 @@ extension View {
     }
 }
 
+struct UtilityTimestampRow: View {
+    let date: Date
+    var title = "Last Checked"
+    var symbol = "checkmark.circle.fill"
+    var color: Color = UtilityStyle.successColor
+    var detail: String?
+
+    var body: some View {
+        HStack(spacing: UtilityStyle.contentSpacing) {
+            Label(title, systemImage: symbol)
+            Spacer()
+            Text(timestampText)
+                .monospacedDigit()
+                .multilineTextAlignment(.trailing)
+        }
+        .font(UtilityStyle.bodyFont)
+        .foregroundStyle(color)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var timestampText: String {
+        let timestamp = date.formatted(date: .abbreviated, time: .shortened)
+        guard let detail, !detail.isEmpty else { return timestamp }
+        return "(timestamp) · (detail)"
+    }
+}
+
 struct HandCursorPicker<Option: Hashable & Identifiable>: View {
     let title: String
     let options: [Option]

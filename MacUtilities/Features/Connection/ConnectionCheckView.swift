@@ -128,7 +128,7 @@ struct ConnectionCheckView: View {
     }
 
     private func checkTimestamp(_ date: Date, succeeded: Bool) -> some View {
-        ConnectionCheckTimestamp(date: date,
+        UtilityTimestampRow(date: date,
             symbol: succeeded ? "checkmark.circle.fill" : "exclamationmark.circle.fill",
             color: succeeded ? UtilityStyle.successColor : UtilityStyle.warningColor)
     }
