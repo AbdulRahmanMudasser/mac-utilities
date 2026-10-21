@@ -9,6 +9,21 @@ private final class UtilityWindowVisibilityState {
     var displayable = true
 }
 
+@MainActor
+private final class UtilityWindowPowerAssertions: PowerAsserting {
+    private(set) var released: [PowerAssertionID] = []
+    private var nextID: UInt32 = 1
+
+    func create(_ kind: PowerAssertionKind, timeout: TimeInterval?) throws -> PowerAssertionID {
+        defer { nextID &+= 1 }
+        return PowerAssertionID(rawValue: nextID)
+    }
+
+    func release(_ id: PowerAssertionID) throws {
+        released.append(id)
+    }
+}
+
 @Suite(.serialized)
 @MainActor
 struct UtilityWindowTests {
@@ -177,7 +192,7 @@ struct UtilityWindowTests {
     @Test func startupDoesNotCreateAWindow() {
         let subject = coordinator()
         #expect(subject.window == nil)
-        #expect(UtilitySection.allCases == [.connection, .usage, .settings])
+        #expect(UtilitySection.allCases == [.connection, .keepAwake, .usage, .settings])
     }
 
     @Test(arguments: UtilitySection.allCases)
@@ -229,7 +244,7 @@ struct UtilityWindowTests {
         defer { subject.shutdown() }
         subject.present(.settings)
         let original = subject.window
-        for section in [UtilitySection.connection, .usage, .settings, .connection] {
+        for section in [UtilitySection.connection, .keepAwake, .usage, .settings, .connection] {
             subject.present(section)
             #expect(subject.window === original)
             #expect(subject.selection == section)
@@ -395,10 +410,19 @@ struct UtilityWindowTests {
         let delegate = AppDelegate()
         delegate.diagnostics = diagnostics
         delegate.wifiQualityMonitor = wifiQualityMonitor
+        let power = UtilityWindowPowerAssertions()
+        let preferenceSuite = "MacUtilities.UtilityWindowTests.\(UUID().uuidString)"
+        let preferences = UserDefaults(suiteName: preferenceSuite)!
+        defer { preferences.removePersistentDomain(forName: preferenceSuite) }
+        let keepAwake = KeepAwakeController(power: power, preferences: preferences)
+        keepAwake.setActive(true)
+        delegate.keepAwakeController = keepAwake
         var replies: [Bool] = []
         delegate.replyToTermination = { replies.append($0) }
 
         #expect(delegate.applicationShouldTerminate(NSApp) == .terminateLater)
+        #expect(!keepAwake.isActive)
+        #expect(power.released.map(\.rawValue) == [1])
         #expect(!wifiQualityMonitor.isVisible)
         #expect(wifiQualityMonitor.snapshot == nil)
         #expect(replies.isEmpty)
@@ -408,9 +432,32 @@ struct UtilityWindowTests {
         for _ in 0..<10_000 where replies.isEmpty { await Task.yield() }
 
         #expect(replies == [true])
+        delegate.applicationWillTerminate(Notification(name: NSApplication.willTerminateNotification))
+        #expect(power.released.map(\.rawValue) == [1])
         wifiQualityMonitor.shutdown()
         #expect(diagnostics.stabilitySnapshot?.status == .cancelled)
         #expect(events.stopCount == 1)
+    }
+
+    @Test func immediateTerminationReleasesKeepAwakeBeforeReturningAndWillTerminateIsIdempotent() {
+        let power = UtilityWindowPowerAssertions()
+        let preferenceSuite = "MacUtilities.UtilityWindowTests.\(UUID().uuidString)"
+        let preferences = UserDefaults(suiteName: preferenceSuite)!
+        defer { preferences.removePersistentDomain(forName: preferenceSuite) }
+        let keepAwake = KeepAwakeController(power: power, preferences: preferences)
+        keepAwake.setKeepDisplayOn(true)
+        keepAwake.setActive(true)
+        let delegate = AppDelegate()
+        delegate.keepAwakeController = keepAwake
+        let diagnostics = ConnectionDiagnostics()
+        delegate.diagnostics = diagnostics
+
+        #expect(delegate.applicationShouldTerminate(NSApp) == .terminateNow)
+        #expect(!keepAwake.isActive)
+        #expect(power.released.map(\.rawValue) == [2, 1])
+
+        delegate.applicationWillTerminate(Notification(name: NSApplication.willTerminateNotification))
+        #expect(power.released.map(\.rawValue) == [2, 1])
     }
 
     @Test func resultsSurviveNavigationAndWindowReopen() async {
@@ -533,10 +580,11 @@ struct UtilityWindowTests {
         #expect(subject.window?.contentView?.frame == original)
     }
 
-    @Test func usageKeepsExistingKeyboardShortcuts() {
+    @Test func utilitySectionsUseSequentialKeyboardShortcuts() {
         #expect(UtilitySection.connection.shortcut == "1")
-        #expect(UtilitySection.settings.shortcut == "2")
+        #expect(UtilitySection.keepAwake.shortcut == "2")
         #expect(UtilitySection.usage.shortcut == "3")
+        #expect(UtilitySection.settings.shortcut == "4")
     }
 
     @Test func realUsageViewKeepsSharedBoundsInBothAppearances() async throws {
