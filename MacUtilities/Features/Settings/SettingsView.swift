@@ -20,8 +20,16 @@ struct SettingsView: View {
 
             UtilityPanel("General") {
                 UtilityValueRow(title: "Local Time Zone", value: monitor.localTimeZoneDescription)
-                Toggle("Start At Login", isOn: loginItemBinding)
-                    .toggleStyle(HandCursorToggleStyle())
+                HStack(spacing: UtilityStyle.contentSpacing) {
+                    Text("Start At Login")
+                    Spacer()
+                    Toggle("Start At Login", isOn: loginItemBinding)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .accessibilityLabel("Start At Login")
+                        .handPointer()
+                }
                 if let message = monitor.loginItemMessage {
                     Text(message)
                         .font(UtilityStyle.helpFont)

@@ -4,6 +4,7 @@ import SwiftUI
 
 enum UtilitySection: String, CaseIterable, Identifiable {
     case connection = "Connection"
+    case keepAwake = "Keep Awake"
     case usage = "Usage"
     case settings = "Settings"
 
@@ -11,8 +12,9 @@ enum UtilitySection: String, CaseIterable, Identifiable {
     var shortcut: KeyEquivalent {
         switch self {
         case .connection: "1"
-        case .settings: "2"
+        case .keepAwake: "2"
         case .usage: "3"
+        case .settings: "4"
         }
     }
 }
@@ -158,6 +160,14 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
         if CommandLine.arguments.contains("--usage-preview") && CommandLine.arguments.contains("--usage-preview-compact") {
             target.setContentSize(Self.minimumContentSize)
         }
+        if CommandLine.arguments.contains("--keep-awake-preview") {
+            target.appearance = NSAppearance(named: CommandLine.arguments.contains("--keep-awake-preview-light") ? .aqua : .darkAqua)
+            if CommandLine.arguments.contains("--keep-awake-preview-compact") {
+                target.setContentSize(Self.minimumContentSize)
+            } else if CommandLine.arguments.contains("--keep-awake-preview-expanded") {
+                target.setContentSize(NSSize(width: 1100, height: 800))
+            }
+        }
         #endif
         setActivationPolicy(.regular)
         if target.isMiniaturized { target.deminiaturize(nil) }
@@ -291,6 +301,7 @@ struct UtilityWindowView: View {
             Group {
                 switch utilityWindow.selection {
                 case .connection: ConnectionCheckView()
+                case .keepAwake: KeepAwakeView()
                 case .usage: UsageHistoryView()
                 case .settings: SettingsView()
                 }

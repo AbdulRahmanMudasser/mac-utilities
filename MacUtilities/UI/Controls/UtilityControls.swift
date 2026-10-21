@@ -24,30 +24,6 @@ extension View {
     }
 }
 
-struct HandCursorToggleStyle: ToggleStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        Button { configuration.isOn.toggle() } label: {
-            HStack(spacing: UtilityStyle.contentSpacing) {
-                configuration.label
-                Spacer()
-                Capsule()
-                    .fill(configuration.isOn ? Color.accentColor : UtilityStyle.Toggle.offColor)
-                    .frame(width: UtilityStyle.Toggle.width, height: UtilityStyle.Toggle.height)
-                    .overlay(alignment: configuration.isOn ? .trailing : .leading) {
-                        Circle()
-                            .fill(configuration.isOn ? UtilityStyle.Toggle.onThumbColor : UtilityStyle.Toggle.offThumbColor)
-                            .frame(width: UtilityStyle.Toggle.thumbSize, height: UtilityStyle.Toggle.thumbSize)
-                            .padding(UtilityStyle.Toggle.thumbInset)
-                    }
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .handPointer()
-        .accessibilityValue(configuration.isOn ? "On" : "Off")
-    }
-}
-
 struct HandCursorPicker<Option: Hashable & Identifiable>: View {
     let title: String
     let options: [Option]

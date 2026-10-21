@@ -8,11 +8,17 @@ struct Mac_UtilitiesApp: App {
     @StateObject private var monitor: UsageMonitor
     @StateObject private var diagnostics: ConnectionDiagnostics
     @StateObject private var wifiQualityMonitor: WiFiQualityMonitor
+    @StateObject private var keepAwakeController: KeepAwakeController
     @StateObject private var utilityWindow: UtilityWindowCoordinator
 
     init() {
         let testing = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil || NSClassFromString("XCTestCase") != nil
-        let reloadCoordinator = testing ? nil : WidgetReloadCoordinator(widgetKind: "UsageHistoryWidget",
+        #if DEBUG
+        let keepAwakePreview = !testing && CommandLine.arguments.contains("--keep-awake-preview")
+        #else
+        let keepAwakePreview = false
+        #endif
+        let reloadCoordinator = testing || keepAwakePreview ? nil : WidgetReloadCoordinator(widgetKind: "UsageHistoryWidget",
             reloadTimelines: { WidgetCenter.shared.reloadTimelines(ofKind: $0) })
         let didCommit: ((UsageWidgetSnapshot, WidgetReloadReason) -> Void)? = { [weak reloadCoordinator] _, reason in
             reloadCoordinator?.requestReload(for: reason)
@@ -23,7 +29,7 @@ struct Mac_UtilitiesApp: App {
             monitor = UsageMonitor(stateURL: file, startAutomatically: false, readCounters: { [:] })
         } else {
             #if DEBUG
-            if CommandLine.arguments.contains("--usage-preview") || CommandLine.arguments.contains("--stability-preview") {
+            if CommandLine.arguments.contains("--usage-preview") || CommandLine.arguments.contains("--stability-preview") || keepAwakePreview {
                 monitor = Self.previewMonitor(verificationOnly: CommandLine.arguments.contains("--stability-preview"))
             } else { monitor = UsageMonitor(onSnapshotCommittedWithReason: didCommit) }
             #else
@@ -32,6 +38,28 @@ struct Mac_UtilitiesApp: App {
         }
         let diagnostics = ConnectionDiagnostics()
         let wifiQualityMonitor = WiFiQualityMonitor()
+        let keepAwakeController: KeepAwakeController
+        #if DEBUG
+        if testing {
+            let suiteName = "com.abdulrahman.mac-utilities.keep-awake-tests.\(UUID().uuidString)"
+            guard let preferences = UserDefaults(suiteName: suiteName) else {
+                preconditionFailure("Could not create isolated Keep Awake test preferences.")
+            }
+            keepAwakeController = KeepAwakeController(power: PreviewPowerAsserter(), preferences: preferences)
+        } else if keepAwakePreview {
+            let suiteName = "com.abdulrahman.mac-utilities.keep-awake-preview.\(ProcessInfo.processInfo.processIdentifier)"
+            guard let preferences = UserDefaults(suiteName: suiteName) else {
+                preconditionFailure("Could not create isolated Keep Awake preview preferences.")
+            }
+            preferences.removePersistentDomain(forName: suiteName)
+            keepAwakeController = KeepAwakeController(power: PreviewPowerAsserter(), preferences: preferences)
+            Self.configureKeepAwakePreview(keepAwakeController)
+        } else {
+            keepAwakeController = KeepAwakeController(power: PowerAssertionClient())
+        }
+        #else
+        keepAwakeController = KeepAwakeController(power: PowerAssertionClient())
+        #endif
         #if DEBUG
         if !testing && CommandLine.arguments.contains("--stability-preview") {
             diagnostics.showStabilityPreview(
@@ -42,6 +70,7 @@ struct Mac_UtilitiesApp: App {
         _monitor = StateObject(wrappedValue: monitor)
         _diagnostics = StateObject(wrappedValue: diagnostics)
         _wifiQualityMonitor = StateObject(wrappedValue: wifiQualityMonitor)
+        _keepAwakeController = StateObject(wrappedValue: keepAwakeController)
         let coordinator = UtilityWindowCoordinator(
             diagnostics: diagnostics,
             wifiQualityMonitor: wifiQualityMonitor
@@ -50,6 +79,7 @@ struct Mac_UtilitiesApp: App {
                 .environmentObject(monitor)
                 .environmentObject(diagnostics)
                 .environmentObject(wifiQualityMonitor)
+                .environmentObject(keepAwakeController)
                 .environmentObject(coordinator))
         }
         _utilityWindow = StateObject(wrappedValue: coordinator)
@@ -63,6 +93,7 @@ struct Mac_UtilitiesApp: App {
         appDelegate.monitor = monitor
         appDelegate.diagnostics = diagnostics
         appDelegate.wifiQualityMonitor = wifiQualityMonitor
+        appDelegate.keepAwakeController = keepAwakeController
         appDelegate.utilityWindow = coordinator
     }
 
@@ -70,9 +101,11 @@ struct Mac_UtilitiesApp: App {
         MenuBarExtra {
             ContentView()
                 .environmentObject(monitor)
+                .environmentObject(keepAwakeController)
                 .environmentObject(utilityWindow)
         } label: {
             MenuBarStatusLabel(text: monitor.menuBarText, status: monitor.collectionStatus)
+                .environmentObject(keepAwakeController)
                 .environmentObject(utilityWindow)
         }
         .menuBarExtraStyle(.window)
@@ -108,5 +141,35 @@ struct Mac_UtilitiesApp: App {
         }
         return UsageMonitor(stateURL: file, startAutomatically: false, readCounters: { [:] })
     }
+
+    private static func configureKeepAwakePreview(_ controller: KeepAwakeController) {
+        let arguments = CommandLine.arguments
+        if arguments.contains("--keep-awake-preview-two-presets") {
+            try? controller.setPresetEnabled(false, for: .timedThree)
+            try? controller.setPresetEnabled(false, for: .untilStopped)
+        } else if arguments.contains("--keep-awake-preview-three-presets") {
+            try? controller.setPresetEnabled(false, for: .timedThree)
+        }
+        if arguments.contains("--keep-awake-preview-until-stopped") {
+            controller.selectPreset(.untilStopped)
+            controller.setActive(true)
+        } else if arguments.contains("--keep-awake-preview-active") {
+            controller.setActive(true)
+        }
+    }
     #endif
 }
+
+#if DEBUG
+@MainActor
+private final class PreviewPowerAsserter: PowerAsserting {
+    private var nextID: UInt32 = 1
+
+    func create(_ kind: PowerAssertionKind, timeout: TimeInterval?) throws -> PowerAssertionID {
+        defer { nextID &+= 1 }
+        return PowerAssertionID(rawValue: nextID)
+    }
+
+    func release(_ id: PowerAssertionID) throws {}
+}
+#endif

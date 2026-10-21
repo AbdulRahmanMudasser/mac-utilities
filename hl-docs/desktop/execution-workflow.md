@@ -21,14 +21,14 @@ Do not use this file for:
 
 * **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md)
 * **Usage History Contract:** The [PRD](../mac-utilities-prd.md) owns the product requirements; [Phase 07](./phase-07-usage-history-chart.md), especially Sections 6–8, records the detailed storage, accounting, interface and verification contracts. Earlier completed phases retain their historical scope.
-* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions; [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) is implemented and verified in a signed sandbox preview. [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) is completed and was first included in installed Release 1.4.0 (16), with user acceptance recorded in its execution notes. The current installed Release is 1.4.1 (17), including the Usage chart accessibility update. The PRD records product behavior and release state, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
+* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions; [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) is implemented and verified. [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) is completed and was first included in installed Release 1.4.0 (16), with user acceptance recorded in its execution notes. [12 Keep Awake Control](./phase-12-keep-awake-control.md) is completed and included in installed Release 1.5.0 (18). The PRD records product behavior and release state, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
 
 ## 3. Platform Baseline
 
 * **Platform Name:** Desktop
 * **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an Apple Development signed personal build with verified App Group access
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.4.1 (build 17), including configurable usage widgets, accessible Usage chart inspection, and the existing shared foundation, connection checks, Wi-Fi readings and expandable descriptions. No public binary distribution target.
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.5.0 (build 18), including Keep Awake, configurable usage widgets, accessible Usage chart inspection, and the existing shared foundation, connection checks, Wi-Fi readings and expandable descriptions. No public binary distribution target.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
   - `xcodegen generate --spec project.yml` using XcodeGen 2.46.0; configure ignored local signing before a signed build. See [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
@@ -65,16 +65,16 @@ Every completed phase must satisfy all of the following:
 
 ## 6. Current Active Phase
 
-* **Current Phase:** 11 - Configurable Usage Widget
+* **Current Phase:** 12 - Keep Awake Control
 * **Status:** Completed
-* **Owner:** Product Developer
-* **Linked Phase Doc:** [phase-11-configurable-usage-widget.md](./phase-11-configurable-usage-widget.md)
-* **Immediate Goal:** All defined phases are closed. Select and approve the next improvement before starting another phase.
-* **Current Blockers:** None for widget delivery. Final layout refinements and Light/Dark, clear and tinted rendering have been inspected. The Usage chart accessibility improvement is installed in signed Release 1.4.1 (17); existing widgets and both gallery families were verified. Per-app attribution remains deferred.
+* **Owner:** TBD
+* **Linked Phase Doc:** [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md)
+* **Immediate Goal:** Select and scope the next phase while preserving the verified Release 1.5.0 baseline.
+* **Current Blockers:** None known.
 
 ## 7. Ready Queue
 
-The installed 1.4.1 (build 17) Release includes Wireless Link Quality, Configurable Usage Widget and the Usage chart accessibility improvement. Phase 11 is completed with user acceptance; installed gallery discovery and both family timelines work. No next phase is approved. The widget does not depend on Wi-Fi or stability measurement data.
+No phase is currently queued for implementation. Phase 12 is complete in installed Release 1.5.0 (18). Closed-lid overrides, automatic triggers, schedules and helper processes remain out of scope.
 
 ## 8. Phase Register
 
@@ -92,12 +92,13 @@ The installed 1.4.1 (build 17) Release includes Wireless Link Quality, Configura
 | 09 | Extended Stability Checks | Completed | TBD | TBD | Phase 08 | [phase-09-extended-stability-checks.md](./phase-09-extended-stability-checks.md) | Completed 2026-10-17 |
 | 10 | Wireless Link Quality | Completed | TBD | TBD | Phase 08; delivery follows Phase 09 | [phase-10-wireless-link-quality.md](./phase-10-wireless-link-quality.md) | Completed 2026-10-20 |
 | 11 | Configurable Usage Widget | Completed | TBD | Product Developer | Phase 08; delivery follows Phase 10; signed extension/group access | [phase-11-configurable-usage-widget.md](./phase-11-configurable-usage-widget.md) | Completed 2026-10-21 |
+| 12 | Keep Awake Control | Completed | TBD | TBD | Phases 06 and 08 | [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md) | Completed 2026-10-22 |
 
 ## 9. Blockers And Risks
 
 ### Active Blockers
 
-- No active delivery blockers. Phase 11 is completed with user acceptance; verification limitations are recorded in its execution notes.
+- No active delivery blockers are known. Phase 12 is complete and installed.
 - Host and extension App Group access are verified; the sole installation retains the existing canonical container.
 
 ### Execution Risks
