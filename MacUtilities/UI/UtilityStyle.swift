@@ -84,16 +84,6 @@ enum UtilityStyle {
         static let minimumSize = NSSize(width: 620, height: 420)
     }
 
-    enum Toggle {
-        static let width: CGFloat = 36
-        static let height: CGFloat = 22
-        static let thumbSize: CGFloat = 18
-        static let thumbInset: CGFloat = 2
-        static let offColor = Color.secondary.opacity(0.3)
-        static let onThumbColor = Color(nsColor: .windowBackgroundColor)
-        static let offThumbColor = Color.white
-    }
-
     enum Picker {
         static let indicatorFont: Font = .caption2
         static let optionSpacing: CGFloat = 4
@@ -119,6 +109,7 @@ enum UtilityStyle {
         static let columnSpacing: CGFloat = 8
         static let dividerWidth: CGFloat = 1
         static let dividerHeight: CGFloat = 16
+        static let iconButtonSize: CGFloat = 16
         static let valueFont: Font = UtilityStyle.emphasizedBodyFont.monospacedDigit()
         static let labelFont: Font = UtilityStyle.helpFont
     }

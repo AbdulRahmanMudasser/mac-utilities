@@ -12,14 +12,22 @@ struct ContentView: View {
                 Text("Connection Health")
                     .font(UtilityStyle.headingFont)
                 Spacer()
-                Button("Check") {
+                Button {
                     utilityWindow.present(.connection)
+                } label: {
+                    Image(systemName: "network")
+                        .font(UtilityStyle.Popover.labelFont)
+                        .frame(width: UtilityStyle.Popover.iconButtonSize,
+                               height: UtilityStyle.Popover.iconButtonSize)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(UtilityStyle.Popover.controlSize)
+                .help("Check Connection")
+                .accessibilityLabel("Check Connection")
                 .handPointer()
             }
             ratesSection
+            KeepAwakePopoverSection()
             totalsSection
             footer
         }
@@ -73,9 +81,16 @@ struct ContentView: View {
                 Text("Today's Usage")
                     .font(UtilityStyle.headingFont)
                 Spacer()
-                Button("Usage") { utilityWindow.present(.usage) }
+                Button { utilityWindow.present(.usage) } label: {
+                    Image(systemName: "chart.bar.xaxis")
+                        .font(UtilityStyle.Popover.labelFont)
+                        .frame(width: UtilityStyle.Popover.iconButtonSize,
+                               height: UtilityStyle.Popover.iconButtonSize)
+                }
                     .buttonStyle(.bordered)
                     .controlSize(UtilityStyle.Popover.controlSize)
+                    .help("Open Usage")
+                    .accessibilityLabel("Open Usage")
                     .handPointer()
             }
 
@@ -95,10 +110,15 @@ struct ContentView: View {
     private var footer: some View {
         HStack(spacing: UtilityStyle.contentSpacing) {
             Button(action: presentSettings) {
-                Text("Settings")
+                Image(systemName: "gearshape")
+                    .font(UtilityStyle.Popover.labelFont)
+                    .frame(width: UtilityStyle.Popover.iconButtonSize,
+                           height: UtilityStyle.Popover.iconButtonSize)
             }
             .buttonStyle(.bordered)
             .controlSize(UtilityStyle.Popover.controlSize)
+            .help("Open Settings")
+            .accessibilityLabel("Open Settings")
             .handPointer()
 
             Spacer()
@@ -110,6 +130,9 @@ struct ContentView: View {
 
             Button { NSApplication.shared.terminate(nil) } label: {
                 Image(systemName: "power")
+                    .font(UtilityStyle.Popover.labelFont)
+                    .frame(width: UtilityStyle.Popover.iconButtonSize,
+                           height: UtilityStyle.Popover.iconButtonSize)
             }
                 .buttonStyle(.bordered)
                 .controlSize(UtilityStyle.Popover.controlSize)

@@ -4,10 +4,15 @@ struct MenuBarStatusLabel: View {
     let text: String
     let status: String
     @EnvironmentObject private var utilityWindow: UtilityWindowCoordinator
+    @EnvironmentObject private var keepAwakeController: KeepAwakeController
     @State private var presentedDebugWindow = false
 
+    static func displayedText(rateText: String, keepAwakePrefix: String) -> String {
+        keepAwakePrefix + rateText
+    }
+
     var body: some View {
-        Text(text)
+        Text(Self.displayedText(rateText: text, keepAwakePrefix: keepAwakeController.menuBarPrefix))
             .monospacedDigit()
             .font(UtilityStyle.menuBarFont)
             .help(status)

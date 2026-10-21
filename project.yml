@@ -22,6 +22,7 @@ targets:
     platform: macOS
     dependencies:
       - sdk: CoreWLAN.framework
+      - sdk: IOKit.framework
       - target: Mac UtilitiesWidgets
         embed: true
         codeSign: true

@@ -30,9 +30,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var monitor: UsageMonitor?
     weak var diagnostics: ConnectionDiagnostics?
     weak var wifiQualityMonitor: WiFiQualityMonitor?
+    weak var keepAwakeController: KeepAwakeController?
     var replyToTermination: @MainActor (Bool) -> Void = { NSApp.reply(toApplicationShouldTerminate: $0) }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        keepAwakeController?.shutdown()
         wifiQualityMonitor?.shutdown()
         guard let diagnostics, diagnostics.isRunning else { return .terminateNow }
         diagnostics.shutdown()
@@ -44,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        keepAwakeController?.shutdown()
         utilityWindow?.shutdown()
         wifiQualityMonitor?.shutdown()
         monitor?.shutdown()
@@ -61,8 +64,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         markWindowRoutingReady()
         #if DEBUG
-        if CommandLine.arguments.contains("--stability-preview") || CommandLine.arguments.contains("--usage-preview") {
-            utilityWindow?.present(CommandLine.arguments.contains("--usage-preview") ? .usage : .connection)
+        if CommandLine.arguments.contains("--stability-preview") || CommandLine.arguments.contains("--usage-preview") ||
+            CommandLine.arguments.contains("--keep-awake-preview") {
+            if CommandLine.arguments.contains("--keep-awake-preview") {
+                utilityWindow?.present(.keepAwake)
+            } else {
+                utilityWindow?.present(CommandLine.arguments.contains("--usage-preview") ? .usage : .connection)
+            }
         }
         #endif
     }
