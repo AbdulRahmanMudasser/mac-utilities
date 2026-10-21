@@ -1,25 +1,5 @@
 import SwiftUI
 
-struct ConnectionCheckTimestamp: View {
-    let date: Date
-    var title = "Last Checked"
-    var symbol = "checkmark.circle.fill"
-    var color: Color = UtilityStyle.successColor
-
-    var body: some View {
-        HStack(spacing: UtilityStyle.contentSpacing) {
-            Label(title, systemImage: symbol)
-            Spacer()
-            Text(date.formatted(date: .abbreviated, time: .shortened))
-                .monospacedDigit()
-                .multilineTextAlignment(.trailing)
-        }
-        .font(UtilityStyle.bodyFont)
-        .foregroundStyle(color)
-        .accessibilityElement(children: .combine)
-    }
-}
-
 struct ConnectionServerCards<Content: View>: View {
     @ViewBuilder let content: (ProbeTarget) -> Content
 

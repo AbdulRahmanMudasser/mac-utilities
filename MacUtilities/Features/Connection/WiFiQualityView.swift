@@ -35,7 +35,7 @@ struct WiFiQualityView: View {
             .padding(UtilityStyle.cardPadding)
             .utilityCardBackground()
             if let snapshot = wifiQuality.snapshot {
-                ConnectionCheckTimestamp(
+                UtilityTimestampRow(
                     date: snapshot.sampledAt,
                     title: "Last Updated",
                     symbol: snapshot.hasAnyReading ? "checkmark.circle.fill" : "exclamationmark.circle.fill",

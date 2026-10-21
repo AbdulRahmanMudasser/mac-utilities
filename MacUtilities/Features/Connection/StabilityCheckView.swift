@@ -53,7 +53,7 @@ struct StabilityCheckView: View {
     }
 
     private func checkTimestamp(for snapshot: StabilitySnapshot) -> some View {
-        ConnectionCheckTimestamp(date: snapshot.finishedAt ?? snapshot.startedAt,
+        UtilityTimestampRow(date: snapshot.finishedAt ?? snapshot.startedAt,
             title: snapshot.status == .completed ? "Last Checked" : snapshot.status.rawValue,
             symbol: snapshot.status == .completed && !snapshot.hasCompletedChecks
                 ? "exclamationmark.circle.fill" : statusSymbol(for: snapshot.status),

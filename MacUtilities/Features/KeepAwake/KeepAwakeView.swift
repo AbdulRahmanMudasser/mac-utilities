@@ -55,6 +55,15 @@ struct KeepAwakeView: View {
                 }
             }
 
+            if let lastSession = controller.lastSession {
+                UtilityTimestampRow(
+                    date: lastSession.startedAt,
+                    title: "Last Ran",
+                    symbol: "hourglass",
+                    detail: lastSession.duration.title
+                )
+            }
+
             UtilityPanel(
                 "Keep Display On",
                 action: AnyView(

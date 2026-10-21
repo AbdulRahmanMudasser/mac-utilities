@@ -21,14 +21,14 @@ Do not use this file for:
 
 * **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md)
 * **Usage History Contract:** The [PRD](../mac-utilities-prd.md) owns the product requirements; [Phase 07](./phase-07-usage-history-chart.md), especially Sections 6–8, records the detailed storage, accounting, interface and verification contracts. Earlier completed phases retain their historical scope.
-* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions; [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) is implemented and verified. [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) is completed and was first included in installed Release 1.4.0 (16), with user acceptance recorded in its execution notes. [12 Keep Awake Control](./phase-12-keep-awake-control.md) is completed and included in installed Release 1.5.0 (18). The PRD records product behavior and release state, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
+* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions; [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) is implemented and verified. [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) is completed and was first included in installed Release 1.4.0 (16), with user acceptance recorded in its execution notes. [12 Keep Awake Control](./phase-12-keep-awake-control.md) is completed and included in installed Release 1.5.1 (19), including the transient Last Ran summary. The PRD records product behavior and release state, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
 
 ## 3. Platform Baseline
 
 * **Platform Name:** Desktop
 * **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an Apple Development signed personal build with verified App Group access
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.5.0 (build 18), including Keep Awake, configurable usage widgets, accessible Usage chart inspection, and the existing shared foundation, connection checks, Wi-Fi readings and expandable descriptions. No public binary distribution target.
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.5.1 (build 19), including Keep Awake with Last Ran, configurable usage widgets, accessible Usage chart inspection, and the existing shared foundation, connection checks, Wi-Fi readings and expandable descriptions. No public binary distribution target.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
   - `xcodegen generate --spec project.yml` using XcodeGen 2.46.0; configure ignored local signing before a signed build. See [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
@@ -69,12 +69,12 @@ Every completed phase must satisfy all of the following:
 * **Status:** Completed
 * **Owner:** TBD
 * **Linked Phase Doc:** [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md)
-* **Immediate Goal:** Select and scope the next phase while preserving the verified Release 1.5.0 baseline.
+* **Immediate Goal:** Select and scope the next phase while preserving the verified Release 1.5.1 baseline.
 * **Current Blockers:** None known.
 
 ## 7. Ready Queue
 
-No phase is currently queued for implementation. Phase 12 is complete in installed Release 1.5.0 (18). Closed-lid overrides, automatic triggers, schedules and helper processes remain out of scope.
+No phase is currently queued for implementation. Phase 12 is complete in installed Release 1.5.1 (19). Closed-lid overrides, automatic triggers, schedules and helper processes remain out of scope.
 
 ## 8. Phase Register
 

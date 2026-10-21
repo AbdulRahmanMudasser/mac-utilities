@@ -26,6 +26,7 @@ final class KeepAwakeController: ObservableObject {
     @Published private(set) var presetConfiguration: KeepAwakePresetConfiguration
     @Published private(set) var selectedPresetID: KeepAwakePresetID
     @Published private(set) var activeSession: KeepAwakeSessionSnapshot?
+    @Published private(set) var lastSession: KeepAwakeSessionSnapshot?
     @Published private(set) var remainingMinutes: Int?
     @Published private(set) var isKeepDisplayOn: Bool
     @Published private(set) var errorMessage: String?
@@ -246,12 +247,16 @@ final class KeepAwakeController: ObservableObject {
     }
 
     private func stopSession() {
+        let finishedSession = activeSession
         cancelTimer()
         sessionGeneration &+= 1
         sessionDeadline = nil
         activeSession = nil
         remainingMinutes = nil
         warningMessage = nil
+        if let finishedSession {
+            lastSession = finishedSession
+        }
 
         var failures: [String] = []
         if let displayAssertionID {
