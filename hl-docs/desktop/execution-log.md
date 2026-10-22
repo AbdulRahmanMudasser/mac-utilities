@@ -81,3 +81,13 @@ Chronological delivery history for the desktop app. Read when historical evidenc
 - **Status Change:** Installed version 1.2.0 (build 14) -> 1.3.0 (build 15)
 - **Summary:** Released expandable descriptions for shared utility panels and installed the Wi-Fi link-quality implementation in the signed local app.
 - **Evidence:** The arm64 Release build succeeded and passed strict code-signature verification with the same team and App Group as the prior app. The previous app bundle and canonical usage ledger were preserved in a local rollback backup; the ledger copy matched before replacement. Version 1.3.0 (build 15) was installed and launched, and the canonical ledger remained valid JSON.
+
+### 2026-10-22 - Phase 13 / Local Notification System Planning
+- **Status Change:** New phase registered as Planned; implementation has not started.
+- **Summary:** Researched Apple's local UserNotifications flow and keep-awake utility patterns, then created a desktop plan for a separate Notifications utility section with a saved opt-in Keep Awake timer switch. The selected architecture keeps expiration ownership in `KeepAwakeController`, delegates authorization/content/delivery to an app-lifetime Notifications controller and platform adapter, preserves existing shortcuts by assigning Notifications Command-5, and sends no notification for Until Stopped, manual stop, replacement or quit.
+- **Evidence:** [Phase 13](./phase-13-local-notification-system.md) contains the verified file anchors, event/content contract, permission/error behavior, test matrix, signed verification gates and exclusions. The workflow and separated decision/execution logs were updated; no application source, tests, PRD, build configuration, installation, permission state or release artifact was changed or executed during planning.
+
+### 2026-10-22 - Phase 13 / Plan Naming And Sidebar Order Correction
+- **Status Change:** Phase 13 remains Planned; its plan name, filename and utility sidebar contract were corrected before implementation.
+- **Summary:** Renamed the plan to `Local Notification System` using the three-word lowercase filename convention, moved the Notifications utility section before Settings, assigned Notifications Command-4 and Settings Command-5, and preserved Connection, Keep Awake and Usage as Commands 1–3.
+- **Evidence:** [Phase 13](./phase-13-local-notification-system.md), the execution workflow, and the decision log now share the corrected phase name, filename, ordering and shortcut contract. No application source, tests, PRD, build configuration, installation, permission state or release artifact was changed or executed.
