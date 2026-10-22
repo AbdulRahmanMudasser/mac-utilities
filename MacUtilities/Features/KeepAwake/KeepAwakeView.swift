@@ -2,6 +2,9 @@ import AppKit
 import SwiftUI
 
 struct KeepAwakeView: View {
+    static let lastRanSymbol = "checkmark.circle.fill"
+    static let lastRanColor = UtilityStyle.successColor
+
     @EnvironmentObject private var controller: KeepAwakeController
     @State private var minuteInputs: [KeepAwakePresetID: String] = [:]
     @State private var validationMessage: String?
@@ -39,29 +42,34 @@ struct KeepAwakeView: View {
                 EmptyView()
             }
 
-            UtilityPanel("Current Session") {
-                UtilityValueRow(title: "Status", value: controller.isActive ? "On" : "Off")
-                UtilityValueRow(title: controller.isActive ? "Session Preset" : "Selected Preset",
-                                value: currentPresetTitle)
-                UtilityValueRow(title: "Started", value: sessionDate(controller.activeSession?.startedAt) ?? "Not Active")
-                UtilityValueRow(title: "Ends", value: endTimeText)
-                UtilityValueRow(title: "Remaining", value: remainingText)
+            VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
+                UtilityPanel("Current Session") {
+                    UtilityValueRow(title: "Status", value: controller.isActive ? "On" : "Off")
+                    UtilityValueRow(title: controller.isActive ? "Session Preset" : "Selected Preset",
+                                    value: currentPresetTitle)
+                    UtilityValueRow(title: "Started", value: sessionDate(controller.activeSession?.startedAt) ?? "Not Active")
+                    UtilityValueRow(title: "Ends", value: endTimeText)
+                    UtilityValueRow(title: "Remaining", value: remainingText)
 
-                if let message = controller.errorMessage {
-                    messageText(message)
+                    if let message = controller.errorMessage {
+                        messageText(message)
+                    }
+                    if let message = controller.warningMessage {
+                        messageText(message)
+                    }
                 }
-                if let message = controller.warningMessage {
-                    messageText(message)
-                }
-            }
 
-            if let lastSession = controller.lastSession {
-                UtilityTimestampRow(
-                    date: lastSession.startedAt,
-                    title: "Last Ran",
-                    symbol: "hourglass",
-                    detail: lastSession.duration.title
-                )
+                if let lastSession = controller.lastSession {
+                    UtilityTimestampRow(
+                        date: lastSession.startedAt,
+                        title: "Last Ran",
+                        symbol: Self.lastRanSymbol,
+                        color: Self.lastRanColor,
+                        detail: [lastSession.duration.title, lastSession.outcome?.summary]
+                            .compactMap { $0 }
+                            .joined(separator: " · ")
+                    )
+                }
             }
 
             UtilityPanel(

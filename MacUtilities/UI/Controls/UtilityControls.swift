@@ -44,10 +44,14 @@ struct UtilityTimestampRow: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var timestampText: String {
+    static func timestampText(for date: Date, detail: String?) -> String {
         let timestamp = date.formatted(date: .abbreviated, time: .shortened)
         guard let detail, !detail.isEmpty else { return timestamp }
-        return "(timestamp) · (detail)"
+        return "\(timestamp) · \(detail)"
+    }
+
+    private var timestampText: String {
+        Self.timestampText(for: date, detail: detail)
     }
 }
 
