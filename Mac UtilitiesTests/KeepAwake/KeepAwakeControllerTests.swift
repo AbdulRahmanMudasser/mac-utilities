@@ -197,6 +197,22 @@ struct KeepAwakeControllerTests {
         await harness.cleanUp()
     }
 
+    @Test func endedSessionOutcomeIsTransientAndDoesNotRestoreAfterRelaunch() async {
+        let harness = KeepAwakeTestHarness()
+        harness.controller.setActive(true)
+        harness.controller.setActive(false)
+        #expect(harness.controller.lastSession?.outcome == .cancelled(reason: .stopped))
+
+        let relaunched = KeepAwakeController(
+            power: FakeKeepAwakePower(),
+            preferences: harness.preferences,
+            clock: FakeKeepAwakeClock().makeClock()
+        )
+        #expect(relaunched.lastSession == nil)
+        relaunched.shutdown()
+        await harness.cleanUp()
+    }
+
     @Test func incompletePreferencesFallBackAndRestoreDefaultsPersistsTheCompleteConfiguration() async throws {
         let incomplete = [
             KeepAwakePreset(id: .timedOne, duration: .timed(minutes: 15)),
@@ -285,11 +301,13 @@ struct KeepAwakeControllerTests {
         #expect(controller.isActive)
         #expect(controller.activeSession?.duration == .untilStopped)
         #expect(controller.menuBarPrefix == "☾ ∞\u{2003}")
+        #expect(controller.lastSession?.outcome == .cancelled(reason: .replaced))
         #expect(harness.power.releaseAttempts.map(\.rawValue) == [1])
         #expect(harness.power.createRequests.count == 2)
         #expect(harness.power.createRequests[1].timeout == nil)
 
         controller.setActive(false)
+        #expect(controller.lastSession?.outcome == .cancelled(reason: .stopped))
         controller.setActive(false)
         controller.shutdown()
         #expect(!controller.isActive)
@@ -324,6 +342,7 @@ struct KeepAwakeControllerTests {
         for _ in 0..<20 { await Task.yield() }
         #expect(!controller.isActive)
         #expect(controller.remainingMinutes == nil)
+        #expect(controller.lastSession?.outcome == .completed)
         #expect(harness.power.releaseAttempts.map(\.rawValue) == [1])
         await harness.cleanUp()
     }
@@ -347,6 +366,7 @@ struct KeepAwakeControllerTests {
         #expect(harness.power.releaseAttempts.map(\.rawValue) == [2])
         #expect(controller.isActive)
         controller.setActive(false)
+        #expect(controller.lastSession?.outcome == .cancelled(reason: .stopped))
         #expect(harness.power.releaseAttempts.map(\.rawValue) == [2, 1])
         await harness.cleanUp()
     }
@@ -368,6 +388,7 @@ struct KeepAwakeControllerTests {
         baseHarness.controller.setActive(true)
         #expect(!baseHarness.controller.isActive)
         #expect(baseHarness.controller.errorMessage?.contains("could not start") == true)
+        #expect(baseHarness.controller.lastSession == nil)
         #expect(baseHarness.power.releaseAttempts.isEmpty)
         await baseHarness.cleanUp()
     }
@@ -459,6 +480,7 @@ struct KeepAwakeControllerTests {
         harness.controller.setActive(true)
 
         #expect(!harness.controller.isActive)
+        #expect(harness.controller.lastSession?.outcome == .cancelled(reason: .applicationQuit))
         #expect(harness.power.releaseAttempts.map(\.rawValue) == [2, 1])
         #expect(harness.power.createRequests.count == 2)
         await harness.cleanUp()

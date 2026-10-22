@@ -36,6 +36,24 @@ struct KeepAwakePresentationTests {
         #expect(two.enabledPresets.map(\.title) == ["30 Min", "1 Hour"])
     }
 
+    @Test func lastRanUsesSharedCheckmarkAndHonestOutcomeSummaries() {
+        #expect(KeepAwakeView.lastRanSymbol == "checkmark.circle.fill")
+        #expect(KeepAwakeView.lastRanColor == UtilityStyle.successColor)
+        #expect(KeepAwakeSessionOutcome.completed.summary == "Completed")
+        #expect(KeepAwakeSessionOutcome.cancelled(reason: .stopped).summary == "Cancelled")
+        #expect(KeepAwakeSessionOutcome.cancelled(reason: .replaced).summary == "Cancelled · Replaced")
+        #expect(KeepAwakeSessionOutcome.cancelled(reason: .applicationQuit).summary == "Cancelled · Mac Utilities Quit")
+    }
+
+    @Test func timestampRowsRenderValuesInsteadOfPlaceholderText() {
+        let timestamp = Date(timeIntervalSince1970: 1_797_000_000)
+        let rendered = UtilityTimestampRow.timestampText(for: timestamp, detail: "5 Min · Completed")
+
+        #expect(rendered.contains("5 Min · Completed"))
+        #expect(!rendered.contains("(timestamp)"))
+        #expect(!rendered.contains("(detail)"))
+    }
+
     @Test func realKeepAwakeViewKeepsSharedBoundsAcrossSupportedSizesAndAppearances() async throws {
         let suiteName = "MacUtilities.KeepAwakePresentationTests.\(UUID().uuidString)"
         let preferences = UserDefaults(suiteName: suiteName)!

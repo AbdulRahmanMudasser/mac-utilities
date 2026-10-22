@@ -121,7 +121,7 @@ final class KeepAwakeController: ObservableObject {
             guard !isActive else { return }
             startSession(using: selectedPresetID)
         } else {
-            stopSession()
+            stopSession(reason: .stopped)
         }
     }
 
@@ -180,14 +180,14 @@ final class KeepAwakeController: ObservableObject {
             wakeNotificationCenter.removeObserver(wakeObserver)
             self.wakeObserver = nil
         }
-        stopSession()
+        stopSession(reason: .applicationQuit)
     }
 
     private func startSession(using presetID: KeepAwakePresetID) {
         guard !hasShutDown, !isStartBlocked,
               let preset = presetConfiguration.enabledPresets.first(where: { $0.id == presetID }) else { return }
 
-        if isActive { stopSession() }
+        if isActive { stopSession(reason: .replaced) }
         guard !isStartBlocked else { return }
 
         selectedPresetID = presetID
@@ -231,7 +231,8 @@ final class KeepAwakeController: ObservableObject {
             duration: preset.duration,
             startedAt: startedAt,
             endsAt: endsAt,
-            generation: generation
+            generation: generation,
+            outcome: nil
         )
         remainingMinutes = deadline.map { Self.remainingMinutes(until: $0, now: clock.now()) }
 
@@ -246,7 +247,11 @@ final class KeepAwakeController: ObservableObject {
         if deadline != nil { scheduleTimer(generation: generation) }
     }
 
-    private func stopSession() {
+    private func stopSession(reason: KeepAwakeCancellationReason) {
+        endSession(with: .cancelled(reason: reason))
+    }
+
+    private func endSession(with outcome: KeepAwakeSessionOutcome) {
         let finishedSession = activeSession
         cancelTimer()
         sessionGeneration &+= 1
@@ -254,9 +259,6 @@ final class KeepAwakeController: ObservableObject {
         activeSession = nil
         remainingMinutes = nil
         warningMessage = nil
-        if let finishedSession {
-            lastSession = finishedSession
-        }
 
         var failures: [String] = []
         if let displayAssertionID {
@@ -278,6 +280,9 @@ final class KeepAwakeController: ObservableObject {
         if !failures.isEmpty {
             failedReleaseMessage = "A power assertion could not be released (\(failures.joined(separator: "; "))). Restart Mac Utilities to clear it."
             errorMessage = failedReleaseMessage
+        }
+        if let finishedSession {
+            lastSession = finishedSession.ended(with: outcome)
         }
     }
 
@@ -366,7 +371,7 @@ final class KeepAwakeController: ObservableObject {
         guard let deadline = sessionDeadline else { return }
         let now = clock.now()
         guard now < deadline else {
-            stopSession()
+            endSession(with: .completed)
             return
         }
 

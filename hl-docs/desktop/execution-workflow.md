@@ -21,21 +21,21 @@ Do not use this file for:
 
 * **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md)
 * **Usage History Contract:** The [PRD](../mac-utilities-prd.md) owns the product requirements; [Phase 07](./phase-07-usage-history-chart.md), especially Sections 6–8, records the detailed storage, accounting, interface and verification contracts. Earlier completed phases retain their historical scope.
-* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions; [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) is implemented and verified. [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) is completed and was first included in installed Release 1.4.0 (16), with user acceptance recorded in its execution notes. [12 Keep Awake Control](./phase-12-keep-awake-control.md) is completed and included in installed Release 1.5.1 (19), including the transient Last Ran summary. The PRD records product behavior and release state, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
+* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions; [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) is implemented and verified. [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) is completed and was first included in installed Release 1.4.0 (16), with user acceptance recorded in its execution notes. [12 Keep Awake Control](./phase-12-keep-awake-control.md) is completed and included in installed Release 1.5.2 (20), including the outcome-aware transient Last Ran summary and Light/Dark layout verification. [13 Local Notification System](./phase-13-local-notification-system.md) is planned and adds an opt-in local notification preference for finite Keep Awake expiration. The PRD records product behavior and release state, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
 
 ## 3. Platform Baseline
 
 * **Platform Name:** Desktop
 * **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an Apple Development signed personal build with verified App Group access
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.5.1 (build 19), including Keep Awake with Last Ran, configurable usage widgets, accessible Usage chart inspection, and the existing shared foundation, connection checks, Wi-Fi readings and expandable descriptions. No public binary distribution target.
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.5.2 (build 20), including Keep Awake with outcome-aware Last Ran, configurable usage widgets, accessible Usage chart inspection, and the existing shared foundation, connection checks, Wi-Fi readings and expandable descriptions. No public binary distribution target.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
   - `xcodegen generate --spec project.yml` using XcodeGen 2.46.0; configure ignored local signing before a signed build. See [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
   - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-install CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES build`
   - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-install CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES test`
   - `codesign --verify --deep --strict "$HOME/Applications/Mac Utilities.app"`
-  - Run the complete regression suite and opt-in signed five-minute/notification checks in [Phase 09 Section 11](./phase-09-extended-stability-checks.md#11-verification-protocol-definition-of-done) when changing stability scheduling or lifecycle behavior.
+  - Run the complete regression suite and the applicable opt-in signed five-minute checks from [Phase 09 Section 11](./phase-09-extended-stability-checks.md#11-verification-protocol-definition-of-done) and timer-notification checks from [Phase 13 Section 11](./phase-13-local-notification-system.md#11-verification-protocol-definition-of-done) when changing those lifecycle behaviors.
 * **Release Gates:**
   - Verify live device rates, current-day totals, restart persistence, local-midnight rollover, collection-state messaging, and normal network connectivity on the target MacBook. Ad-hoc tests use injected storage; the installed app requires a verified matching development signature for group access.
   - Run the signed Release build with verified group configuration. The sole installation's history is already in the canonical ledger. Preserve it and prevent competing writers during installation.
@@ -65,16 +65,16 @@ Every completed phase must satisfy all of the following:
 
 ## 6. Current Active Phase
 
-* **Current Phase:** 12 - Keep Awake Control
-* **Status:** Completed
+* **Current Phase:** 13 - Local Notification System
+* **Status:** Planned
 * **Owner:** TBD
-* **Linked Phase Doc:** [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md)
-* **Immediate Goal:** Select and scope the next phase while preserving the verified Release 1.5.1 baseline.
+* **Linked Phase Doc:** [phase-13-local-notification-system.md](./phase-13-local-notification-system.md)
+* **Immediate Goal:** Implement the approved Phase 13 plan after review while preserving the verified Release 1.5.2 baseline.
 * **Current Blockers:** None known.
 
 ## 7. Ready Queue
 
-No phase is currently queued for implementation. Phase 12 is complete in installed Release 1.5.1 (19). Closed-lid overrides, automatic triggers, schedules and helper processes remain out of scope.
+Phase 13 is planned for implementation after plan review. Phase 12 is complete in installed Release 1.5.2 (20), including outcome-aware Last Ran/icon behavior and Light/Dark layout verification. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
 
 ## 8. Phase Register
 
@@ -92,7 +92,8 @@ No phase is currently queued for implementation. Phase 12 is complete in install
 | 09 | Extended Stability Checks | Completed | TBD | TBD | Phase 08 | [phase-09-extended-stability-checks.md](./phase-09-extended-stability-checks.md) | Completed 2026-10-17 |
 | 10 | Wireless Link Quality | Completed | TBD | TBD | Phase 08; delivery follows Phase 09 | [phase-10-wireless-link-quality.md](./phase-10-wireless-link-quality.md) | Completed 2026-10-20 |
 | 11 | Configurable Usage Widget | Completed | TBD | Product Developer | Phase 08; delivery follows Phase 10; signed extension/group access | [phase-11-configurable-usage-widget.md](./phase-11-configurable-usage-widget.md) | Completed 2026-10-21 |
-| 12 | Keep Awake Control | Completed | TBD | TBD | Phases 06 and 08 | [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md) | Completed 2026-10-22 |
+| 12 | Keep Awake Control | Completed | TBD | TBD | Phases 06 and 08 | [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md) | Completed 2026-10-22; Release 1.5.2 (20) |
+| 13 | Local Notification System | Planned | TBD | TBD | Phase 12; signed local UserNotifications verification | [phase-13-local-notification-system.md](./phase-13-local-notification-system.md) | TBD |
 
 ## 9. Blockers And Risks
 

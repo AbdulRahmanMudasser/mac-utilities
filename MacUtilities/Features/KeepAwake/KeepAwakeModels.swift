@@ -195,6 +195,51 @@ nonisolated struct KeepAwakeSessionSnapshot: Equatable, Sendable {
     let startedAt: Date
     let endsAt: Date?
     let generation: UInt64
+    let outcome: KeepAwakeSessionOutcome?
 
     var isFinite: Bool { duration.isTimed }
+
+    func ended(with outcome: KeepAwakeSessionOutcome) -> Self {
+        Self(
+            presetID: presetID,
+            duration: duration,
+            startedAt: startedAt,
+            endsAt: endsAt,
+            generation: generation,
+            outcome: outcome
+        )
+    }
+}
+
+nonisolated enum KeepAwakeSessionOutcome: Equatable, Sendable {
+    case completed
+    case cancelled(reason: KeepAwakeCancellationReason)
+
+    var summary: String {
+        switch self {
+        case .completed:
+            return "Completed"
+        case .cancelled(reason: .stopped):
+            return "Cancelled"
+        case let .cancelled(reason):
+            return "Cancelled · \(reason.title)"
+        }
+    }
+}
+
+nonisolated enum KeepAwakeCancellationReason: Equatable, Sendable {
+    case stopped
+    case replaced
+    case applicationQuit
+
+    var title: String {
+        switch self {
+        case .stopped:
+            return "Stopped"
+        case .replaced:
+            return "Replaced"
+        case .applicationQuit:
+            return "Mac Utilities Quit"
+        }
+    }
 }
