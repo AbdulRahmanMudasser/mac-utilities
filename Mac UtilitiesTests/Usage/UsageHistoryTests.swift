@@ -241,6 +241,9 @@ struct UsageHistoryTests {
         monitor.sample()
         #expect(monitor.combinedToday == 0)
         #expect(monitor.counterError != nil)
+        #expect(monitor.counterCapabilityMessage == UtilityCapabilityMessage(
+            title: "Device Counters Are Unavailable.", detail: nil
+        ))
         #expect(monitor.historyRecords.count == 1)
         monitor.resetToday()
         f.counterFailure = false
@@ -248,6 +251,7 @@ struct UsageHistoryTests {
         monitor.sample()
         #expect(monitor.combinedToday == 0)
         #expect(monitor.counterError == nil)
+        #expect(monitor.counterCapabilityMessage == nil)
         f.advance(download: 8, upload: 2)
         monitor.sample()
         #expect(monitor.combinedToday == 10)
@@ -324,6 +328,8 @@ struct UsageHistoryTests {
         let monitor = f.makeMonitor()
         #expect(!monitor.historyWritable)
         #expect(monitor.historyError != nil)
+        #expect(monitor.historyCapabilityMessage?.title == "Saved Usage Could Not Be Opened.")
+        #expect(monitor.historyCapabilityMessage?.detail?.isEmpty == false)
         f.advance(download: 100, upload: 20)
         monitor.sample()
         monitor.clearHistory()
@@ -361,10 +367,14 @@ struct UsageHistoryTests {
         monitor.flush()
         #expect(monitor.historyWritable)
         #expect(monitor.historyError != nil)
+        #expect(monitor.historyCapabilityMessage == UtilityCapabilityMessage(
+            title: "Usage Could Not Be Saved.", detail: "We will try again."
+        ))
         #expect(monitor.historyRecords.first?.combined == 120)
         try FileManager.default.removeItem(at: f.url)
         monitor.flush()
         #expect(monitor.historyError == nil)
+        #expect(monitor.historyCapabilityMessage == nil)
         #expect(try UsageStateStore.readState(at: f.url)?.history?.first?.combined == 120)
     }
 

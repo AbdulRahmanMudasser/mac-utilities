@@ -70,6 +70,24 @@ struct NotificationsPresentationTests {
         #expect(KeepAwakeTimerFinishedEvent(sessionGeneration: 4, duration: .untilStopped).notificationDuration == nil)
     }
 
+    @Test func capabilityDetailsAppearOnlyForFailuresWithExistingExplanations() {
+        let suiteName = "MacUtilities.NotificationsCapabilityPresentation.\(UUID().uuidString)"
+        let preferences = UserDefaults(suiteName: suiteName)!
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let controller = NotificationsController(client: PresentationNotificationClient(), preferences: preferences)
+        defer { controller.shutdown() }
+
+        for capability in [NotificationCapabilityState.off, .permissionPending, .authorized, .denied, .deliverySurfaceDisabled] {
+            controller.showPreviewCapabilityState(.notDetermined, enabled: false, capability: capability)
+            #expect(controller.capabilityMessage.title == controller.statusText)
+            #expect(controller.capabilityMessage.detail == nil)
+        }
+        controller.showPreviewCapabilityState(.notDetermined, enabled: false, capability: .permissionFailed)
+        #expect(controller.capabilityMessage.detail == nil)
+        controller.showPreviewCapabilityState(.notDetermined, enabled: true, capability: .deliveryFailed)
+        #expect(controller.capabilityMessage.detail == nil)
+    }
+
     @Test func recoveryPreviewsExposeTheRealActionsWithoutPlatformDelivery() {
         let suiteName = "MacUtilities.NotificationsRecoveryPresentation.\(UUID().uuidString)"
         let preferences = UserDefaults(suiteName: suiteName)!

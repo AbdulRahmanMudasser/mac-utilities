@@ -36,9 +36,15 @@ struct KeepAwakePresentationTests {
         #expect(two.enabledPresets.map(\.title) == ["30 Min", "1 Hour"])
     }
 
-    @Test func lastRanUsesSharedCheckmarkAndHonestOutcomeSummaries() {
-        #expect(KeepAwakeView.lastRanSymbol == "checkmark.circle.fill")
-        #expect(KeepAwakeView.lastRanColor == UtilityStyle.successColor)
+    @Test func lastRanStylingMatchesItsOutcome() {
+        #expect(KeepAwakeView.lastRanSymbol(for: .completed) == "checkmark.circle.fill")
+        #expect(KeepAwakeView.lastRanColor(for: .completed) == UtilityStyle.successColor)
+        for reason in [KeepAwakeCancellationReason.stopped, .replaced, .applicationQuit] {
+            #expect(KeepAwakeView.lastRanSymbol(for: .cancelled(reason: reason)) == "exclamationmark.circle.fill")
+            #expect(KeepAwakeView.lastRanColor(for: .cancelled(reason: reason)) == UtilityStyle.warningColor)
+        }
+        #expect(KeepAwakeView.lastRanSymbol(for: nil) == "exclamationmark.circle.fill")
+        #expect(KeepAwakeView.lastRanColor(for: nil) == UtilityStyle.warningColor)
         #expect(KeepAwakeSessionOutcome.completed.summary == "Completed")
         #expect(KeepAwakeSessionOutcome.cancelled(reason: .stopped).summary == "Cancelled")
         #expect(KeepAwakeSessionOutcome.cancelled(reason: .replaced).summary == "Cancelled · Replaced")
