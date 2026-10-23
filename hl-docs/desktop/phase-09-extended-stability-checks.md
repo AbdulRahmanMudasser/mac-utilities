@@ -34,7 +34,7 @@ Extend Connection with an explicitly started five-minute session that reveals ch
 
 - **Environment Variables:** No new production variables. Inject clock, scheduler, path/sleep events and probe operations for deterministic tests.
 - **Database/Index Changes:** Not applicable; session data stays in memory and is discarded at app termination.
-- **Feature Flags / Config Switches:** Preserve existing fixed executables/network entitlements. Add a Debug-only synthetic stability preview route using the existing Connection preview approach; it must start no real probes or production collection.
+- **Feature Flags / Config Switches:** Preserve existing fixed executables/network entitlements. Add a Debug-only synthetic stability preview route using the existing Connection preview approach; `--stability-preview=<state>` supports complete, sparse, unobserved, running and cancelled states and must start no real probes or production collection.
 - **Seed / Fixture Requirements:** Successful replies, valid no-reply summaries, launch/parser failures, delayed results, cancelled processes, network/sleep gaps, wall-clock jumps and the five-minute deadline.
 - **Required Reusable Utilities:** `ConnectionDiagnostics` owns the overall activity; reuse `ProbeTarget.defaults`, existing ping parsing validation, `DiagnosticProcessRunner`, the singleton window/fixed status footer, Swift Charts and centralized tooltip/style helpers. No new package or helper app is required.
 
