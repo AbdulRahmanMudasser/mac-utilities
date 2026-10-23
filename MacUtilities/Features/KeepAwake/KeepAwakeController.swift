@@ -40,6 +40,7 @@ final class KeepAwakeController: ObservableObject {
     private let preferences: UserDefaults
     private let clock: KeepAwakeClock
     private let wakeNotificationCenter: NotificationCenter
+    private weak var timerFinishedNotifier: (any KeepAwakeTimerFinishedNotifying)?
     private var wakeObserver: NSObjectProtocol?
     private var sessionDeadline: Double?
     private var baseAssertionID: PowerAssertionID?
@@ -48,18 +49,22 @@ final class KeepAwakeController: ObservableObject {
     private var sessionGeneration: UInt64 = 0
     private var timerGeneration: UInt64 = 0
     private var failedReleaseMessage: String?
+    private var sessionHadAssertionCreationFailure = false
+    private var sessionHadAssertionCleanupFailure = false
     private var hasShutDown = false
 
     init(
         power: any PowerAsserting,
         preferences: UserDefaults = .standard,
         clock: KeepAwakeClock? = nil,
-        wakeNotificationCenter: NotificationCenter? = nil
+        wakeNotificationCenter: NotificationCenter? = nil,
+        timerFinishedNotifier: (any KeepAwakeTimerFinishedNotifying)? = nil
     ) {
         self.power = power
         self.preferences = preferences
         self.clock = clock ?? .system()
         self.wakeNotificationCenter = wakeNotificationCenter ?? NSWorkspace.shared.notificationCenter
+        self.timerFinishedNotifier = timerFinishedNotifier
 
         let savedConfiguration: KeepAwakePresetConfiguration
         var savedPreferenceError: String? = nil
@@ -183,6 +188,21 @@ final class KeepAwakeController: ObservableObject {
         stopSession(reason: .applicationQuit)
     }
 
+    #if DEBUG
+    func showPreviewLastSession(outcome: KeepAwakeSessionOutcome) {
+        guard !hasShutDown else { return }
+        let startedAt = Date().addingTimeInterval(-1_800)
+        lastSession = KeepAwakeSessionSnapshot(
+            presetID: .timedOne,
+            duration: .timed(minutes: 30),
+            startedAt: startedAt,
+            endsAt: startedAt.addingTimeInterval(1_800),
+            generation: 1,
+            outcome: outcome
+        )
+    }
+    #endif
+
     private func startSession(using presetID: KeepAwakePresetID) {
         guard !hasShutDown, !isStartBlocked,
               let preset = presetConfiguration.enabledPresets.first(where: { $0.id == presetID }) else { return }
@@ -190,9 +210,12 @@ final class KeepAwakeController: ObservableObject {
         if isActive { stopSession(reason: .replaced) }
         guard !isStartBlocked else { return }
 
+        timerFinishedNotifier?.notificationSessionStarted()
         selectedPresetID = presetID
         errorMessage = nil
         warningMessage = nil
+        sessionHadAssertionCreationFailure = false
+        sessionHadAssertionCleanupFailure = false
 
         let startedAt = clock.date()
         let deadline: Double?
@@ -240,6 +263,7 @@ final class KeepAwakeController: ObservableObject {
             do {
                 displayAssertionID = try power.create(.displayIdle, timeout: timeout)
             } catch {
+                sessionHadAssertionCreationFailure = true
                 warningMessage = "Keep Display On could not be applied. \(error.localizedDescription)"
             }
         }
@@ -278,11 +302,22 @@ final class KeepAwakeController: ObservableObject {
             }
         }
         if !failures.isEmpty {
+            sessionHadAssertionCleanupFailure = true
             failedReleaseMessage = "A power assertion could not be released (\(failures.joined(separator: "; "))). Restart Mac Utilities to clear it."
             errorMessage = failedReleaseMessage
         }
         if let finishedSession {
             lastSession = finishedSession.ended(with: outcome)
+            if failures.isEmpty,
+               !sessionHadAssertionCreationFailure,
+               !sessionHadAssertionCleanupFailure,
+               outcome == .completed,
+               finishedSession.isFinite {
+                timerFinishedNotifier?.notifyTimerFinished(KeepAwakeTimerFinishedEvent(
+                    sessionGeneration: finishedSession.generation,
+                    duration: finishedSession.duration
+                ))
+            }
         }
     }
 
@@ -297,6 +332,7 @@ final class KeepAwakeController: ObservableObject {
                     displayAssertionID = try power.create(.displayIdle, timeout: nil)
                     return
                 } catch {
+                    sessionHadAssertionCreationFailure = true
                     warningMessage = "Keep Display On could not be applied. \(error.localizedDescription)"
                     return
                 }
@@ -314,6 +350,7 @@ final class KeepAwakeController: ObservableObject {
             displayAssertionID = try power.create(.displayIdle, timeout: timeout)
             warningMessage = nil
         } catch {
+            sessionHadAssertionCreationFailure = true
             warningMessage = "Keep Display On could not be applied. \(error.localizedDescription)"
         }
     }
@@ -325,6 +362,7 @@ final class KeepAwakeController: ObservableObject {
             try power.release(displayAssertionID)
             warningMessage = nil
         } catch {
+            sessionHadAssertionCleanupFailure = true
             failedReleaseMessage = "The display power assertion could not be released (\(error.localizedDescription)). Restart Mac Utilities to clear it."
             errorMessage = failedReleaseMessage
         }
