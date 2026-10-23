@@ -52,6 +52,19 @@ struct UtilityWindowTests {
         #expect(!diagnostics.isRunning)
     }
 
+    @Test func queuedKeepAwakeRouteSelectsKeepAwakeAfterWindowRoutingIsReady() {
+        let coordinator = UtilityWindowCoordinator(diagnostics: ConnectionDiagnostics(),
+            setActivationPolicy: { _ in }, activateApplication: {}) { _ in AnyView(Text("Fixture")) }
+        defer { coordinator.shutdown() }
+        let delegate = AppDelegate()
+        delegate.routeToKeepAwake()
+        delegate.utilityWindow = coordinator
+        #expect(coordinator.window == nil)
+        delegate.markWindowRoutingReady()
+        #expect(coordinator.selection == .keepAwake)
+        #expect(coordinator.window?.isVisible == true)
+    }
+
     #if DEBUG
     @Test func realStabilityViewsKeepSharedBoundsAcrossSizesAppearancesAndEmptyStates() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("stability-window-\(UUID().uuidString)")
@@ -192,7 +205,7 @@ struct UtilityWindowTests {
     @Test func startupDoesNotCreateAWindow() {
         let subject = coordinator()
         #expect(subject.window == nil)
-        #expect(UtilitySection.allCases == [.connection, .keepAwake, .usage, .settings])
+        #expect(UtilitySection.allCases == [.connection, .keepAwake, .usage, .notifications, .settings])
     }
 
     @Test(arguments: UtilitySection.allCases)
@@ -244,7 +257,7 @@ struct UtilityWindowTests {
         defer { subject.shutdown() }
         subject.present(.settings)
         let original = subject.window
-        for section in [UtilitySection.connection, .keepAwake, .usage, .settings, .connection] {
+        for section in [UtilitySection.connection, .keepAwake, .usage, .notifications, .settings, .connection] {
             subject.present(section)
             #expect(subject.window === original)
             #expect(subject.selection == section)
@@ -584,7 +597,8 @@ struct UtilityWindowTests {
         #expect(UtilitySection.connection.shortcut == "1")
         #expect(UtilitySection.keepAwake.shortcut == "2")
         #expect(UtilitySection.usage.shortcut == "3")
-        #expect(UtilitySection.settings.shortcut == "4")
+        #expect(UtilitySection.notifications.shortcut == "4")
+        #expect(UtilitySection.settings.shortcut == "5")
     }
 
     @Test func realUsageViewKeepsSharedBoundsInBothAppearances() async throws {

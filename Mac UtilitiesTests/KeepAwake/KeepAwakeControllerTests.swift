@@ -110,11 +110,21 @@ private final class FakeKeepAwakeClock {
 }
 
 @MainActor
+private final class FakeTimerFinishedNotifier: KeepAwakeTimerFinishedNotifying {
+    private(set) var events: [KeepAwakeTimerFinishedEvent] = []
+
+    func notifyTimerFinished(_ event: KeepAwakeTimerFinishedEvent) {
+        events.append(event)
+    }
+}
+
+@MainActor
 private final class KeepAwakeTestHarness {
     let suiteName = "MacUtilities.KeepAwakeTests.\(UUID().uuidString)"
     let preferences: UserDefaults
     let power: FakeKeepAwakePower
     let clock: FakeKeepAwakeClock
+    let timerFinishedNotifier: FakeTimerFinishedNotifier
     let wakeNotificationCenter = NotificationCenter()
     let controller: KeepAwakeController
 
@@ -124,11 +134,13 @@ private final class KeepAwakeTestHarness {
         prepare(preferences)
         power = FakeKeepAwakePower()
         clock = FakeKeepAwakeClock()
+        timerFinishedNotifier = FakeTimerFinishedNotifier()
         controller = KeepAwakeController(
             power: power,
             preferences: preferences,
             clock: clock.makeClock(),
-            wakeNotificationCenter: wakeNotificationCenter
+            wakeNotificationCenter: wakeNotificationCenter,
+            timerFinishedNotifier: timerFinishedNotifier
         )
     }
 
@@ -203,10 +215,11 @@ struct KeepAwakeControllerTests {
         harness.controller.setActive(false)
         #expect(harness.controller.lastSession?.outcome == .cancelled(reason: .stopped))
 
+        let relaunchClock = FakeKeepAwakeClock()
         let relaunched = KeepAwakeController(
             power: FakeKeepAwakePower(),
             preferences: harness.preferences,
-            clock: FakeKeepAwakeClock().makeClock()
+            clock: relaunchClock.makeClock()
         )
         #expect(relaunched.lastSession == nil)
         relaunched.shutdown()
@@ -347,6 +360,41 @@ struct KeepAwakeControllerTests {
         await harness.cleanUp()
     }
 
+    @Test func naturalFiniteExpirationNotifiesExactlyOnceAfterAssertionsRelease() async {
+        let harness = KeepAwakeTestHarness()
+        harness.controller.setActive(true)
+        await harness.clock.waitForSleepers(1)
+
+        harness.clock.advance(monotonic: 1_800)
+        for _ in 0..<20 { await Task.yield() }
+
+        #expect(!harness.controller.isActive)
+        #expect(harness.power.releaseAttempts.map(\.rawValue) == [1])
+        #expect(harness.timerFinishedNotifier.events.count == 1)
+        #expect(harness.timerFinishedNotifier.events.first?.duration == .timed(minutes: 30))
+        #expect(harness.timerFinishedNotifier.events.first?.sessionGeneration == 1)
+        await harness.cleanUp()
+    }
+
+    @Test func cancellationReplacementUntilStoppedAndReleaseFailureDoNotNotify() async {
+        let harness = KeepAwakeTestHarness()
+        harness.controller.setActive(true)
+        harness.controller.setActive(false)
+        harness.controller.setActive(true)
+        harness.controller.selectPreset(.untilStopped)
+        harness.controller.setActive(false)
+
+        let failed = KeepAwakeTestHarness()
+        failed.controller.setActive(true)
+        failed.power.failedReleaseIDs = [1]
+        failed.controller.setActive(false)
+
+        #expect(harness.timerFinishedNotifier.events.isEmpty)
+        #expect(failed.timerFinishedNotifier.events.isEmpty)
+        await harness.cleanUp()
+        await failed.cleanUp()
+    }
+
     @Test func untilStoppedHasNoDeadlineAndDisplayPreferenceAppliesLive() async {
         let harness = KeepAwakeTestHarness()
         let controller = harness.controller
@@ -379,6 +427,10 @@ struct KeepAwakeControllerTests {
         #expect(displayHarness.controller.isActive)
         #expect(displayHarness.controller.warningMessage?.contains("Keep Display On") == true)
         #expect(displayHarness.power.createRequests.count == 2)
+        await displayHarness.clock.waitForSleepers(1)
+        displayHarness.clock.advance(monotonic: 1_800)
+        for _ in 0..<20 { await Task.yield() }
+        #expect(displayHarness.timerFinishedNotifier.events.isEmpty)
         displayHarness.controller.setActive(false)
         #expect(displayHarness.power.releaseAttempts.map(\.rawValue) == [1])
         await displayHarness.cleanUp()
@@ -391,6 +443,44 @@ struct KeepAwakeControllerTests {
         #expect(baseHarness.controller.lastSession == nil)
         #expect(baseHarness.power.releaseAttempts.isEmpty)
         await baseHarness.cleanUp()
+    }
+
+    @Test func liveDisplayCreationFailureSuppressesFiniteCompletionNotification() async {
+        let harness = KeepAwakeTestHarness()
+        harness.controller.setActive(true)
+        harness.power.failDisplayCreate = true
+
+        harness.controller.setKeepDisplayOn(true)
+        #expect(harness.controller.isActive)
+        #expect(harness.controller.warningMessage?.contains("Keep Display On") == true)
+
+        await harness.clock.waitForSleepers(1)
+        harness.clock.advance(monotonic: 1_800)
+        for _ in 0..<20 { await Task.yield() }
+
+        #expect(!harness.controller.isActive)
+        #expect(harness.power.releaseAttempts.map(\.rawValue) == [1])
+        #expect(harness.timerFinishedNotifier.events.isEmpty)
+        await harness.cleanUp()
+    }
+
+    @Test func liveDisplayReleaseFailureSuppressesFiniteCompletionNotification() async {
+        let harness = KeepAwakeTestHarness()
+        harness.controller.setKeepDisplayOn(true)
+        harness.controller.setActive(true)
+        harness.power.failedReleaseIDs = [2]
+
+        harness.controller.setKeepDisplayOn(false)
+        #expect(harness.controller.isStartBlocked)
+
+        await harness.clock.waitForSleepers(1)
+        harness.clock.advance(monotonic: 1_800)
+        for _ in 0..<20 { await Task.yield() }
+
+        #expect(!harness.controller.isActive)
+        #expect(harness.power.releaseAttempts.map(\.rawValue) == [2, 1])
+        #expect(harness.timerFinishedNotifier.events.isEmpty)
+        await harness.cleanUp()
     }
 
     @Test func failedReleaseBlocksStartsAndIsNeverRetriedDuringShutdown() async {
@@ -498,6 +588,7 @@ struct KeepAwakeControllerTests {
         #expect(!harness.controller.isActive)
         #expect(harness.power.releaseAttempts.map(\.rawValue) == [1])
         #expect(harness.controller.menuBarPrefix == "")
+        #expect(harness.timerFinishedNotifier.events.count == 1)
         await harness.cleanUp()
     }
 }
