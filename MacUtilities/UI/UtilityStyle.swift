@@ -4,6 +4,7 @@ enum UtilityStyle {
     static let pagePadding: CGFloat = 20
     static let sectionSpacing: CGFloat = 24
     static let contentSpacing: CGFloat = 10
+    static let capabilityDetailSpacing: CGFloat = 4
     static let cardPadding: CGFloat = 12
     static let cornerRadius: CGFloat = 10
     static let headerHeight: CGFloat = 28
