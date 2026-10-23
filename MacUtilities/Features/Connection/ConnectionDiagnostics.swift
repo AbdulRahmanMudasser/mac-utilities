@@ -49,6 +49,16 @@ final class ConnectionDiagnostics: ObservableObject {
 
     func cancel() {
         guard isRunning, !isStopping else { return }
+#if DEBUG
+        if isStabilityPreview, stabilitySnapshot?.status == .running {
+            stabilitySnapshot?.status = .cancelled
+            stabilitySnapshot?.finishedAt = Date()
+            message = "Check Cancelled"
+            activity = .idle
+            isStopping = false
+            return
+        }
+#endif
         isStopping = true
         task?.cancel()
         stabilitySession?.cancel()
@@ -219,6 +229,8 @@ final class ConnectionDiagnostics: ObservableObject {
         isStabilityPreview = true
         message = running ? "Check In Progress…" : cancelled ? "Check Cancelled" : "Check Done"
         stabilitySnapshot?.finishedAt = running ? nil : finishedAt
+        activity = running ? .stability : .idle
+        isStopping = false
     }
     #endif
 
