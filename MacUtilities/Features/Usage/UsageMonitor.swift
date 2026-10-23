@@ -24,10 +24,12 @@ final class UsageMonitor: ObservableObject {
     @Published private(set) var isIncomplete = true
     @Published private(set) var incompleteReason: String?
     @Published private(set) var counterError: String?
+    @Published private(set) var counterCapabilityMessage: UtilityCapabilityMessage?
     @Published private(set) var loginItemEnabled = false
     @Published private(set) var loginItemMessage: String?
     @Published private(set) var historyRecords: [DailyUsageRecord] = []
     @Published private(set) var historyError: String?
+    @Published private(set) var historyCapabilityMessage: UtilityCapabilityMessage?
     @Published private(set) var historyWritable = true
     @Published private(set) var historyDate: Date
 
@@ -112,8 +114,15 @@ final class UsageMonitor: ObservableObject {
             canSample = !verification
         } catch {
             historyWritable = false
-            historyError = "Saved Usage Could Not Be Opened. " + error.localizedDescription
-            counterError = "Usage Storage Is Unavailable."
+            let historyMessage = UtilityCapabilityMessage(
+                title: "Saved Usage Could Not Be Opened.",
+                detail: error.localizedDescription
+            )
+            historyCapabilityMessage = historyMessage
+            historyError = historyMessage.combinedText
+            let counterMessage = UtilityCapabilityMessage(title: "Usage Storage Is Unavailable.", detail: nil)
+            counterCapabilityMessage = counterMessage
+            counterError = counterMessage.combinedText
         }
         lastCommittedWidgetRecords = persisted.widgetSnapshot?.records
         let savedDay = persisted.localDayKey
@@ -123,7 +132,14 @@ final class UsageMonitor: ObservableObject {
         if canSample {
             let counters = try? readCounters()
             Self.observe(at: date, calendar: calendar(), counters: counters, boot: boot(), state: &persisted)
-            counterError = counters == nil ? "Device Counters Are Unavailable." : nil
+            if counters == nil {
+                let message = UtilityCapabilityMessage(title: "Device Counters Are Unavailable.", detail: nil)
+                counterCapabilityMessage = message
+                counterError = message.combinedText
+            } else {
+                counterCapabilityMessage = nil
+                counterError = nil
+            }
             lastRateSampleUptime = ProcessInfo.processInfo.systemUptime
         }
         publish()
@@ -234,7 +250,14 @@ final class UsageMonitor: ObservableObject {
         let delta = Self.observe(at: date, calendar: calendarProvider(), counters: counters,
                                  boot: boot(), state: &persisted)
         historyDate = date
-        counterError = counters == nil ? "Device Counters Are Unavailable." : nil
+        if counters == nil {
+            let message = UtilityCapabilityMessage(title: "Device Counters Are Unavailable.", detail: nil)
+            counterCapabilityMessage = message
+            counterError = message.combinedText
+        } else {
+            counterCapabilityMessage = nil
+            counterError = nil
+        }
         publish()
         let uptime = ProcessInfo.processInfo.systemUptime
         if let previous = lastRateSampleUptime, let delta {
@@ -371,8 +394,14 @@ final class UsageMonitor: ObservableObject {
             }
             lastStateWriteDate = now
             historyError = nil
+            historyCapabilityMessage = nil
         } catch {
-            historyError = "Usage Could Not Be Saved. We Will Try Again."
+            let message = UtilityCapabilityMessage(
+                title: "Usage Could Not Be Saved.",
+                detail: "We will try again."
+            )
+            historyCapabilityMessage = message
+            historyError = message.combinedText
             persisted.isIncomplete = true
             persisted.incompleteReason = "Today's Usage Could Not Be Saved Locally."
             isIncomplete = true
