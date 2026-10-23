@@ -328,6 +328,10 @@ struct NotificationsControllerTests {
         #expect(harness.client.deliveryPayloads.isEmpty)
         #expect(harness.controller.capabilityState == .deliveryFailed)
         #expect(harness.controller.statusDetail == "The notification could not be delivered. fixture")
+        #expect(harness.controller.capabilityMessage == UtilityCapabilityMessage(
+            title: "Notification Delivery Failed",
+            detail: "The notification could not be delivered. fixture"
+        ))
     }
 
     @Test func deniedStateOpensSystemSettingsThroughTheInjectedClient() async {
@@ -419,6 +423,10 @@ struct NotificationsControllerTests {
         await harness.controller.waitForAuthorizationTask()
         #expect(harness.controller.capabilityState == .permissionFailed)
         #expect(harness.controller.permissionActionTitle == "Try Again")
+        #expect(harness.controller.capabilityMessage == UtilityCapabilityMessage(
+            title: "Notification Permission Request Failed",
+            detail: "The notification could not be delivered. permission fixture"
+        ))
         await harness.controller.refreshAuthorization()
         #expect(harness.controller.capabilityState == .permissionFailed)
         harness.client.requestResult = .success(true)

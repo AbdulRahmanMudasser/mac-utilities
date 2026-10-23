@@ -426,6 +426,8 @@ struct KeepAwakeControllerTests {
         displayHarness.controller.setActive(true)
         #expect(displayHarness.controller.isActive)
         #expect(displayHarness.controller.warningMessage?.contains("Keep Display On") == true)
+        #expect(displayHarness.controller.warningCapabilityMessage?.title == "Keep Display On Could Not Be Applied.")
+        #expect(displayHarness.controller.warningCapabilityMessage?.detail != nil)
         #expect(displayHarness.power.createRequests.count == 2)
         await displayHarness.clock.waitForSleepers(1)
         displayHarness.clock.advance(monotonic: 1_800)
@@ -439,7 +441,8 @@ struct KeepAwakeControllerTests {
         baseHarness.power.failSystemCreate = true
         baseHarness.controller.setActive(true)
         #expect(!baseHarness.controller.isActive)
-        #expect(baseHarness.controller.errorMessage?.contains("could not start") == true)
+        #expect(baseHarness.controller.errorCapabilityMessage?.title == "Keep Awake Could Not Start.")
+        #expect(baseHarness.controller.errorCapabilityMessage?.detail != nil)
         #expect(baseHarness.controller.lastSession == nil)
         #expect(baseHarness.power.releaseAttempts.isEmpty)
         await baseHarness.cleanUp()

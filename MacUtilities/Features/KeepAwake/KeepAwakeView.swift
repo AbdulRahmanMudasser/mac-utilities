@@ -2,8 +2,13 @@ import AppKit
 import SwiftUI
 
 struct KeepAwakeView: View {
-    static let lastRanSymbol = "checkmark.circle.fill"
-    static let lastRanColor = UtilityStyle.successColor
+    static func lastRanSymbol(for outcome: KeepAwakeSessionOutcome?) -> String {
+        outcome == .completed ? "checkmark.circle.fill" : "exclamationmark.circle.fill"
+    }
+
+    static func lastRanColor(for outcome: KeepAwakeSessionOutcome?) -> Color {
+        outcome == .completed ? UtilityStyle.successColor : UtilityStyle.warningColor
+    }
 
     @EnvironmentObject private var controller: KeepAwakeController
     @State private var minuteInputs: [KeepAwakePresetID: String] = [:]
@@ -25,6 +30,13 @@ struct KeepAwakeView: View {
 
     var body: some View {
         UtilityScrollContent {
+            if let message = controller.errorCapabilityMessage ?? controller.warningCapabilityMessage ?? controller.preferenceCapabilityMessage {
+                UtilityCapabilityCard(message: message, isActive: false)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Keep Awake Status")
+                    .accessibilityValue(message.combinedText)
+            }
+
             UtilityPanel(
                 "Keep Awake",
                 action: AnyView(
@@ -50,21 +62,14 @@ struct KeepAwakeView: View {
                     UtilityValueRow(title: "Started", value: sessionDate(controller.activeSession?.startedAt) ?? "Not Active")
                     UtilityValueRow(title: "Ends", value: endTimeText)
                     UtilityValueRow(title: "Remaining", value: remainingText)
-
-                    if let message = controller.errorMessage {
-                        messageText(message)
-                    }
-                    if let message = controller.warningMessage {
-                        messageText(message)
-                    }
                 }
 
                 if let lastSession = controller.lastSession {
                     UtilityTimestampRow(
                         date: lastSession.startedAt,
                         title: "Last Ran",
-                        symbol: Self.lastRanSymbol,
-                        color: Self.lastRanColor,
+                        symbol: Self.lastRanSymbol(for: lastSession.outcome),
+                        color: Self.lastRanColor(for: lastSession.outcome),
                         detail: [lastSession.duration.title, lastSession.outcome?.summary]
                             .compactMap { $0 }
                             .joined(separator: " · ")
@@ -98,9 +103,6 @@ struct KeepAwakeView: View {
 
                         if let validationMessage {
                             messageText(validationMessage)
-                        }
-                        if let message = controller.preferenceError {
-                            messageText(message)
                         }
                     }
                     .padding(.horizontal, UtilityStyle.cardPadding)

@@ -30,19 +30,24 @@ struct UsageHistoryView: View {
     private var scale: Double { UsageChartPresentation.scale(maximumBytes: maximumBytes, unit: monitor.dataUnit) }
     private var scaleLabel: String { UsageChartPresentation.scaleLabel(scale: scale, unit: monitor.dataUnit) }
 
+    private var capabilityMessage: UtilityCapabilityMessage? {
+        monitor.historyCapabilityMessage ?? monitor.counterCapabilityMessage
+    }
+
     var body: some View {
         UtilityScrollContent {
+            if let capabilityMessage {
+                UtilityCapabilityCard(message: capabilityMessage, isActive: false)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Usage Status")
+                    .accessibilityValue(capabilityMessage.combinedText)
+            }
+
             UtilityPanel("Usage Summary", subtitle: summaryRange, action: AnyView(rangePicker), wrapsContent: false) {
                 if days.contains(where: { $0.record != nil }) {
                     summaryMetrics
                 } else {
                     Text("No Data In This Range").foregroundStyle(.secondary)
-                }
-                if let error = monitor.historyError {
-                    Text(error).font(UtilityStyle.helpFont).foregroundStyle(UtilityStyle.warningColor)
-                }
-                if let error = monitor.counterError {
-                    Text(error).font(UtilityStyle.helpFont).foregroundStyle(UtilityStyle.warningColor)
                 }
             }
             VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
@@ -52,10 +57,6 @@ struct UsageHistoryView: View {
                         chart
                     } else {
                         UtilityChartEmptyState(height: UtilityStyle.History.chartHeight)
-                    }
-                    if monitor.historyRecords.isEmpty {
-                        Text("No history yet. Usage appears as readings are collected.")
-                            .font(UtilityStyle.helpFont).foregroundStyle(.secondary)
                     }
                 }
                 HStack {

@@ -16,6 +16,24 @@ struct ConnectionDiagnosticsTests {
         #expect(abs(Date().timeIntervalSince(finishedAt)) < 2)
         #expect(snapshot.unobservedDuration == 20)
     }
+
+    @Test func runningStabilityPreviewUsesRunningActivityAndCanBeCancelled() throws {
+        let diagnostics = ConnectionDiagnostics()
+        diagnostics.showStabilityPreview(running: true)
+
+        let snapshot = try #require(diagnostics.stabilitySnapshot)
+        #expect(diagnostics.isRunning)
+        #expect(snapshot.status == .running)
+        #expect(diagnostics.message == "Check In Progress…")
+
+        diagnostics.cancel()
+
+        #expect(!diagnostics.isRunning)
+        #expect(diagnostics.stabilitySnapshot?.status == .cancelled)
+        #expect(diagnostics.stabilitySnapshot?.finishedAt != nil)
+        #expect(diagnostics.message == "Check Cancelled")
+    }
+
     @Test func realStabilityCheckClearsPreviewStateAndResults() async {
         let clock = StabilityTestClock()
         clock.advancesAutomatically = false

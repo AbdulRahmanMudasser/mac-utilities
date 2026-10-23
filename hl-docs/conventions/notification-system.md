@@ -87,7 +87,8 @@ When a notification has a saved preference, authorization state or user-facing e
 - lead with one full-width rounded status card that owns the current capability state;
 - use a green `checkmark.circle.fill` for an active, deliverable state;
 - use an orange `exclamationmark.circle.fill` for off, denied, unavailable or failed states;
-- show one concise state label and, when recovery is actionable, a right-aligned native action in the same card, with no secondary detail line or info icon in the section heading;
+- show one concise state label and, when recovery is actionable, a right-aligned native action in the same card; do not add an info icon in the section heading;
+- for permission-request or delivery failures with an existing `errorMessage`, pass the title and explanation separately through `NotificationsController.capabilityMessage` as a `UtilityCapabilityMessage`; use [the shared capability-card layout](../desktop/development-standards.md#42-descriptions-content-and-status) for casing, spacing, icon alignment and wrapping. Do not add a visible detail line for generic fallback descriptions or ordinary off, pending, active, denied or unavailable states;
 - use the same `UtilityPanel` structure as Connection and Usage; place one native small `Enable Notifications` master switch inline on the Notifications panel heading without a duplicate visible description;
 - keep feature-specific panels description-only while only one notification type exists; add an event-specific switch only after a second independent notification preference is approved;
 - use a native small switch with a pointing-hand cursor and an accessible on/off value;
@@ -97,7 +98,7 @@ When a notification has a saved preference, authorization state or user-facing e
 - use shared `UtilityScrollContent`, `UtilityPanel`, `UtilityStyle`, spacing and card components;
 - preserve the current sidebar order and keyboard shortcuts unless the approved feature decision changes them.
 
-The status card communicates the current notification capability. It must not claim that macOS displayed a banner when the app only submitted a request. Model the user opt-in separately from capability: `Off`, `Permission Pending`, `Authorized`, `Denied`, `Delivery Surface Disabled` and `Delivery Failed` are capability states, while the master switch is the user preference. Read authorization, alert, sound and Notification Center settings before claiming that delivery is available; expose capability detail through the accessible state value without adding a second visible status description.
+The status card communicates the current notification capability. It must not claim that macOS displayed a banner when the app only submitted a request. Model the user opt-in separately from capability: `Off`, `Permission Pending`, `Authorized`, `Denied`, `Delivery Surface Disabled` and `Delivery Failed` are capability states, while the master switch is the user preference. Read authorization, alert, sound and Notification Center settings before claiming that delivery is available. Keep authorization values and generic status explanations accessible; only actual permission-request and delivery failure explanations also appear visibly beneath the title in the same card. Do not repeat the state label in a second description or error card.
 
 ### 6.1.1 Master And Feature-Specific Controls
 
@@ -164,7 +165,9 @@ Every new notification must add or update these checks:
 - Light and Dark appearances;
 - off, active, denied, unavailable and delivery-error states;
 - keyboard focus, native switch values and VoiceOver labels;
-- narrow layouts and fully visible warnings.
+- narrow layouts and fully visible warnings, including structured failure details and recovery actions;
+- preservation of actual failure explanations without splitting strings at punctuation, and absence of invented or duplicate detail lines;
+- shared capability-card wrapping in Light and Dark through `UtilityCapabilityCardTests`, with title/icon alignment and centered single-line recovery cards checked in native previews.
 
 ### Signed native checks
 

@@ -24,25 +24,68 @@ extension View {
     }
 }
 
+struct UtilityCapabilityMessage: Equatable {
+    let title: String
+    let detail: String?
+
+    var combinedText: String {
+        [title, detail]
+            .compactMap { $0 }
+            .joined(separator: " ")
+    }
+}
+
 struct UtilityCapabilityCard: View {
     let title: String
     let isActive: Bool
+    let detail: String?
     var action: AnyView? = nil
 
-    private var statusLabel: some View {
-        Label(title, systemImage: isActive ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-            .foregroundStyle(isActive ? UtilityStyle.successColor : UtilityStyle.warningColor)
+    init(title: String, isActive: Bool, detail: String? = nil, action: AnyView? = nil) {
+        self.title = title
+        self.isActive = isActive
+        self.detail = detail
+        self.action = action
+    }
+
+    init(message: UtilityCapabilityMessage, isActive: Bool, action: AnyView? = nil) {
+        self.init(title: message.title, isActive: isActive, detail: message.detail, action: action)
+    }
+
+    private enum TitleCenterAlignment: AlignmentID {
+        static func defaultValue(in dimensions: ViewDimensions) -> CGFloat {
+            dimensions[VerticalAlignment.center]
+        }
+    }
+
+    private static let titleCenter = VerticalAlignment(TitleCenterAlignment.self)
+
+    private var statusContent: some View {
+        HStack(alignment: Self.titleCenter, spacing: UtilityStyle.contentSpacing) {
+            Image(systemName: isActive ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                .alignmentGuide(Self.titleCenter) { $0[VerticalAlignment.center] }
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: detail == nil ? 0 : UtilityStyle.capabilityDetailSpacing) {
+                Text(title)
+                    .alignmentGuide(Self.titleCenter) { $0[VerticalAlignment.center] }
+                if let detail {
+                    Text(detail)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .foregroundStyle(isActive ? UtilityStyle.successColor : UtilityStyle.warningColor)
     }
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: UtilityStyle.contentSpacing) {
-                statusLabel.fixedSize(horizontal: true, vertical: false)
+                statusContent
                 Spacer(minLength: UtilityStyle.contentSpacing)
                 if let action { action.fixedSize() }
             }
             VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
-                statusLabel
+                statusContent
                 if let action {
                     HStack { Spacer(); action }
                 }
