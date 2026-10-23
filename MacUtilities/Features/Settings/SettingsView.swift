@@ -12,11 +12,7 @@ struct SettingsView: View {
 
     var body: some View {
         UtilityScrollContent {
-            Label(monitor.collectionStatus, systemImage: monitor.isMonitoringActive ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                .foregroundStyle(monitor.isMonitoringActive ? UtilityStyle.successColor : UtilityStyle.warningColor)
-                .padding(UtilityStyle.cardPadding)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .utilityCardBackground()
+            UtilityCapabilityCard(title: monitor.collectionStatus, isActive: monitor.isMonitoringActive)
 
             UtilityPanel("General") {
                 UtilityValueRow(title: "Local Time Zone", value: monitor.localTimeZoneDescription)

@@ -24,6 +24,36 @@ extension View {
     }
 }
 
+struct UtilityCapabilityCard: View {
+    let title: String
+    let isActive: Bool
+    var action: AnyView? = nil
+
+    private var statusLabel: some View {
+        Label(title, systemImage: isActive ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+            .foregroundStyle(isActive ? UtilityStyle.successColor : UtilityStyle.warningColor)
+    }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: UtilityStyle.contentSpacing) {
+                statusLabel.fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: UtilityStyle.contentSpacing)
+                if let action { action.fixedSize() }
+            }
+            VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
+                statusLabel
+                if let action {
+                    HStack { Spacer(); action }
+                }
+            }
+        }
+        .padding(UtilityStyle.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .utilityCardBackground()
+    }
+}
+
 struct UtilityTimestampRow: View {
     let date: Date
     var title = "Last Checked"
