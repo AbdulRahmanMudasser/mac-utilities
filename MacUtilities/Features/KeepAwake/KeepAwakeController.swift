@@ -29,9 +29,13 @@ final class KeepAwakeController: ObservableObject {
     @Published private(set) var lastSession: KeepAwakeSessionSnapshot?
     @Published private(set) var remainingMinutes: Int?
     @Published private(set) var isKeepDisplayOn: Bool
-    @Published private(set) var errorMessage: String?
-    @Published private(set) var warningMessage: String?
-    @Published private(set) var preferenceError: String?
+    @Published private(set) var errorCapabilityMessage: UtilityCapabilityMessage?
+    @Published private(set) var warningCapabilityMessage: UtilityCapabilityMessage?
+    @Published private(set) var preferenceCapabilityMessage: UtilityCapabilityMessage?
+
+    var errorMessage: String? { errorCapabilityMessage?.combinedText }
+    var warningMessage: String? { warningCapabilityMessage?.combinedText }
+    var preferenceError: String? { preferenceCapabilityMessage?.combinedText }
 
     static let presetsPreferenceKey = "keepAwake.presets.v1"
     static let keepDisplayOnPreferenceKey = "keepAwake.keepDisplayOn.v1"
@@ -48,7 +52,7 @@ final class KeepAwakeController: ObservableObject {
     private var timerTask: Task<Void, Never>?
     private var sessionGeneration: UInt64 = 0
     private var timerGeneration: UInt64 = 0
-    private var failedReleaseMessage: String?
+    private var failedReleaseMessage: UtilityCapabilityMessage?
     private var sessionHadAssertionCreationFailure = false
     private var sessionHadAssertionCleanupFailure = false
     private var hasShutDown = false
@@ -67,14 +71,17 @@ final class KeepAwakeController: ObservableObject {
         self.timerFinishedNotifier = timerFinishedNotifier
 
         let savedConfiguration: KeepAwakePresetConfiguration
-        var savedPreferenceError: String? = nil
+        var savedPreferenceError: UtilityCapabilityMessage? = nil
         if let data = preferences.data(forKey: Self.presetsPreferenceKey) {
             do {
                 let savedPresets = try JSONDecoder().decode([KeepAwakePreset].self, from: data)
                 savedConfiguration = try KeepAwakePresetConfiguration(validating: savedPresets)
             } catch {
                 savedConfiguration = .defaults
-                savedPreferenceError = "Saved duration presets could not be read. Restore Defaults to save a valid configuration."
+                savedPreferenceError = UtilityCapabilityMessage(
+                    title: "Saved Duration Presets Could Not Be Read.",
+                    detail: "Restore Defaults to save a valid configuration."
+                )
             }
         } else {
             savedConfiguration = .defaults
@@ -84,7 +91,7 @@ final class KeepAwakeController: ObservableObject {
         presetConfiguration = savedConfiguration
         selectedPresetID = savedConfiguration.firstEnabledPreset.id
         isKeepDisplayOn = preferences.object(forKey: Self.keepDisplayOnPreferenceKey) as? Bool ?? false
-        preferenceError = savedPreferenceError
+        preferenceCapabilityMessage = savedPreferenceError
         wakeObserver = self.wakeNotificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification,
             object: nil,
@@ -134,7 +141,7 @@ final class KeepAwakeController: ObservableObject {
         guard !hasShutDown, isKeepDisplayOn != enabled else { return }
         isKeepDisplayOn = enabled
         preferences.set(enabled, forKey: Self.keepDisplayOnPreferenceKey)
-        warningMessage = nil
+        warningCapabilityMessage = nil
 
         guard isActive else { return }
         if enabled {
@@ -160,7 +167,7 @@ final class KeepAwakeController: ObservableObject {
             selectedPresetID = validated.firstEnabledPreset.id
         }
         persistPresets()
-        preferenceError = nil
+        preferenceCapabilityMessage = nil
     }
 
     func restoreDefaultPresets() {
@@ -170,7 +177,7 @@ final class KeepAwakeController: ObservableObject {
             selectedPresetID = presetConfiguration.firstEnabledPreset.id
         }
         persistPresets()
-        preferenceError = nil
+        preferenceCapabilityMessage = nil
     }
 
     func reconcileAfterWake() {
@@ -212,8 +219,8 @@ final class KeepAwakeController: ObservableObject {
 
         timerFinishedNotifier?.notificationSessionStarted()
         selectedPresetID = presetID
-        errorMessage = nil
-        warningMessage = nil
+        errorCapabilityMessage = nil
+        warningCapabilityMessage = nil
         sessionHadAssertionCreationFailure = false
         sessionHadAssertionCleanupFailure = false
 
@@ -241,7 +248,7 @@ final class KeepAwakeController: ObservableObject {
             sessionDeadline = nil
             activeSession = nil
             remainingMinutes = nil
-            errorMessage = "Keep Awake could not start. \(error.localizedDescription)"
+            errorCapabilityMessage = UtilityCapabilityMessage(title: "Keep Awake Could Not Start.", detail: error.localizedDescription)
             return
         }
 
@@ -264,7 +271,7 @@ final class KeepAwakeController: ObservableObject {
                 displayAssertionID = try power.create(.displayIdle, timeout: timeout)
             } catch {
                 sessionHadAssertionCreationFailure = true
-                warningMessage = "Keep Display On could not be applied. \(error.localizedDescription)"
+                warningCapabilityMessage = UtilityCapabilityMessage(title: "Keep Display On Could Not Be Applied.", detail: error.localizedDescription)
             }
         }
 
@@ -282,7 +289,7 @@ final class KeepAwakeController: ObservableObject {
         sessionDeadline = nil
         activeSession = nil
         remainingMinutes = nil
-        warningMessage = nil
+        warningCapabilityMessage = nil
 
         var failures: [String] = []
         if let displayAssertionID {
@@ -303,8 +310,8 @@ final class KeepAwakeController: ObservableObject {
         }
         if !failures.isEmpty {
             sessionHadAssertionCleanupFailure = true
-            failedReleaseMessage = "A power assertion could not be released (\(failures.joined(separator: "; "))). Restart Mac Utilities to clear it."
-            errorMessage = failedReleaseMessage
+            failedReleaseMessage = UtilityCapabilityMessage(title: "A Power Assertion Could Not Be Released.", detail: "\(failures.joined(separator: "; ")). Restart Mac Utilities to clear it.")
+            errorCapabilityMessage = failedReleaseMessage
         }
         if let finishedSession {
             lastSession = finishedSession.ended(with: outcome)
@@ -323,7 +330,7 @@ final class KeepAwakeController: ObservableObject {
 
     private func createDisplayAssertionForActiveSession() {
         guard !isStartBlocked else {
-            warningMessage = "Keep Display On cannot be applied until Mac Utilities restarts."
+            warningCapabilityMessage = UtilityCapabilityMessage(title: "Keep Display On Cannot Be Applied Until Mac Utilities Restarts.", detail: nil)
             return
         }
         guard let deadline = sessionDeadline else {
@@ -333,11 +340,11 @@ final class KeepAwakeController: ObservableObject {
                     return
                 } catch {
                     sessionHadAssertionCreationFailure = true
-                    warningMessage = "Keep Display On could not be applied. \(error.localizedDescription)"
+                    warningCapabilityMessage = UtilityCapabilityMessage(title: "Keep Display On Could Not Be Applied.", detail: error.localizedDescription)
                     return
                 }
             }
-            warningMessage = "Keep Display On cannot be applied until Mac Utilities restarts."
+            warningCapabilityMessage = UtilityCapabilityMessage(title: "Keep Display On Cannot Be Applied Until Mac Utilities Restarts.", detail: nil)
             return
         }
 
@@ -348,10 +355,10 @@ final class KeepAwakeController: ObservableObject {
         }
         do {
             displayAssertionID = try power.create(.displayIdle, timeout: timeout)
-            warningMessage = nil
+            warningCapabilityMessage = nil
         } catch {
             sessionHadAssertionCreationFailure = true
-            warningMessage = "Keep Display On could not be applied. \(error.localizedDescription)"
+            warningCapabilityMessage = UtilityCapabilityMessage(title: "Keep Display On Could Not Be Applied.", detail: error.localizedDescription)
         }
     }
 
@@ -360,11 +367,11 @@ final class KeepAwakeController: ObservableObject {
         self.displayAssertionID = nil
         do {
             try power.release(displayAssertionID)
-            warningMessage = nil
+            warningCapabilityMessage = nil
         } catch {
             sessionHadAssertionCleanupFailure = true
-            failedReleaseMessage = "The display power assertion could not be released (\(error.localizedDescription)). Restart Mac Utilities to clear it."
-            errorMessage = failedReleaseMessage
+            failedReleaseMessage = UtilityCapabilityMessage(title: "The Display Power Assertion Could Not Be Released.", detail: "\(error.localizedDescription) Restart Mac Utilities to clear it.")
+            errorCapabilityMessage = failedReleaseMessage
         }
     }
 
@@ -372,7 +379,7 @@ final class KeepAwakeController: ObservableObject {
         do {
             preferences.set(try JSONEncoder().encode(presetConfiguration.presets), forKey: Self.presetsPreferenceKey)
         } catch {
-            preferenceError = "Duration presets could not be saved. \(error.localizedDescription)"
+            preferenceCapabilityMessage = UtilityCapabilityMessage(title: "Duration Presets Could Not Be Saved.", detail: error.localizedDescription)
         }
     }
 
