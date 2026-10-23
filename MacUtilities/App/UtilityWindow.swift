@@ -6,6 +6,7 @@ enum UtilitySection: String, CaseIterable, Identifiable {
     case connection = "Connection"
     case keepAwake = "Keep Awake"
     case usage = "Usage"
+    case notifications = "Notifications"
     case settings = "Settings"
 
     var id: Self { self }
@@ -14,7 +15,8 @@ enum UtilitySection: String, CaseIterable, Identifiable {
         case .connection: "1"
         case .keepAwake: "2"
         case .usage: "3"
-        case .settings: "4"
+        case .notifications: "4"
+        case .settings: "5"
         }
     }
 }
@@ -64,6 +66,11 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
         guard !hasShutDown else { return }
         usageRequest = UsagePresentationRequest(range: range, generation: UUID())
         present(.usage)
+    }
+
+    var isKeepAwakeSurfaceDisplayable: Bool {
+        guard selection == .keepAwake, let window else { return false }
+        return NSApp.isActive && !isApplicationHidden() && isWindowDisplayable(window)
     }
 
     weak var menuBarPopoverWindow: NSWindow?
@@ -146,7 +153,7 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
         }
         synchronizeContentFrame(target)
         #if DEBUG
-        if CommandLine.arguments.contains("--stability-preview") {
+        if CommandLine.arguments.contains("--stability-preview") || CommandLine.arguments.contains(where: { $0.hasPrefix("--stability-preview=") }) {
             target.appearance = NSAppearance(named: CommandLine.arguments.contains("--stability-preview-light") ? .aqua : .darkAqua)
             if CommandLine.arguments.contains("--stability-preview-compact") {
                 target.setContentSize(Self.minimumContentSize)
@@ -154,17 +161,39 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
                 target.setContentSize(NSSize(width: 1100, height: 800))
             }
         }
-        if CommandLine.arguments.contains("--usage-preview") && CommandLine.arguments.contains("--usage-preview-light") {
+        if (CommandLine.arguments.contains("--usage-preview") || CommandLine.arguments.contains(where: { $0.hasPrefix("--usage-preview=") })) && CommandLine.arguments.contains("--usage-preview-light") {
             target.appearance = NSAppearance(named: .aqua)
         }
-        if CommandLine.arguments.contains("--usage-preview") && CommandLine.arguments.contains("--usage-preview-compact") {
+        if (CommandLine.arguments.contains("--usage-preview") || CommandLine.arguments.contains(where: { $0.hasPrefix("--usage-preview=") })) && CommandLine.arguments.contains("--usage-preview-compact") {
             target.setContentSize(Self.minimumContentSize)
+        } else if (CommandLine.arguments.contains("--usage-preview") || CommandLine.arguments.contains(where: { $0.hasPrefix("--usage-preview=") })) && CommandLine.arguments.contains("--usage-preview-expanded") {
+            target.setContentSize(NSSize(width: 1100, height: 800))
         }
-        if CommandLine.arguments.contains("--keep-awake-preview") {
+        if CommandLine.arguments.contains("--keep-awake-preview") || CommandLine.arguments.contains(where: { $0.hasPrefix("--keep-awake-preview=") }) {
             target.appearance = NSAppearance(named: CommandLine.arguments.contains("--keep-awake-preview-light") ? .aqua : .darkAqua)
             if CommandLine.arguments.contains("--keep-awake-preview-compact") {
                 target.setContentSize(Self.minimumContentSize)
             } else if CommandLine.arguments.contains("--keep-awake-preview-expanded") {
+                target.setContentSize(NSSize(width: 1100, height: 800))
+            }
+        }
+        let hasNotificationPreview = CommandLine.arguments.contains("--notification-preview") ||
+            CommandLine.arguments.contains(where: { $0.hasPrefix("--notification-preview=") })
+        if hasNotificationPreview {
+            target.appearance = NSAppearance(named: CommandLine.arguments.contains("--notification-preview-light") ? .aqua : .darkAqua)
+            if CommandLine.arguments.contains("--notification-preview-compact") {
+                target.setContentSize(Self.minimumContentSize)
+            } else if CommandLine.arguments.contains("--notification-preview-expanded") {
+                target.setContentSize(NSSize(width: 1100, height: 800))
+            }
+        }
+        let hasSettingsPreview = CommandLine.arguments.contains("--settings-preview") ||
+            CommandLine.arguments.contains(where: { $0.hasPrefix("--settings-preview=") })
+        if hasSettingsPreview {
+            target.appearance = NSAppearance(named: CommandLine.arguments.contains("--settings-preview-light") ? .aqua : .darkAqua)
+            if CommandLine.arguments.contains("--settings-preview-compact") {
+                target.setContentSize(Self.minimumContentSize)
+            } else if CommandLine.arguments.contains("--settings-preview-expanded") {
                 target.setContentSize(NSSize(width: 1100, height: 800))
             }
         }
@@ -303,6 +332,7 @@ struct UtilityWindowView: View {
                 case .connection: ConnectionCheckView()
                 case .keepAwake: KeepAwakeView()
                 case .usage: UsageHistoryView()
+                case .notifications: NotificationsView()
                 case .settings: SettingsView()
                 }
             }

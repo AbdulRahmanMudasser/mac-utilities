@@ -178,12 +178,16 @@ final class ConnectionDiagnostics: ObservableObject {
     }
 
     #if DEBUG
-    func showStabilityPreview(unobserved: Bool = false, sparse: Bool = false) {
+    func showStabilityPreview(unobserved: Bool = false,
+                              sparse: Bool = false,
+                              cancelled: Bool = false,
+                              running: Bool = false) {
         guard !hasShutDown, !isRunning else { return }
         lastStartedActivity = .stability
         let id = UUID()
         let finishedAt = Date()
-        let date = finishedAt.addingTimeInterval(-StabilityCheckLimits.duration)
+        let elapsed = running || cancelled ? 120.0 : StabilityCheckLimits.duration
+        let date = finishedAt.addingTimeInterval(-elapsed)
         probes = ProbeTarget.defaults.enumerated().map { index, target in
             let samples = (0..<10).map { Double(20 + ($0 * 3 + index * 5) % 15) }
             return ProbeResult(target: target,
@@ -192,10 +196,12 @@ final class ConnectionDiagnostics: ObservableObject {
         }
         latencyCompletedAt = date
         var readings: [StabilityObservation] = []
-        for slot in 0..<StabilityCheckLimits.slotCount {
+        let slotCount = running || cancelled ? 24 : StabilityCheckLimits.slotCount
+        for slot in 0..<slotCount {
             for (index, target) in ProbeTarget.defaults.enumerated() {
                 let outcome: StabilityOutcome
-                if unobserved { outcome = .unavailable("Mac Asleep") }
+                if cancelled && slot >= 20 { outcome = .interrupted("User Cancelled") }
+                else if unobserved { outcome = .unavailable("Mac Asleep") }
                 else if (10..<14).contains(slot) { outcome = .unavailable("Mac Asleep") }
                 else if sparse && slot != 2 && slot != 57 { outcome = .unavailable("Sampling Delayed") }
                 else if slot == 25 || slot == 26 { outcome = .noReply }
@@ -205,14 +211,14 @@ final class ConnectionDiagnostics: ObservableObject {
                     epoch: slot < 14 ? 0 : slot < 36 ? 1 : 2, outcome: outcome))
             }
         }
-        stabilitySnapshot = StabilitySnapshot(id: id, startedAt: date, elapsed: StabilityCheckLimits.duration,
-            status: .completed, observations: readings,
-            gaps: unobserved ? [StabilityGap(start: 0, end: StabilityCheckLimits.duration, reason: .sleep)]
-                : [StabilityGap(start: 50, end: 70, reason: .sleep)],
-            transitions: unobserved ? [] : [StabilityTransition(elapsed: 180, epoch: 2)])
+        stabilitySnapshot = StabilitySnapshot(id: id, startedAt: date, elapsed: elapsed,
+            status: running ? .running : cancelled ? .cancelled : .completed, observations: readings,
+            gaps: unobserved ? [StabilityGap(start: 0, end: elapsed, reason: .sleep)]
+                : [StabilityGap(start: 50, end: min(70, elapsed), reason: .sleep)],
+            transitions: unobserved || running ? [] : [StabilityTransition(elapsed: min(180, elapsed), epoch: 2)])
         isStabilityPreview = true
-        message = "Check Done"
-        stabilitySnapshot?.finishedAt = finishedAt
+        message = running ? "Check In Progress…" : cancelled ? "Check Cancelled" : "Check Done"
+        stabilitySnapshot?.finishedAt = running ? nil : finishedAt
     }
     #endif
 
