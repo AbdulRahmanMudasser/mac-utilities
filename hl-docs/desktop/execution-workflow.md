@@ -21,14 +21,14 @@ Do not use this file for:
 
 * **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md)
 * **Usage History Contract:** The [PRD](../mac-utilities-prd.md) owns the product requirements; [Phase 07](./phase-07-usage-history-chart.md), especially Sections 6–8, records the detailed storage, accounting, interface and verification contracts. Earlier completed phases retain their historical scope.
-* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions; [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) is implemented and verified. [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) is completed and was first included in installed Release 1.4.0 (16), with user acceptance recorded in its execution notes. [12 Keep Awake Control](./phase-12-keep-awake-control.md) is completed and included in installed Release 1.5.2 (20), including the outcome-aware transient Last Ran summary and Light/Dark layout verification. [13 Local Notification System](./phase-13-local-notification-system.md) is planned and adds an opt-in local notification preference for finite Keep Awake expiration. The PRD records product behavior and release state, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
+* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions; [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) is implemented and verified. [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) is completed and was first included in installed Release 1.4.0 (16), with user acceptance recorded in its execution notes. [12 Keep Awake Control](./phase-12-keep-awake-control.md) is completed and included in installed Release 1.6.0 (21), including the outcome-aware transient Last Ran summary and Light/Dark layout verification. [13 Local Notification System](./phase-13-local-notification-system.md) is implemented, signed-build verified and confirmed working in the installed Release; final accessibility inspection remains separate. The PRD records product behavior and release state, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
 
 ## 3. Platform Baseline
 
 * **Platform Name:** Desktop
 * **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an Apple Development signed personal build with verified App Group access
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.5.2 (build 20), including Keep Awake with outcome-aware Last Ran, configurable usage widgets, accessible Usage chart inspection, and the existing shared foundation, connection checks, Wi-Fi readings and expandable descriptions. No public binary distribution target.
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.7.1 (build 23), including the Local Notification System, Keep Awake with outcome-aware Last Ran, configurable usage widgets, accessible Usage chart inspection, and the existing shared foundation, connection checks, Wi-Fi readings and expandable descriptions. No public binary distribution target.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
   - `xcodegen generate --spec project.yml` using XcodeGen 2.46.0; configure ignored local signing before a signed build. See [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
@@ -66,15 +66,15 @@ Every completed phase must satisfy all of the following:
 ## 6. Current Active Phase
 
 * **Current Phase:** 13 - Local Notification System
-* **Status:** Planned
+* **Status:** Implemented; installed Release and native notification delivery verified; final accessibility inspection pending
 * **Owner:** TBD
 * **Linked Phase Doc:** [phase-13-local-notification-system.md](./phase-13-local-notification-system.md)
-* **Immediate Goal:** Implement the approved Phase 13 plan after review while preserving the verified Release 1.5.2 baseline.
+* **Immediate Goal:** Complete the remaining Light/Dark utility-window accessibility inspection while preserving the verified Release 1.7.1 baseline.
 * **Current Blockers:** None known.
 
 ## 7. Ready Queue
 
-Phase 13 is planned for implementation after plan review. Phase 12 is complete in installed Release 1.5.2 (20), including outcome-aware Last Ran/icon behavior and Light/Dark layout verification. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
+Phase 13 implementation, signed Debug/Release builds, installed Release replacement and native notification delivery are complete; final accessibility inspection remains in the verification queue. Phase 12 remains complete in installed Release 1.7.1 (23), including outcome-aware Last Ran/icon behavior and Light/Dark layout verification. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
 
 ## 8. Phase Register
 
@@ -92,8 +92,8 @@ Phase 13 is planned for implementation after plan review. Phase 12 is complete i
 | 09 | Extended Stability Checks | Completed | TBD | TBD | Phase 08 | [phase-09-extended-stability-checks.md](./phase-09-extended-stability-checks.md) | Completed 2026-10-17 |
 | 10 | Wireless Link Quality | Completed | TBD | TBD | Phase 08; delivery follows Phase 09 | [phase-10-wireless-link-quality.md](./phase-10-wireless-link-quality.md) | Completed 2026-10-20 |
 | 11 | Configurable Usage Widget | Completed | TBD | Product Developer | Phase 08; delivery follows Phase 10; signed extension/group access | [phase-11-configurable-usage-widget.md](./phase-11-configurable-usage-widget.md) | Completed 2026-10-21 |
-| 12 | Keep Awake Control | Completed | TBD | TBD | Phases 06 and 08 | [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md) | Completed 2026-10-22; Release 1.5.2 (20) |
-| 13 | Local Notification System | Planned | TBD | TBD | Phase 12; signed local UserNotifications verification | [phase-13-local-notification-system.md](./phase-13-local-notification-system.md) | TBD |
+| 12 | Keep Awake Control | Completed | TBD | TBD | Phases 06 and 08 | [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md) | Completed 2026-10-22; Release 1.6.0 (21) |
+| 13 | Local Notification System | In Progress | TBD | TBD | Phase 12; signed local UserNotifications verification | [phase-13-local-notification-system.md](./phase-13-local-notification-system.md) | Release 1.7.1 installed 2026-10-23; native delivery verified; final accessibility inspection pending |
 
 ## 9. Blockers And Risks
 
