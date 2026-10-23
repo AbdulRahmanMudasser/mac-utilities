@@ -86,6 +86,17 @@ final class NotificationsController: NSObject, ObservableObject, UNUserNotificat
         }
     }
 
+    var capabilityMessage: UtilityCapabilityMessage {
+        let detail: String?
+        switch capabilityState {
+        case .permissionFailed, .deliveryFailed:
+            detail = errorMessage
+        default:
+            detail = nil
+        }
+        return UtilityCapabilityMessage(title: statusText, detail: detail)
+    }
+
     var recoveryAction: NotificationRecoveryAction? {
         switch capabilityState {
         case .denied, .deliverySurfaceDisabled: .openSettings

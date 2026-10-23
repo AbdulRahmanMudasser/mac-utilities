@@ -40,7 +40,7 @@ struct NotificationsView: View {
 
     private var statusCard: some View {
         UtilityCapabilityCard(
-            title: controller.statusText,
+            message: controller.capabilityMessage,
             isActive: controller.capabilityState == .authorized,
             action: AnyView(statusActions)
         )
