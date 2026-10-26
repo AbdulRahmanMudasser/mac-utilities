@@ -1,6 +1,28 @@
 import AppKit
 import SwiftUI
 
+private struct KeepAwakeSessionActionButton: View {
+    @EnvironmentObject private var controller: KeepAwakeController
+
+    var body: some View {
+        Button {
+            controller.setActive(!controller.isActive)
+        } label: {
+            Image(systemName: controller.isActive ? "xmark" : "play.fill")
+                .font(UtilityStyle.Popover.labelFont)
+                .frame(width: UtilityStyle.Popover.iconButtonSize,
+                       height: UtilityStyle.Popover.iconButtonSize)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .help(controller.isActive ? "Cancel Keep Awake" : "Start Keep Awake")
+        .accessibilityLabel(controller.isActive ? "Cancel Keep Awake" : "Start Keep Awake")
+        .accessibilityHint(controller.isActive ? "Cancels the current session." : "Starts the selected duration preset.")
+        .disabled(controller.isStartBlocked && !controller.isActive)
+        .handPointer()
+    }
+}
+
 struct KeepAwakeView: View {
     static func lastRanSymbol(for outcome: KeepAwakeSessionOutcome?) -> String {
         outcome == .completed ? "checkmark.circle.fill" : "exclamationmark.circle.fill"
@@ -13,13 +35,6 @@ struct KeepAwakeView: View {
     @EnvironmentObject private var controller: KeepAwakeController
     @State private var minuteInputs: [KeepAwakePresetID: String] = [:]
     @State private var validationMessage: String?
-
-    private var activeBinding: Binding<Bool> {
-        Binding(
-            get: { controller.isActive },
-            set: { controller.setActive($0) }
-        )
-    }
 
     private var displayBinding: Binding<Bool> {
         Binding(
@@ -39,16 +54,8 @@ struct KeepAwakeView: View {
 
             UtilityPanel(
                 "Keep Awake",
-                action: AnyView(
-                    Toggle("Keep Awake", isOn: activeBinding)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-                        .accessibilityLabel("Keep Awake")
-                        .disabled(controller.isStartBlocked && !controller.isActive)
-                        .handPointer()
-                ),
-                description: "Prevents idle sleep during downloads, builds, and other long tasks. It stops at the selected time, when you turn it off, or when Mac Utilities quits.",
+                action: AnyView(KeepAwakeSessionActionButton()),
+                description: "Prevents idle sleep during downloads, builds, and other long tasks. It stops at the selected time, when you cancel it, or when Mac Utilities quits.",
                 showsContent: false
             ) {
                 EmptyView()
@@ -370,13 +377,6 @@ private final class SelectAllNSTextField: NSTextField {
 struct KeepAwakePopoverSection: View {
     @EnvironmentObject private var controller: KeepAwakeController
 
-    private var activeBinding: Binding<Bool> {
-        Binding(
-            get: { controller.isActive },
-            set: { controller.setActive($0) }
-        )
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: UtilityStyle.Popover.sectionContentSpacing) {
             HStack(spacing: UtilityStyle.contentSpacing) {
@@ -384,13 +384,7 @@ struct KeepAwakePopoverSection: View {
                     .font(UtilityStyle.headingFont)
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
-                Toggle("Keep Awake", isOn: activeBinding)
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .disabled(controller.isStartBlocked && !controller.isActive)
-                    .accessibilityLabel("Keep Awake")
-                    .handPointer()
+                KeepAwakeSessionActionButton()
             }
 
             HStack(spacing: UtilityStyle.Popover.valueSpacing) {
