@@ -28,7 +28,7 @@ Do not use this file for:
 * **Platform Name:** Desktop
 * **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an Apple Development signed personal build with verified App Group access
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 1.7.1 (build 23), including the Local Notification System, Keep Awake with outcome-aware Last Ran, configurable usage widgets, accessible Usage chart inspection, and the existing shared foundation, connection checks, Wi-Fi readings and expandable descriptions. No public binary distribution target.
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 2.0.2 (build 26), including the Local Notification System, Keep Awake with icon-only Start/Cancel controls and outcome-aware Last Ran, configurable usage widgets, accessible Usage chart inspection, and the existing shared foundation, connection checks, Wi-Fi readings and expandable descriptions. No public binary distribution target.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
   - `xcodegen generate --spec project.yml` using XcodeGen 2.46.0; configure ignored local signing before a signed build. See [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
@@ -69,12 +69,12 @@ Every completed phase must satisfy all of the following:
 * **Status:** Implemented; installed Release and native notification delivery verified; final accessibility inspection pending
 * **Owner:** TBD
 * **Linked Phase Doc:** [phase-13-local-notification-system.md](./phase-13-local-notification-system.md)
-* **Immediate Goal:** Complete the remaining Light/Dark utility-window accessibility inspection while preserving the verified Release 1.7.1 baseline.
+* **Immediate Goal:** Complete the remaining Light/Dark utility-window accessibility inspection while preserving the verified Release 2.0.2 (26) baseline.
 * **Current Blockers:** None known.
 
 ## 7. Ready Queue
 
-Phase 13 implementation, signed Debug/Release builds, installed Release replacement and native notification delivery are complete; final accessibility inspection remains in the verification queue. Phase 12 remains complete in installed Release 1.7.1 (23), including outcome-aware Last Ran/icon behavior and Light/Dark layout verification. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
+Phase 13 implementation, signed Debug/Release builds, installed Release replacement and native notification delivery are complete; final accessibility inspection remains in the verification queue. Phase 12 remains complete in installed Release 2.0.2 (26), including icon-only Start/Cancel controls, outcome-aware transient Last Ran and Light/Dark layout verification. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
 
 ## 8. Phase Register
 
