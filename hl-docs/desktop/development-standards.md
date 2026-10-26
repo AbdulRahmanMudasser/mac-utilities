@@ -81,17 +81,17 @@ A section heading contains one semantic Title Case heading. A small native switc
 
 ### 4.5 Keep Awake
 
-The popover is control-only and appears after Current Speed and before Today's Usage: heading, synchronized native small switch and two-to-four equal-width enabled preset buttons. It has no description, status sentence, Keep Display On control, info icon or separate Start/Stop button. Preserve the existing inactive rate string; active sessions prefix `☾ <remaining>` or `☾ ∞` with one em space and no separator dot.
+The popover is control-only and appears after Current Speed and before Today's Usage: heading, synchronized icon-only Start/Cancel button and two-to-four equal-width enabled preset buttons. Use `play.fill` for Start and `xmark` for Cancel; accessible labels and tooltips name each action. Start begins the selected preset; Cancel ends the active session. It has no description, status sentence, Keep Display On control or info icon. Preserve the existing inactive rate string; active sessions prefix `☾ <remaining>` or `☾ ∞` with one em space and no separator dot.
 
 The utility window owns the full module:
 
-- Keep the synchronized small switch inline with the Keep Awake heading.
+- Keep the same icon-only Start/Cancel button inline with the Keep Awake heading, with accessible labels and tooltips naming each action. Start uses the selected preset; Cancel ends the active session.
 - Keep Current Session separate and show a transient `Last Ran` row after it.
 - Place Keep Display On before Duration Presets with its switch inline and no description.
 - Keep Restore Defaults outside the presets card.
 - Show preset name, left-side minute field/unit and a right-side small switch without a table header. Select the complete minute value on focus and end editing when the user clicks elsewhere.
 - Use `checkmark.circle.fill` with the shared success color for `Last Ran`, include the start time and selected duration, and show the real outcome. Use `Completed` only after a finite session reaches its captured deadline. Use `Cancelled` for manual stop, replacement, Until Stopped stop and application quit. A failed assertion start does not create a new Last Ran entry; outcomes disappear on relaunch. When replacement follows an active session, the previous session remains `Cancelled`.
-- Defaults are 30 Min, 1 Hour, 2 Hours and Until Stopped. Require two-to-four unique enabled options, accept 1-1,440 whole minutes, count Until Stopped toward the minimum and save edits when editing ends/Return is pressed. Switch and Restore Defaults changes save immediately.
+- Defaults are 30 Min, 1 Hour, 2 Hours and Until Stopped. Require two-to-four unique enabled options, accept 1-1,440 whole minutes, count Until Stopped toward the minimum and save edits when editing ends/Return is pressed. Keep Display On and preset switches save immediately; Restore Defaults saves immediately too.
 - Keep Display On exists only in the utility window, persists for later sessions and applies live to an active session. Preference edits must not rewrite an active session's captured deadline.
 - Keep minute text monospaced. Increased popover height is acceptable, but preserve its width and inspect two, three and four enabled preset buttons on the target display.
 
