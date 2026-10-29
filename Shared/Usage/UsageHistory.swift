@@ -49,7 +49,36 @@ nonisolated struct UsageHistoryDay: Identifiable, Equatable, Sendable {
     var id: String { dayKey }
 }
 
+nonisolated struct MonthlyUsage: Identifiable, Equatable, Sendable {
+    let month: Int
+    var downloaded: UInt64
+    var uploaded: UInt64
+    var id: Int { month }
+    var combined: UInt64 { UsageHistory.add(downloaded, uploaded) }
+}
+
 nonisolated enum UsageHistory {
+    static func years(records: [DailyUsageRecord], currentYear: Int) -> [Int] {
+        let years = records.compactMap { record -> Int? in
+            guard validKey(record.dayKey) else { return nil }
+            return Int(record.dayKey.prefix(4))
+        }
+        return Set(years + [currentYear]).sorted(by: >)
+    }
+
+    static func monthly(records: [DailyUsageRecord], year: Int) -> [MonthlyUsage] {
+        var months: [Int: MonthlyUsage] = [:]
+        for record in records {
+            guard validKey(record.dayKey) else { continue }
+            let parts = record.dayKey.split(separator: "-")
+            guard Int(parts[0]) == year, let month = Int(parts[1]) else { continue }
+            var total = months[month] ?? MonthlyUsage(month: month, downloaded: 0, uploaded: 0)
+            total.downloaded = add(total.downloaded, record.downloaded)
+            total.uploaded = add(total.uploaded, record.uploaded)
+            months[month] = total
+        }
+        return months.values.sorted { $0.month < $1.month }
+    }
     nonisolated static func calendar(timeZone: TimeZone = .autoupdatingCurrent) -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
