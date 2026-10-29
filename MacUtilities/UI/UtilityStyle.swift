@@ -54,6 +54,7 @@ enum UtilityStyle {
         static let summaryBorder = Color.primary.opacity(0.08)
         static let metricSpacing: CGFloat = 4
         static let chartHeight: CGFloat = 200
+        static let placeholderHeight: CGFloat = 70
         static let downloadColor = UsageChartPresentation.downloadColor
         static let uploadColor = UsageChartPresentation.uploadColor
         static let symbolSize: CGFloat = 18

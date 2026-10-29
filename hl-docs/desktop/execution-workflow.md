@@ -94,6 +94,7 @@ Phase 13 implementation, signed Debug/Release builds, installed Release replacem
 | 11 | Configurable Usage Widget | Completed | TBD | Product Developer | Phase 08; delivery follows Phase 10; signed extension/group access | [phase-11-configurable-usage-widget.md](./phase-11-configurable-usage-widget.md) | Completed 2026-10-21 |
 | 12 | Keep Awake Control | Completed | TBD | TBD | Phases 06 and 08 | [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md) | Completed 2026-10-22; Release 1.6.0 (21) |
 | 13 | Local Notification System | In Progress | TBD | TBD | Phase 12; signed local UserNotifications verification | [phase-13-local-notification-system.md](./phase-13-local-notification-system.md) | Release 1.7.1 installed 2026-10-23; native delivery verified; final accessibility inspection pending |
+| 14 | Monthly History Table | In Progress | TBD | TBD | Phase 08 | [phase-14-monthly-history-table.md](./phase-14-monthly-history-table.md) | TBD |
 
 ## 9. Blockers And Risks
 

@@ -46,6 +46,28 @@ struct UsageHistoryTests {
 
     private func date(_ text: String) -> Date { ISO8601DateFormatter().date(from: text)! }
 
+    @Test func monthlyHistoryGroupsRecordedDaysAndSaturatesTotals() {
+        let timestamp = date("2026-01-01T00:00:00Z")
+        func record(_ key: String, _ download: UInt64, _ upload: UInt64) -> DailyUsageRecord {
+            DailyUsageRecord(dayKey: key, downloaded: download, uploaded: upload,
+                             firstObservedAt: timestamp, lastObservedAt: timestamp, isIncomplete: false)
+        }
+        let records = [record("2026-07-01", 0, 0), record("2025-01-01", 4, 2),
+                       record("2026-01-01", .max, 2), record("2026-01-02", 1, 3)]
+        #expect(UsageHistory.years(records: records, currentYear: 2027) == [2027, 2026, 2025])
+        let months = UsageHistory.monthly(records: records, year: 2026)
+        #expect(months.map(\.month) == [1, 7])
+        #expect(months[0].downloaded == .max)
+        #expect(months[0].uploaded == 5)
+        #expect(months[0].combined == .max)
+        #expect(months[1].combined == 0)
+        #expect(UsageHistory.monthly(records: records, year: 2025) == [
+            MonthlyUsage(month: 1, downloaded: 4, uploaded: 2)
+        ])
+        #expect(UsageHistory.monthly(records: records, year: 2027).isEmpty)
+        #expect(UsageHistory.years(records: [], currentYear: 2027) == [2027])
+    }
+
     @Test(arguments: [1, 2, 3])
     func formerlyPausedSnapshotsStartCollectingWithoutImportingTheGap(_ version: Int) throws {
         let f = try Fixture()

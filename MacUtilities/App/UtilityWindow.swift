@@ -153,6 +153,10 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
         }
         synchronizeContentFrame(target)
         #if DEBUG
+        if let argument = CommandLine.arguments.first(where: { $0.hasPrefix("--usage-preview=") }) {
+            let state = argument.dropFirst("--usage-preview=".count)
+            target.title = "Usage Preview — \(state)"
+        }
         if CommandLine.arguments.contains("--stability-preview") || CommandLine.arguments.contains(where: { $0.hasPrefix("--stability-preview=") }) {
             target.appearance = NSAppearance(named: CommandLine.arguments.contains("--stability-preview-light") ? .aqua : .darkAqua)
             if CommandLine.arguments.contains("--stability-preview-compact") {
