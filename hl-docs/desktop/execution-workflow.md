@@ -28,7 +28,7 @@ Do not use this file for:
 * **Platform Name:** Desktop
 * **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an Apple Development signed personal build with verified App Group access
 * **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 2.0.2 (build 26), including the Local Notification System, Keep Awake with icon-only Start/Cancel controls and outcome-aware Last Ran, configurable usage widgets, accessible Usage chart inspection, and the existing shared foundation, connection checks, Wi-Fi readings and expandable descriptions. No public binary distribution target.
+* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 3.0.0 (build 27), including the monthly History table and cross-month comparison, Local Notification System, Keep Awake, usage widgets, connection checks and Wi-Fi readings. No public binary distribution target.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
 * **Required Verification Commands:**
   - `xcodegen generate --spec project.yml` using XcodeGen 2.46.0; configure ignored local signing before a signed build. See [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
@@ -69,12 +69,12 @@ Every completed phase must satisfy all of the following:
 * **Status:** Implemented; installed Release and native notification delivery verified; final accessibility inspection pending
 * **Owner:** TBD
 * **Linked Phase Doc:** [phase-13-local-notification-system.md](./phase-13-local-notification-system.md)
-* **Immediate Goal:** Complete the remaining Light/Dark utility-window accessibility inspection while preserving the verified Release 2.0.2 (26) baseline.
+* **Immediate Goal:** Complete the remaining Light/Dark utility-window accessibility inspection and verify the installed widget gallery and History post-clear transition on Release 3.0.0 (27).
 * **Current Blockers:** None known.
 
 ## 7. Ready Queue
 
-Phase 13 implementation, signed Debug/Release builds, installed Release replacement and native notification delivery are complete; final accessibility inspection remains in the verification queue. Phase 12 remains complete in installed Release 2.0.2 (26), including icon-only Start/Cancel controls, outcome-aware transient Last Ran and Light/Dark layout verification. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
+Phase 13 implementation and native notification delivery are complete; final accessibility inspection remains in the verification queue. Release 3.0.0 (27) includes the History and comparison changes; installed widget gallery inspection and the isolated post-clear History transition remain to be checked. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
 
 ## 8. Phase Register
 
@@ -95,6 +95,7 @@ Phase 13 implementation, signed Debug/Release builds, installed Release replacem
 | 12 | Keep Awake Control | Completed | TBD | TBD | Phases 06 and 08 | [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md) | Completed 2026-10-22; Release 1.6.0 (21) |
 | 13 | Local Notification System | In Progress | TBD | TBD | Phase 12; signed local UserNotifications verification | [phase-13-local-notification-system.md](./phase-13-local-notification-system.md) | Release 1.7.1 installed 2026-10-23; native delivery verified; final accessibility inspection pending |
 | 14 | Monthly History Table | In Progress | TBD | TBD | Phase 08 | [phase-14-monthly-history-table.md](./phase-14-monthly-history-table.md) | TBD |
+| 15 | Cross Usage Comparison | In Progress | TBD | TBD | Phase 14 | [phase-15-cross-usage-comparison.md](./phase-15-cross-usage-comparison.md) | TBD |
 
 ## 9. Blockers And Risks
 

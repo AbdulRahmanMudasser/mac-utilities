@@ -11,6 +11,8 @@ struct UsageHistoryView: View {
     @State private var showDownloads = true
     @State private var showUploads = true
     @State private var selectedYear: Int?
+    @State private var comparing = false
+    @State private var selectedMonths: [UsageMonthID] = []
 
     private var currentYear: Int { monitor.historyCalendar.component(.year, from: monitor.historyDate) }
     private var historyYears: [Int] { UsageHistory.years(records: monitor.historyRecords, currentYear: currentYear) }
@@ -80,6 +82,17 @@ struct UsageHistoryView: View {
         .onChange(of: historyYears) { _, years in
             if let selectedYear, !years.contains(selectedYear) { self.selectedYear = nil }
         }
+        .onChange(of: monitor.historyRecords) { _, records in
+            let monthsByYear = Dictionary(uniqueKeysWithValues: Set(selectedMonths.map(\.year)).map { year in
+                (year, Set(UsageHistory.monthly(records: records, year: year).map(\.month)))
+            })
+            selectedMonths.removeAll { id in
+                !(monthsByYear[id.year]?.contains(id.month) ?? false)
+            }
+        }
+        .onChange(of: monitor.historyWritable) { _, writable in
+            if !writable { selectedMonths.removeAll() }
+        }
         .onAppear { applyUsageRequest() }
         .onChange(of: utilityWindow.usageRequest) { _, _ in applyUsageRequest() }
         .sheet(isPresented: $confirmClear) { clearConfirmation }
@@ -92,9 +105,15 @@ struct UsageHistoryView: View {
                 ForEach(historyYears, id: \.self) { year in Text(String(year)).tag(year) }
             }
             .pickerStyle(.menu).labelsHidden().accessibilityLabel("History Year").handPointer()
+            Button(comparing ? "Done" : "Compare") {
+                comparing.toggle()
+                selectedMonths.removeAll()
+            }.buttonStyle(.bordered).handPointer().disabled(!monitor.historyWritable)
         })) {
             if !monitor.historyWritable {
                 historyPlaceholder("Saved Usage Unavailable", symbol: "exclamationmark.triangle")
+            } else if comparing {
+                comparisonContent(months: months)
             } else if months.isEmpty {
                 historyPlaceholder("No Data For This Year", symbol: "chart.bar.xaxis")
             } else {
@@ -114,6 +133,88 @@ struct UsageHistoryView: View {
                 }
             }
         }
+    }
+
+    private var comparisonRows: [(id: UsageMonthID, usage: MonthlyUsage)] {
+        let monthsByYear = Dictionary(uniqueKeysWithValues: Set(selectedMonths.map(\.year)).map { year in
+            (year, UsageHistory.monthly(records: monitor.historyRecords, year: year))
+        })
+        return selectedMonths.compactMap { id in
+            (monthsByYear[id.year] ?? [])
+                .first(where: { $0.month == id.month }).map { (id, $0) }
+        }
+    }
+
+    private func comparisonContent(months: [MonthlyUsage]) -> some View {
+        let rows = comparisonRows
+        let showYears = rows.contains { $0.id.year != activeYear }
+        return VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
+            if months.isEmpty {
+                historyPlaceholder("No Data For This Year", symbol: "chart.bar.xaxis")
+            } else {
+                Text(rows.count < 2 ? "Select At Least Two Months" : "Select Months To Compare")
+                    .font(UtilityStyle.metadataFont).foregroundStyle(.secondary)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: UtilityStyle.History.comparisonMonthWidth), alignment: .leading)],
+                          alignment: .leading, spacing: UtilityStyle.contentSpacing) {
+                    ForEach(months) { month in
+                        let id = UsageMonthID(year: activeYear, month: month.month)
+                        Toggle(isOn: Binding(
+                            get: { selectedMonths.contains(id) },
+                            set: { selected in
+                                if selected && !selectedMonths.contains(id) { selectedMonths.append(id) }
+                                if !selected { selectedMonths.removeAll { $0 == id } }
+                            })) {
+                                monthDisplay(id, showYear: false)
+                            }
+                            .toggleStyle(.checkbox).handPointer()
+                    }
+                }
+            }
+            if rows.count >= 2 {
+                historyTableHeader.padding(.top, UtilityStyle.contentSpacing)
+                ForEach(rows, id: \.id) { row in
+                    HStack(alignment: .top, spacing: UtilityStyle.contentSpacing) {
+                        monthDisplay(row.id, showYear: showYears)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text(formatted(row.usage.downloaded)).frame(maxWidth: .infinity, alignment: .trailing)
+                        Text(formatted(row.usage.uploaded)).frame(maxWidth: .infinity, alignment: .trailing)
+                        Text(formatted(row.usage.combined)).frame(maxWidth: .infinity, alignment: .trailing)
+                    }.monospacedDigit()
+                }
+                if rows.count == 2 {
+                    let difference = UsageHistory.difference(from: rows[0].usage.combined, to: rows[1].usage.combined)
+                    HStack(alignment: .firstTextBaseline, spacing: UtilityStyle.contentSpacing) {
+                        Image(systemName: difference.comparison == .orderedSame ? "equal.circle" :
+                              difference.comparison == .orderedAscending ? "arrow.down.right" : "arrow.up.right")
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                        (difference.comparison == .orderedSame
+                         ? Text("\(monthLabel(rows[1].id, showYear: showYears)) and \(monthLabel(rows[0].id, showYear: showYears)) recorded the same usage.")
+                         : Text("\(monthLabel(rows[1].id, showYear: showYears)) recorded ") +
+                           Text(formatted(difference.magnitude)).bold() +
+                           Text(" \(difference.comparison == .orderedAscending ? "less" : "more") than \(monthLabel(rows[0].id, showYear: showYears))."))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, UtilityStyle.contentSpacing)
+                }
+            }
+        }
+    }
+
+    private func monthLabel(_ id: UsageMonthID, showYear: Bool) -> String {
+        let year = showYear ? " \(id.year)" : ""
+        return "\(monthName(id.month))\(year)"
+    }
+
+    private func monthDisplay(_ id: UsageMonthID, showYear: Bool) -> some View {
+        let isCurrent = id.year == currentYear && id.month == monitor.historyCalendar.component(.month, from: monitor.historyDate)
+        return Text(monthLabel(id, showYear: showYear))
+            .fontWeight(isCurrent ? .semibold : .regular)
+            .foregroundStyle(.primary)
+            .fixedSize(horizontal: false, vertical: true)
+            .help(isCurrent ? "Current Month" : "")
+            .accessibilityLabel(isCurrent ? "\(monthLabel(id, showYear: showYear)), Current Month" : monthLabel(id, showYear: showYear))
     }
 
     private func historyPlaceholder(_ message: String, symbol: String) -> some View {

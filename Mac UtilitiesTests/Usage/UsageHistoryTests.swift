@@ -46,6 +46,16 @@ struct UsageHistoryTests {
 
     private func date(_ text: String) -> Date { ISO8601DateFormatter().date(from: text)! }
 
+    @Test func monthlyComparisonIdentityAndDifference() {
+        let earlier = UsageMonthID(year: 2025, month: 1)
+        let later = UsageMonthID(year: 2026, month: 1)
+        #expect(Set([earlier, later]).count == 2)
+        #expect([later, earlier].sorted() == [earlier, later])
+        #expect(UsageHistory.difference(from: 0, to: .max) == UsageMonthDifference(magnitude: .max, comparison: .orderedDescending))
+        #expect(UsageHistory.difference(from: .max, to: 0) == UsageMonthDifference(magnitude: .max, comparison: .orderedAscending))
+        #expect(UsageHistory.difference(from: 5, to: 5) == UsageMonthDifference(magnitude: 0, comparison: .orderedSame))
+    }
+
     @Test func monthlyHistoryGroupsRecordedDaysAndSaturatesTotals() {
         let timestamp = date("2026-01-01T00:00:00Z")
         func record(_ key: String, _ download: UInt64, _ upload: UInt64) -> DailyUsageRecord {

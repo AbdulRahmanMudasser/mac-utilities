@@ -57,7 +57,26 @@ nonisolated struct MonthlyUsage: Identifiable, Equatable, Sendable {
     var combined: UInt64 { UsageHistory.add(downloaded, uploaded) }
 }
 
+nonisolated struct UsageMonthID: Hashable, Comparable, Sendable {
+    let year: Int
+    let month: Int
+
+    static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.year == rhs.year ? lhs.month < rhs.month : lhs.year < rhs.year
+    }
+}
+
+nonisolated struct UsageMonthDifference: Equatable, Sendable {
+    let magnitude: UInt64
+    let comparison: ComparisonResult
+}
+
 nonisolated enum UsageHistory {
+    static func difference(from baseline: UInt64, to value: UInt64) -> UsageMonthDifference {
+        if value > baseline { return UsageMonthDifference(magnitude: value - baseline, comparison: .orderedDescending) }
+        if value < baseline { return UsageMonthDifference(magnitude: baseline - value, comparison: .orderedAscending) }
+        return UsageMonthDifference(magnitude: 0, comparison: .orderedSame)
+    }
     static func years(records: [DailyUsageRecord], currentYear: Int) -> [Int] {
         let years = records.compactMap { record -> Int? in
             guard validKey(record.dayKey) else { return nil }
