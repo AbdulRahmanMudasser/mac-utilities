@@ -10,6 +10,11 @@ struct UsageHistoryView: View {
     @State private var confirmClear = false
     @State private var showDownloads = true
     @State private var showUploads = true
+    @State private var selectedYear: Int?
+
+    private var currentYear: Int { monitor.historyCalendar.component(.year, from: monitor.historyDate) }
+    private var historyYears: [Int] { UsageHistory.years(records: monitor.historyRecords, currentYear: currentYear) }
+    private var activeYear: Int { selectedYear ?? currentYear }
 
     private var days: [UsageHistoryDay] {
         UsageHistory.days(records: monitor.historyRecords, range: range,
@@ -50,22 +55,19 @@ struct UsageHistoryView: View {
                     Text("No Data In This Range").foregroundStyle(.secondary)
                 }
             }
-            VStack(alignment: .leading, spacing: UtilityStyle.contentSpacing) {
-                UtilityPanel("Daily Usage") {
-                    legend
-                    if showDownloads || showUploads {
-                        chart
-                    } else {
-                        UtilityChartEmptyState(height: UtilityStyle.History.chartHeight)
-                    }
-                }
-                HStack {
-                    Spacer()
-                    Button("Clear History", role: .destructive) { confirmClear = true }
-                        .buttonStyle(.bordered).handPointer()
-                        .disabled(!monitor.historyWritable || monitor.historyRecords.isEmpty)
+            UtilityPanel("Daily Usage", action: AnyView(
+                Button("Clear History", role: .destructive) { confirmClear = true }
+                    .buttonStyle(.bordered).handPointer()
+                    .disabled(!monitor.historyWritable || monitor.historyRecords.isEmpty)
+            )) {
+                legend
+                if showDownloads || showUploads {
+                    chart
+                } else {
+                    UtilityChartEmptyState(height: UtilityStyle.History.chartHeight)
                 }
             }
+            monthlyHistory
         }
         .font(UtilityStyle.bodyFont)
         .controlSize(UtilityStyle.controlSize)
@@ -75,9 +77,74 @@ struct UsageHistoryView: View {
         .onChange(of: days.map(\.dayKey)) { _, _ in resetSelectionIfNeeded() }
         .onChange(of: showDownloads) { _, _ in resetSelectionIfNeeded() }
         .onChange(of: showUploads) { _, _ in resetSelectionIfNeeded() }
+        .onChange(of: historyYears) { _, years in
+            if let selectedYear, !years.contains(selectedYear) { self.selectedYear = nil }
+        }
         .onAppear { applyUsageRequest() }
         .onChange(of: utilityWindow.usageRequest) { _, _ in applyUsageRequest() }
         .sheet(isPresented: $confirmClear) { clearConfirmation }
+    }
+
+    private var monthlyHistory: some View {
+        let months = UsageHistory.monthly(records: monitor.historyRecords, year: activeYear)
+        return UtilityPanel("History", action: AnyView(HStack {
+            Picker("Year", selection: Binding(get: { activeYear }, set: { selectedYear = $0 })) {
+                ForEach(historyYears, id: \.self) { year in Text(String(year)).tag(year) }
+            }
+            .pickerStyle(.menu).labelsHidden().accessibilityLabel("History Year").handPointer()
+        })) {
+            if !monitor.historyWritable {
+                historyPlaceholder("Saved Usage Unavailable", symbol: "exclamationmark.triangle")
+            } else if months.isEmpty {
+                historyPlaceholder("No Data For This Year", symbol: "chart.bar.xaxis")
+            } else {
+                VStack(spacing: UtilityStyle.contentSpacing) {
+                    historyTableHeader
+                    ForEach(months) { month in
+                        HStack(spacing: UtilityStyle.contentSpacing) {
+                            Text(monthName(month.month)).frame(maxWidth: .infinity, alignment: .leading)
+                            Text(formatted(month.downloaded)).monospacedDigit().frame(maxWidth: .infinity, alignment: .trailing)
+                                .accessibilityLabel("\(monthName(month.month)), Downloaded, \(formatted(month.downloaded))")
+                            Text(formatted(month.uploaded)).monospacedDigit().frame(maxWidth: .infinity, alignment: .trailing)
+                                .accessibilityLabel("\(monthName(month.month)), Uploaded, \(formatted(month.uploaded))")
+                            Text(formatted(month.combined)).monospacedDigit().frame(maxWidth: .infinity, alignment: .trailing)
+                                .accessibilityLabel("\(monthName(month.month)), Combined, \(formatted(month.combined))")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func historyPlaceholder(_ message: String, symbol: String) -> some View {
+        VStack(spacing: UtilityStyle.contentSpacing) {
+            Image(systemName: symbol)
+                .font(.title2)
+                .accessibilityHidden(true)
+            Text(message)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, minHeight: UtilityStyle.History.placeholderHeight)
+        .padding(.vertical, UtilityStyle.cardPadding)
+    }
+
+    private var historyTableHeader: some View {
+        HStack(spacing: UtilityStyle.contentSpacing) {
+            Text("Month").frame(maxWidth: .infinity, alignment: .leading)
+            Text("Downloaded").frame(maxWidth: .infinity, alignment: .trailing)
+            Text("Uploaded").frame(maxWidth: .infinity, alignment: .trailing)
+            Text("Combined").frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .font(UtilityStyle.metadataFont).foregroundStyle(.secondary)
+    }
+
+    private func monthName(_ month: Int) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = .current
+        formatter.calendar = monitor.historyCalendar
+        return formatter.monthSymbols[month - 1]
     }
 
     private func applyUsageRequest() {

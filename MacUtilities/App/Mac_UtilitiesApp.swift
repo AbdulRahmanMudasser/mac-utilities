@@ -209,7 +209,8 @@ struct Mac_UtilitiesApp: App {
     #if DEBUG
     private static func previewMonitor(verificationOnly: Bool = false,
                                        state previewState: UsagePreviewState = .history) -> UsageMonitor {
-        let directory = verificationOnly ? "stability-check-preview" : "usage-history-preview"
+        let directory = (verificationOnly ? "stability-check-preview" : "usage-history-preview")
+            + "-\(ProcessInfo.processInfo.processIdentifier)"
         let verificationPaths = try? UsageStoragePaths.resolve()
         let sharedFixturePaths = verificationPaths.flatMap { $0.isVerification ? $0 : nil }
         let file = sharedFixturePaths?.stateURL ?? FileManager.default.temporaryDirectory
@@ -230,6 +231,17 @@ struct Mac_UtilitiesApp: App {
                 return DailyUsageRecord(dayKey: UsageHistory.key(for: day), downloaded: UInt64(offset == 8 ? 0 : 2 + (offset * 7) % 18) * 1_000_000_000,
                     uploaded: UInt64(offset == 8 ? 0 : 1 + offset % 3) * 500_000_000,
                     firstObservedAt: day, lastObservedAt: day, isIncomplete: true)
+            }
+            if previewState == .history, let start = calendar.dateInterval(of: .month, for: date)?.start {
+                let older = (2...15).compactMap { offset -> DailyUsageRecord? in
+                    guard let month = calendar.date(byAdding: .month, value: -offset, to: start),
+                          let day = calendar.date(byAdding: .day, value: 14, to: month) else { return nil }
+                    return DailyUsageRecord(dayKey: UsageHistory.key(for: day, calendar: calendar),
+                        downloaded: UInt64(offset == 5 ? 0 : offset * 5) * 1_000_000_000,
+                        uploaded: UInt64(offset == 5 ? 0 : offset) * 1_000_000_000,
+                        firstObservedAt: day, lastObservedAt: day, isIncomplete: true)
+                }
+                persistedState.history?.append(contentsOf: older)
             }
         case .empty:
             persistedState.history = []
