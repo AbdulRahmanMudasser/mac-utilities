@@ -105,10 +105,16 @@ struct UsageHistoryView: View {
                 ForEach(historyYears, id: \.self) { year in Text(String(year)).tag(year) }
             }
             .pickerStyle(.menu).labelsHidden().accessibilityLabel("History Year").handPointer()
-            Button(comparing ? "Done" : "Compare") {
+            Button {
                 comparing.toggle()
                 selectedMonths.removeAll()
-            }.buttonStyle(.bordered).handPointer().disabled(!monitor.historyWritable)
+            } label: {
+                Image(systemName: comparing ? "checkmark" : "rectangle.2.swap")
+            }
+            .buttonStyle(.bordered)
+            .accessibilityLabel(comparing ? "Done" : "Compare")
+            .help(comparing ? "Done" : "Compare")
+            .handPointer().disabled(!monitor.historyWritable)
         })) {
             if !monitor.historyWritable {
                 historyPlaceholder("Saved Usage Unavailable", symbol: "exclamationmark.triangle")
