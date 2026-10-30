@@ -45,7 +45,7 @@ No endpoint or event. Reuse the validated local Gregorian day-key records. Selec
 
 ## 8. UX / Behavioral Expectations
 
-- The default History view stays unchanged. Provide icon-only `Compare` and `Done` controls using the `rectangle.2.swap` and `checkmark` SF Symbols, respectively, alongside the existing year selector using the shared heading layout; expose the action names accessibly and return to the default History view when Done is pressed.
+- The default History view stays unchanged. Provide icon-only `Compare` and `Done` controls using the `arrow.left.arrow.right` and `checkmark` SF Symbols, respectively, alongside the existing year selector using the shared heading layout; expose the action names accessibly and return to the default History view when Done is pressed.
 - In Compare mode, show selectable recorded months in a responsive grid. Switching years retains selections; Done clears them. Use semibold text for the current month, and show years in results when selections span or differ from the displayed year. Missing months are not selectable and recorded zeroes remain selectable.
 - With two or more selections show one table of Month, Downloaded, Uploaded and Combined in the current unit. For exactly two months show the absolute byte difference below the table; for more than two, show no pairwise difference. Do not show percentages or comparison bars.
 - Keep no-selection and single-selection states clear without fabricated results. Preserve the existing unavailable-storage message; never present missing data as zero. Totals are observed and may have gaps; do not imply that an in-progress or incomplete month is a full-month measurement.

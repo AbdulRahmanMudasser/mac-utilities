@@ -109,7 +109,7 @@ struct UsageHistoryView: View {
                 comparing.toggle()
                 selectedMonths.removeAll()
             } label: {
-                Image(systemName: comparing ? "checkmark" : "rectangle.2.swap")
+                Image(systemName: comparing ? "checkmark" : "arrow.left.arrow.right")
             }
             .buttonStyle(.bordered)
             .accessibilityLabel(comparing ? "Done" : "Compare")
