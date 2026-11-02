@@ -9,6 +9,8 @@
     </dict></array>
     <key>MacUtilitiesAppGroupIdentifier</key>
     <string>$(MACUTILITIES_APP_GROUP_IDENTIFIER)</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Mac Utilities uses the microphone to transcribe your speech on this Mac.</string>
 #if DEBUG
     <key>MACUTILITIES_VERIFICATION_NAMESPACE</key>
     <string>$(MACUTILITIES_VERIFICATION_NAMESPACE)</string>
