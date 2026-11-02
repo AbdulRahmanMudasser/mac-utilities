@@ -11,6 +11,7 @@ struct Mac_UtilitiesApp: App {
     @StateObject private var wifiQualityMonitor: WiFiQualityMonitor
     @StateObject private var keepAwakeController: KeepAwakeController
     @StateObject private var notificationsController: NotificationsController
+    @StateObject private var transcribeController: TranscribeFeatureController
     @StateObject private var utilityWindow: UtilityWindowCoordinator
 
     init() {
@@ -21,7 +22,11 @@ struct Mac_UtilitiesApp: App {
         let settingsPreview = !testing && Self.hasArgument("--settings-preview", allowingValue: true)
         let stabilityPreview = !testing && Self.hasArgument("--stability-preview", allowingValue: true)
         let notificationPreview = !testing ? Self.notificationPreviewState : nil
-        let previewMode = keepAwakePreview || usagePreview || settingsPreview || stabilityPreview || notificationPreview != nil
+        let transcribePreview = !testing && Self.hasArgument("--transcribe-preview", allowingValue: true)
+        let nativeCheckArgument = CommandLine.arguments.first { $0.hasPrefix("--transcribe-native-check=") }
+        let nativeCheckID = nativeCheckArgument.flatMap { UUID(uuidString: String($0.dropFirst("--transcribe-native-check=".count))) }
+        let transcribeNativeCheck = !testing && nativeCheckID != nil
+        let previewMode = keepAwakePreview || usagePreview || settingsPreview || stabilityPreview || notificationPreview != nil || transcribePreview || transcribeNativeCheck
         #else
         let keepAwakePreview = false
         let previewMode = false
@@ -154,6 +159,50 @@ struct Mac_UtilitiesApp: App {
         _wifiQualityMonitor = StateObject(wrappedValue: wifiQualityMonitor)
         _keepAwakeController = StateObject(wrappedValue: keepAwakeController)
         _notificationsController = StateObject(wrappedValue: notificationsController)
+        let transcribeController: TranscribeFeatureController
+        #if DEBUG
+        if testing || previewMode {
+            let showHistoryPreview = transcribePreview && CommandLine.arguments.contains("--transcribe-preview=history")
+            let identifier = transcribeNativeCheck ? (nativeCheckID?.uuidString ?? UUID().uuidString) : UUID().uuidString
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent("transcribe-preview-\(identifier)", isDirectory: true)
+            let suiteName = "com.abdulrahman.mac-utilities.transcribe-isolated.\(identifier)"
+            guard let preferences = UserDefaults(suiteName: suiteName) else {
+                preconditionFailure("Could not create isolated Transcribe preferences.")
+            }
+            let history = TranscriptionHistoryStore(historyURL: directory.appendingPathComponent("history.json"))
+            if showHistoryPreview {
+                _ = try? history.load()
+                _ = try? history.append(" This is a sample transcription for the preview.")
+                _ = try? history.append("یہ ایک نمونہ نقل ہے۔")
+            }
+            if transcribeNativeCheck {
+                let store = SpeechModelStore(rootURL: directory.appendingPathComponent("Models", isDirectory: true))
+                let acquisition = SpeechAssetAcquisition(store: store, session: URLSessionSpeechAssetDownloadClient.ephemeralSession())
+                transcribeController = TranscribeFeatureController(
+                    capture: AudioCaptureAdapter(), permission: MicrophonePermissionClient(), history: history,
+                    languagePreferences: TranscriptionLanguagePreferenceStore(preferences: preferences),
+                    assetSetup: SpeechAssetTranscribeSetup(acquisition: acquisition),
+                    recognizerFactory: SpeechAssetTranscribeRecognizerFactory(inferenceFactory: SpeechAssetInferenceFactory(store: store))
+                )
+            } else {
+                let previewController = TranscribeFeatureController(
+                    capture: PreviewTranscribeCapture(),
+                    permission: PreviewMicrophonePermission(state: .granted),
+                    history: history,
+                    languagePreferences: TranscriptionLanguagePreferenceStore(preferences: preferences),
+                    assetSetup: PreviewTranscribeSetup(),
+                    recognizerFactory: PreviewTranscribeRecognizerFactory(),
+                    runtimeMode: .interactivePreview
+                )
+                transcribeController = previewController
+            }
+        } else {
+            transcribeController = Self.makeTranscribeController()
+        }
+        #else
+        transcribeController = Self.makeTranscribeController()
+        #endif
+        _transcribeController = StateObject(wrappedValue: transcribeController)
         let coordinator = UtilityWindowCoordinator(
             diagnostics: diagnostics,
             wifiQualityMonitor: wifiQualityMonitor
@@ -164,6 +213,7 @@ struct Mac_UtilitiesApp: App {
                 .environmentObject(wifiQualityMonitor)
                 .environmentObject(keepAwakeController)
                 .environmentObject(notificationsController)
+                .environmentObject(transcribeController)
                 .environmentObject(coordinator))
         }
         _utilityWindow = StateObject(wrappedValue: coordinator)
@@ -182,7 +232,23 @@ struct Mac_UtilitiesApp: App {
         appDelegate.wifiQualityMonitor = wifiQualityMonitor
         appDelegate.keepAwakeController = keepAwakeController
         appDelegate.notificationsController = notificationsController
+        appDelegate.transcribeController = transcribeController
         appDelegate.utilityWindow = coordinator
+    }
+
+    private static func makeTranscribeController() -> TranscribeFeatureController {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support", isDirectory: true)
+        let directory = support.appendingPathComponent("MacUtilities/Transcribe", isDirectory: true)
+        let store = SpeechModelStore(rootURL: directory.appendingPathComponent("Models", isDirectory: true))
+        let acquisition = SpeechAssetAcquisition(store: store, session: URLSessionSpeechAssetDownloadClient.ephemeralSession())
+        return TranscribeFeatureController(
+            capture: AudioCaptureAdapter(), permission: MicrophonePermissionClient(),
+            history: TranscriptionHistoryStore(historyURL: directory.appendingPathComponent("history.json")),
+            languagePreferences: TranscriptionLanguagePreferenceStore(),
+            assetSetup: SpeechAssetTranscribeSetup(acquisition: acquisition),
+            recognizerFactory: SpeechAssetTranscribeRecognizerFactory(inferenceFactory: SpeechAssetInferenceFactory(store: store))
+        )
     }
 
     var body: some Scene {
