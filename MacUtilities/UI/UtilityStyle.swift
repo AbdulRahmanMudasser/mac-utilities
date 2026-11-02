@@ -62,6 +62,10 @@ enum UtilityStyle {
         static let axisTickCount = 5
     }
 
+    enum Transcribe {
+        static let urduLiveTextBaselineOffset: CGFloat = 2
+    }
+
     enum Stability {
         static let tooltipWidth: CGFloat = 180
         static let chartHeight: CGFloat = 220
