@@ -205,7 +205,7 @@ struct UtilityWindowTests {
     @Test func startupDoesNotCreateAWindow() {
         let subject = coordinator()
         #expect(subject.window == nil)
-        #expect(UtilitySection.allCases == [.connection, .keepAwake, .usage, .notifications, .settings])
+        #expect(UtilitySection.allCases == [.connection, .keepAwake, .usage, .notifications, .transcribe, .settings])
     }
 
     @Test(arguments: UtilitySection.allCases)
@@ -598,6 +598,7 @@ struct UtilityWindowTests {
         #expect(UtilitySection.keepAwake.shortcut == "2")
         #expect(UtilitySection.usage.shortcut == "3")
         #expect(UtilitySection.notifications.shortcut == "4")
+        #expect(UtilitySection.transcribe.shortcut == "6")
         #expect(UtilitySection.settings.shortcut == "5")
     }
 

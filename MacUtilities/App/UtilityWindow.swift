@@ -7,6 +7,7 @@ enum UtilitySection: String, CaseIterable, Identifiable {
     case keepAwake = "Keep Awake"
     case usage = "Usage"
     case notifications = "Notifications"
+    case transcribe = "Transcribe"
     case settings = "Settings"
 
     var id: Self { self }
@@ -16,6 +17,7 @@ enum UtilitySection: String, CaseIterable, Identifiable {
         case .keepAwake: "2"
         case .usage: "3"
         case .notifications: "4"
+        case .transcribe: "6"
         case .settings: "5"
         }
     }
@@ -201,6 +203,18 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
                 target.setContentSize(NSSize(width: 1100, height: 800))
             }
         }
+        let hasTranscribePreview = CommandLine.arguments.contains("--transcribe-preview") ||
+            CommandLine.arguments.contains(where: { $0.hasPrefix("--transcribe-preview=") }) ||
+            CommandLine.arguments.contains(where: { $0.hasPrefix("--transcribe-native-check=") })
+        if hasTranscribePreview {
+            target.title = CommandLine.arguments.contains(where: { $0.hasPrefix("--transcribe-native-check=") }) ? "Transcribe Verification" : "Transcribe Preview"
+            target.appearance = NSAppearance(named: CommandLine.arguments.contains("--transcribe-preview-light") ? .aqua : .darkAqua)
+            if CommandLine.arguments.contains("--transcribe-preview-compact") {
+                target.setContentSize(Self.minimumContentSize)
+            } else if CommandLine.arguments.contains("--transcribe-preview-expanded") {
+                target.setContentSize(NSSize(width: 1100, height: 800))
+            }
+        }
         #endif
         setActivationPolicy(.regular)
         if target.isMiniaturized { target.deminiaturize(nil) }
@@ -337,11 +351,20 @@ struct UtilityWindowView: View {
                 case .keepAwake: KeepAwakeView()
                 case .usage: UsageHistoryView()
                 case .notifications: NotificationsView()
+                case .transcribe: TranscribeUtilityView()
                 case .settings: SettingsView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+private struct TranscribeUtilityView: View {
+    @EnvironmentObject private var controller: TranscribeFeatureController
+
+    var body: some View {
+        TranscribeView(model: controller.viewModel, actions: controller.actions)
     }
 }
