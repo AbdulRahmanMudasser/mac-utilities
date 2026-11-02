@@ -1,0 +1,10 @@
+diff --git a/src/whisper.cpp b/src/whisper.cpp
+index 1675f33..6fe4b88 100644
+--- a/src/whisper.cpp
++++ b/src/whisper.cpp
+@@ -5325,3 +5325,4 @@ bool whisper_vad_detect_speech_no_reset(
+             WHISPER_LOG_ERROR("%s: failed to compute VAD graph\n", __func__);
+-            break;
++            ggml_backend_sched_reset(sched);
++            return false;
+         }
