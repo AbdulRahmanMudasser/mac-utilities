@@ -2,7 +2,7 @@
 
 ## 1. Scope And Platform
 
-Mac Utilities is a native SwiftUI/AppKit application for this arm64 MacBook, targeting macOS 26.6 and later. The [PRD](../mac-utilities-prd.md) owns product behavior. [Phase 08](./phase-08-shared-architecture-foundation.md) records the shared architecture and canonical storage contract. Completed earlier phases remain historical implementation evidence.
+Mac Utilities is a native SwiftUI/AppKit application targeting macOS 26.6 and later. The [PRD](../mac-utilities-prd.md) owns product behavior. [Phase 08](./phase-08-shared-architecture-foundation.md) records the shared architecture and canonical storage contract. Completed earlier phases remain historical implementation evidence.
 
 ## 2. Source Ownership
 
@@ -14,8 +14,10 @@ Mac Utilities is a native SwiftUI/AppKit application for this arm64 MacBook, tar
 | `MacUtilities/Features/Connection/` | User-started diagnostics, transient Wi-Fi quality presentation, and their models and monitors |
 | `MacUtilities/Features/KeepAwake/` | Keep Awake session state, validated presets, preferences and utility presentation |
 | `MacUtilities/Features/Notifications/` | Local notification preference, authorization, delivery and utility presentation |
+| `MacUtilities/Features/Speech/` | Transcribe setup, recording lifecycle, transcript presentation and local history |
 | `MacUtilities/Features/Settings/` | Settings presentation |
 | `MacUtilities/Platform/` | AppKit resources, network counters, read-only CoreWLAN access, native power assertions, processes, login items and canonical storage |
+| `MacUtilities/Platform/Speech/` | Microphone permission and capture, speech-model assets and local inference |
 | `MacUtilities/UI/` | Shared host typography, cards, controls, spacing and tooltips |
 | `MacUtilitiesWidgets/` | WidgetKit configuration, read-only timelines and family-adaptive saved-usage presentation |
 | `Shared/` | Value types, calendar/range calculations, byte formatting, bounded projection reader and chart presentation |
@@ -34,10 +36,11 @@ Dependencies flow from app/features into platform adapters and shared values. `S
 - Resolve the group using the built `MacUtilitiesAppGroupIdentifier` key and `FileManager.containerURL(forSecurityApplicationGroupIdentifier:)`. Do not construct a production container path manually or fall back to legacy writes.
 - Canonical data is `Library/Application Support/MacUtilities/today-usage.json` beneath that group. Schema 3 retains independent Today counters, daily history, checkpoints and timestamps. The optional schema-1 `widgetSnapshot` is derived from canonical history and committed in the same atomic replacement; there is no sidecar ledger.
 - Shared limits are 9 MiB per envelope, 64 KiB per projection and 31 local-day projection records. Preserve valid core state if the optional projection is invalid; regenerate derived data. Protect unsupported/corrupt core data. A size/write failure preserves the last file and exposes a saving error without pruning history.
-- The sole installation's usage history was copied into the shared canonical file before this implementation. Startup reads only that file; it does not resolve or import data from another location. An absent canonical file starts a new ledger. Retained backup files are never automatic recovery sources; restoring one requires an explicit recovery action with collection stopped.
+- Usage history is stored in the shared canonical file. Startup reads only that file; it does not resolve or import data from another location. An absent canonical file starts a new ledger. Retained backup files are never automatic recovery sources; restoring one requires an explicit recovery action with collection stopped.
 - Reset Today preserves history. Clear History preserves Today and atomically clears the projection. Missing days are unknown, recorded zeroes are measured zero, and all totals remain observed traffic. `savedAt` is distinct from `lastObservedAt`.
 - Publish commit callbacks only after a successful canonical write. The host owns one `WidgetReloadCoordinator`: ordinary observation changes coalesce to at most one targeted usage-widget reload per 30 minutes; successful clear, unit and local-day/time-zone commits request an immediate reload. WidgetKit controls when requests appear on screen. Shut down pending reload work with the app.
 - The widget reads only the bounded embedded projection through `UsageWidgetSnapshotReader`; it never collects, writes, repairs, starts diagnostics or falls back to legacy storage. Saved and last-observed timestamps remain separate. Keep extension source membership explicit and extension API checks enabled; share only extension-safe values, readers and presentation calculations.
+- Transcribe stores only completed, nonempty transcript text and its saved timestamp in app-sandbox Application Support, separate from the App Group usage ledger. Retain entries until the user deletes them. Keep the history directory at `0700` and the history file at `0600`; reject symbolic links and publish updates atomically. The JSON is not application-level encrypted. Audio stays transient in memory. Do not include audio or transcript content in logs, diagnostics, previews that touch production data, or the usage ledger. Model assets use their own protected store and license/access rules.
 
 ## 4. UI Conventions
 
@@ -49,7 +52,7 @@ All utility-window modules use the shared shell and controls:
 - `UtilityPanel` owns one Title Case heading, an optional subtitle, one optional inline action, an optional explanation card and an optional content card.
 - Shared cards use 12-point padding. Use `UtilityStyle`, `UtilityControls.swift`, shared rows, tooltips and pointer behavior; do not create feature-specific style systems.
 - Keep the utility window readable at 620 × 420, 860 × 660 and, where needed, 1100 × 800. The popover remains compact and closes when the utility window opens.
-- Sidebar order and shortcuts are fixed: Connection (Command-1), Keep Awake (Command-2), Usage (Command-3), Notifications (Command-4) and Settings (Command-5).
+- Sidebar order and shortcuts are fixed: Connection (Command-1), Keep Awake (Command-2), Usage (Command-3), Notifications (Command-4), Transcribe (Command-6) and Settings (Command-5).
 
 A section heading contains one semantic Title Case heading. A small native switch, picker or primary action may sit inline on the trailing edge. Keep actions keyboard reachable, expose meaningful accessibility labels and values, and apply the shared pointing-hand cursor when enabled.
 
@@ -59,7 +62,7 @@ A section heading contains one semantic Title Case heading. A small native switc
 - Keep warnings, errors, confirmations and result values fully visible. Do not apply the description truncation rule to them.
 - Content cards contain actual rows, metrics, charts, editors or controls. Hide conditional content until it has meaningful loading, result, empty-state or error content; never render an empty rounded card.
 - Do not duplicate a description, status, error or nested result card when the heading or status row already supplies that context.
-- Use the shared `UtilityCapabilityCard` for durable capability states, as Settings and Notifications do: one full-width rounded card with an icon, concise label and optional right-aligned recovery actions that wrap when narrow. Green `checkmark.circle.fill` means ready/active; orange `exclamationmark.circle.fill` means unavailable, denied or failed. Use an action such as `Open Settings` only when it can address the cause; do not add a generic Retry without a defined retry and deduplication contract.
+- Use the shared `UtilityCapabilityCard` for durable capability states, as Settings and Notifications do: one full-width rounded card with an icon, concise label and optional right-aligned recovery actions that wrap when narrow. Green `checkmark.circle.fill` means ready/active; orange `exclamationmark.circle.fill` means not ready, including unavailable, denied, failed or pending. While work is in progress, show an accessible `ProgressView` in the same card's trailing accessory, as Notifications does. Use an action such as `Open Settings` only when it can address the cause; do not add a generic Retry without a defined retry and deduplication contract.
 - When an existing capability error includes explanatory detail, pass its title and detail separately through `UtilityCapabilityMessage`. Render the Title Case title above the sentence-case detail using the centralized 4-point `UtilityStyle.capabilityDetailSpacing`; align both text blocks on the same leading edge and the icon's vertical center with the title's center using the shared title alignment guide. Single-line cards stay vertically centered, including beside recovery actions. Show a detail line only when an actual explanation exists; keep generic fallback descriptions in accessibility values instead of repeating the visible title. Preserve existing wording without inventing extra detail or splitting arbitrary error strings at punctuation.
 - Modules without a durable capability state keep their action-specific results and timestamps in their owning panels.
 
@@ -115,6 +118,8 @@ The master preference is `notifications.enabled.v1`, defaulting off, with one-ti
 
 Before implementation or review, identify initial/waiting, active/ready, empty/no-data, recoverable warning/error, cancelled/replaced and disabled-by-preference states. Controllers own transitions and guard stale asynchronous results during visibility changes, cancellation and shutdown.
 
+Transcribe follows [Speech Transcription Conventions](../conventions/speech-transcription.md) for model setup, capture, history and verification. The guide is the canonical cross-feature contract for transcript retention, privacy and capability messaging.
+
 Verify every module in Light and Dark at supported sizes, including narrow layouts, keyboard navigation, VoiceOver labels/values, pointer behavior, text-field focus, empty/error/warning/recovery states and status truthfulness. Confirm that headings/actions align, no card is empty, timestamps align and no duplicate description/status/error text is visible.
 
 The app does not provide text or system services; keep the Mac Utilities Services command group empty so unrelated providers do not appear in its menu.
@@ -125,7 +130,10 @@ The app does not provide text or system services; keep the Mac Utilities Service
 
 `Configuration/Info.plist` is preprocessed and merged by Xcode. Its custom group key must be present in the built plist; arbitrary `INFOPLIST_KEY_` settings alone do not reliably emit custom keys. Only Debug includes the optional UUID verification namespace. Entitlements use the same local group setting. Release contains no verification namespace key.
 
+Before generating a project from a clean checkout, run `./Scripts/Speech/build-whisper-runtime.sh` to build the pinned arm64 whisper.cpp framework with embedded Metal support in ignored `build/speech-runtime/`. The script requires Git, Xcode and CMake 3.28 or later, fetches the pinned upstream commit and verifies the resulting architecture, symbols and Swift module. Re-run it when the pinned runtime or toolchain changes; do not commit its generated framework or source checkout.
+
 ```sh
+./Scripts/Speech/build-whisper-runtime.sh
 xcodegen generate --spec project.yml
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-foundation CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES test
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -configuration Release -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-foundation build
@@ -146,13 +154,15 @@ Stability tests use virtual continuous time for the five-minute deadline and 60-
 
 Phase 10 reads optional Wi-Fi signal, noise, channel and link-rate values through the sandboxed, transient CoreWLAN path. Do not request Location access or call APIs for SSID/BSSID, scanning, association or Wi-Fi configuration. A signed preview does not install or replace the existing app. CoreWLAN values may be unavailable on a particular run.
 
-Debug-only previews expose named state parameters so each module can be inspected without changing production data or macOS settings. The current matrix contains **32 named state values**: Usage (5), Settings (2), Connection (5), Keep Awake (11) and Notifications (9). The count covers state values only; light/compact/expanded appearance flags, legacy aliases and the Usage large-envelope gate are modifiers and do not add states. Each state is launched in its own Debug process because one process selects one module route.
+Debug-only previews expose named state parameters so each module can be inspected without changing production data or macOS settings. The current matrix contains **34 named state values**: Usage (5), Settings (2), Connection (5), Keep Awake (11), Notifications (9) and Transcribe (2). The count covers state values only; light/compact/expanded appearance flags, legacy aliases and the Usage large-envelope gate are modifiers and do not add states. Each state is launched in its own Debug process because one process selects one module route.
 
 `--usage-preview=<state>` opens Usage with disposable synthetic history; supported states are `history`, `empty`, `zero`, `counter-error` and `storage-error`. The history fixture spans multiple years, and each ordinary preview process uses separate temporary storage and identifies its state in the window title. `--usage-preview-light`, `--usage-preview-compact` and `--usage-preview-expanded` exercise appearance and window sizing. `--settings-preview=<state>` opens Settings using the same isolated UsageMonitor; supported states are `active` and `unavailable`, with matching `--settings-preview-light`, `--settings-preview-compact` and `--settings-preview-expanded` variants.
 
 `--stability-preview=<state>` opens Connection with synthetic results and an isolated usage monitor, without live probes or production collection. Supported states are `complete`, `sparse`, `unobserved`, `running` and `cancelled`; the existing `--stability-preview-sparse` and `--stability-preview-unobserved` aliases remain supported. Optional `--stability-preview-light`, `--stability-preview-compact` and `--stability-preview-expanded` flags exercise appearance and sizing. `--keep-awake-preview=<state>` opens Keep Awake with isolated preferences and a fake assertion adapter; supported states are `idle`, `active`, `until-stopped`, `completed`, `cancelled`, `display-on`, `error`, `display-error`, `preference-error`, `two-presets` and `three-presets`. The existing Keep Awake state flags remain supported, along with light/compact/expanded variants.
 
 `--notification-preview=<state>` opens Notifications with isolated synthetic preferences and an injected notification client; supported states are `off`, `active`, `denied`, `alerts-disabled`, `notification-center-disabled`, `sound-disabled`, `requesting`, `permission-error` and `delivery-error`. Optional `--notification-preview-light`, `--notification-preview-compact` and `--notification-preview-expanded` flags exercise appearance and sizing. Release contains no preview route.
+
+`--transcribe-preview=<state>` opens Transcribe with isolated preferences and temporary history. Supported states are `empty` and `history`; `history` contains synthetic English and Urdu entries. Both states use an explicit interactive-preview capability presentation. Start and Stop run injected fake capture and inference, save clearly synthetic language-appropriate text to isolated preview History, and never use the microphone or real model assets. The capability card identifies all readiness and permission as simulated; changing languages updates the selected language without starting real model setup. Optional `--transcribe-preview-light`, `--transcribe-preview-compact` and `--transcribe-preview-expanded` flags exercise appearance and sizing. Previews do not request microphone access, use production model files or write production History. Release contains no preview route.
 
 A namespaced Debug `--usage-preview` publishes its synthetic canonical state and projection into that UUID namespace before requesting a targeted widget reload. Add `--usage-preview-large-envelope` only for the near-9-MiB native resource gate; it pads an unused canonical explanation, never the consumed projection, and is ignored without a verification namespace. Relaunch the ordinary usage preview afterward to restore the small fixture.
 

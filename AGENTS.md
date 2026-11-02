@@ -16,11 +16,11 @@ Resolve conflicts using explicit user decisions and current verified evidence. C
 | Location | Ownership |
 | --- | --- |
 | `MacUtilities/App/` | Composition, delegate and singleton utility-window lifecycle |
-| `MacUtilities/Features/` | Connection, Keep Awake, Usage, Settings and popover behavior |
-| `MacUtilities/Platform/` | macOS adapters, networking, power assertions, processes, login items and canonical storage |
+| `MacUtilities/Features/` | Connection, Keep Awake, Usage, Notifications, Transcribe, Settings and popover behavior |
+| `MacUtilities/Platform/` | macOS adapters, networking, speech capture/inference, power assertions, processes, login items and canonical storage |
 | `MacUtilities/UI/` | Shared styles, panels, controls, cards and tooltips |
 | `Shared/` | Shared values, formatting, calendar calculations and bounded projection reading |
-| `Mac UtilitiesTests/` | Usage, Connection, Keep Awake and Window regression suites |
+| `Mac UtilitiesTests/` | Usage, Connection, Keep Awake, Notifications, Transcribe and Window regression suites |
 
 ## Implementation Rules
 

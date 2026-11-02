@@ -21,27 +21,23 @@ Do not use this file for:
 
 * **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md)
 * **Usage History Contract:** The [PRD](../mac-utilities-prd.md) owns the product requirements; [Phase 07](./phase-07-usage-history-chart.md), especially Sections 6–8, records the detailed storage, accounting, interface and verification contracts. Earlier completed phases retain their historical scope.
-* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions; [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) is implemented and verified. [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) is completed and was first included in installed Release 1.4.0 (16), with user acceptance recorded in its execution notes. [12 Keep Awake Control](./phase-12-keep-awake-control.md) is completed and included in installed Release 1.6.0 (21), including the outcome-aware transient Last Ran summary and Light/Dark layout verification. [13 Local Notification System](./phase-13-local-notification-system.md) is implemented, signed-build verified and confirmed working in the installed Release; final accessibility inspection remains separate. The PRD records product behavior and release state, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
+* **Architecture And Feature Scope:** [08 Shared Architecture Foundation](./phase-08-shared-architecture-foundation.md) implements the shared source/storage foundation; [09 Extended Stability Checks](./phase-09-extended-stability-checks.md) adds bounded manual stability sessions; [10 Wireless Link Quality](./phase-10-wireless-link-quality.md) is implemented and verified. [11 Configurable Usage Widget](./phase-11-configurable-usage-widget.md) is completed, with acceptance recorded in its execution notes. [12 Keep Awake Control](./phase-12-keep-awake-control.md) is completed and includes the outcome-aware transient Last Ran summary and Light/Dark layout verification. [13 Local Notification System](./phase-13-local-notification-system.md) has verified native delivery and accessibility inspection. The PRD records product requirements, and [Desktop Development Standards](./development-standards.md) owns current source boundaries and local build setup.
 
 ## 3. Platform Baseline
 
 * **Platform Name:** Desktop
-* **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics, and an Apple Development signed personal build with verified App Group access
-* **Target Environments:** Local development and personal use on the target MacBook only
-* **Deployment Target:** `~/Applications/Mac Utilities.app` on the target MacBook; installed version 3.0.0 (build 27), including the monthly History table and cross-month comparison, Local Notification System, Keep Awake, usage widgets, connection checks and Wi-Fi readings. No public binary distribution target.
+* **Primary Runtime:** SwiftUI with AppKit integration, local device interface counters, user-started system diagnostics and macOS system integrations
+* **Target Environments:** Local development and use on macOS
+* **Deployment Target:** Local macOS builds; public binary distribution is out of scope.
 * **Branch Strategy:** Feature branches from `master`, reviewed through lowercase conventional commits and a pull request before merging into `master`.
-* **Required Verification Commands:**
-  - `xcodegen generate --spec project.yml` using XcodeGen 2.46.0; configure ignored local signing before a signed build. See [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
-  - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-install CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES build`
-  - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project MacUtilities.xcodeproj -scheme "Mac Utilities" -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/mac-utilities-install CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES test`
-  - `codesign --verify --deep --strict "$HOME/Applications/Mac Utilities.app"`
-  - Run the complete regression suite and the applicable opt-in signed five-minute checks from [Phase 09 Section 11](./phase-09-extended-stability-checks.md#11-verification-protocol-definition-of-done) and timer-notification checks from [Phase 13 Section 11](./phase-13-local-notification-system.md#11-verification-protocol-definition-of-done) when changing those lifecycle behaviors.
+* **Build And Verification:** Follow [Desktop Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing) for supported build, test and signing commands. Phase-specific checks remain in their owning phase documents.
 * **Release Gates:**
-  - Verify live device rates, current-day totals, restart persistence, local-midnight rollover, collection-state messaging, and normal network connectivity on the target MacBook. Ad-hoc tests use injected storage; the installed app requires a verified matching development signature for group access.
-  - Run the signed Release build with verified group configuration. The sole installation's history is already in the canonical ledger. Preserve it and prevent competing writers during installation.
+  - Verify live device rates, current-day totals, restart persistence, local-midnight rollover, collection-state messaging, and normal network connectivity on a supported macOS installation. Ad-hoc tests use isolated storage; verify signed-app storage access using [Development Standards Section 5](./development-standards.md#5-reproducible-project-and-local-signing).
+  - Run the signed Release build with verified group configuration. Preserve existing user data and prevent competing writers during installation.
   - Verify schema-3 daily history compatibility, reset-independent totals, calendar ranges, missing/zero states, chart interaction, storage protection and explicit clearing using the Phase 07 protocol.
   - Keep per-app usage explicitly deferred until a supported macOS report handoff and app-identity path are proven.
   - Verify manual diagnostic tools from the signed sandboxed app, including reply permissions, real metrics, impact disclosure, cancellation and child-process cleanup; diagnostic results remain transient. Retained usage history contains daily byte aggregates only.
+  - Verify Transcribe history permissions and content-free logging as specified in [Speech Transcription Conventions](../conventions/speech-transcription.md); run Phase 17 separately for quality and resource acceptance.
 
 ## 4. Status Definitions
 
@@ -65,16 +61,16 @@ Every completed phase must satisfy all of the following:
 
 ## 6. Current Active Phase
 
-* **Current Phase:** 13 - Local Notification System
-* **Status:** Implemented; installed Release and native notification delivery verified; final accessibility inspection pending
+* **Current Phase:** 17 - Speech Quality And Resource Benchmark
+* **Status:** Planned. Phase 16 implementation and post-fix native capture are complete; benchmark results are not yet available.
 * **Owner:** TBD
-* **Linked Phase Doc:** [phase-13-local-notification-system.md](./phase-13-local-notification-system.md)
-* **Immediate Goal:** Complete the remaining Light/Dark utility-window accessibility inspection and verify the installed widget gallery and History post-clear transition on Release 3.0.0 (27).
-* **Current Blockers:** None known.
+* **Linked Phase Doc:** [phase-17-speech-benchmark.md](./phase-17-speech-benchmark.md)
+* **Immediate Goal:** Select an eligible evaluation corpus, then measure recognition quality, VAD/segment behavior, latency and resource use under Phase 17.
+* **Current Blockers:** The gated evaluation dataset requires separate access; an alternative corpus must have suitable rights and consent. Model access does not grant dataset access.
 
 ## 7. Ready Queue
 
-Phase 13 implementation and native notification delivery are complete; final accessibility inspection remains in the verification queue. Release 3.0.0 (27) includes the History and comparison changes; installed widget gallery inspection and the isolated post-clear History transition remain to be checked. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
+Phases 13–16 are complete based on the recorded execution evidence and user verification. Phase 17 is the next planned phase for repeatable English/Urdu recognition, latency, memory and energy evidence; no benchmark results are claimed. Its corpus must have separate dataset authorization or suitable licensing and consent. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
 
 ## 8. Phase Register
 
@@ -92,27 +88,28 @@ Phase 13 implementation and native notification delivery are complete; final acc
 | 09 | Extended Stability Checks | Completed | TBD | TBD | Phase 08 | [phase-09-extended-stability-checks.md](./phase-09-extended-stability-checks.md) | Completed 2026-10-17 |
 | 10 | Wireless Link Quality | Completed | TBD | TBD | Phase 08; delivery follows Phase 09 | [phase-10-wireless-link-quality.md](./phase-10-wireless-link-quality.md) | Completed 2026-10-20 |
 | 11 | Configurable Usage Widget | Completed | TBD | Product Developer | Phase 08; delivery follows Phase 10; signed extension/group access | [phase-11-configurable-usage-widget.md](./phase-11-configurable-usage-widget.md) | Completed 2026-10-21 |
-| 12 | Keep Awake Control | Completed | TBD | TBD | Phases 06 and 08 | [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md) | Completed 2026-10-22; Release 1.6.0 (21) |
-| 13 | Local Notification System | In Progress | TBD | TBD | Phase 12; signed local UserNotifications verification | [phase-13-local-notification-system.md](./phase-13-local-notification-system.md) | Release 1.7.1 installed 2026-10-23; native delivery verified; final accessibility inspection pending |
-| 14 | Monthly History Table | In Progress | TBD | TBD | Phase 08 | [phase-14-monthly-history-table.md](./phase-14-monthly-history-table.md) | TBD |
-| 15 | Cross Usage Comparison | In Progress | TBD | TBD | Phase 14 | [phase-15-cross-usage-comparison.md](./phase-15-cross-usage-comparison.md) | TBD |
+| 12 | Keep Awake Control | Completed | TBD | TBD | Phases 06 and 08 | [phase-12-keep-awake-control.md](./phase-12-keep-awake-control.md) | Completed 2026-10-22 |
+| 13 | Local Notification System | Completed | TBD | TBD | Phase 12; signed local UserNotifications verification | [phase-13-local-notification-system.md](./phase-13-local-notification-system.md) | Completed 2026-11-02; user confirmed final accessibility inspection |
+| 14 | Monthly History Table | Completed | TBD | TBD | Phase 08 | [phase-14-monthly-history-table.md](./phase-14-monthly-history-table.md) | Completed 2026-11-02; user confirmed verification |
+| 15 | Cross Usage Comparison | Completed | TBD | TBD | Phase 14 | [phase-15-cross-usage-comparison.md](./phase-15-cross-usage-comparison.md) | Completed 2026-11-02; user confirmed verification |
+| 16 | Local Speech Transcription | Completed | 2026-10-31 | TBD | Post-fix live capture and integration verification; benchmark is Phase 17 | [phase-16-local-speech-transcription.md](./phase-16-local-speech-transcription.md) | Completed 2026-11-02; user confirmed English and Urdu capture and finalization |
+| 17 | Speech Quality And Resource Benchmark | Planned | TBD | TBD | Phase 16 complete; evaluation data with suitable rights | [phase-17-speech-benchmark.md](./phase-17-speech-benchmark.md) | No measurements claimed; dataset has separate gated access |
 
 ## 9. Blockers And Risks
 
 ### Active Blockers
 
-- No active delivery blockers are known. Phase 12 is complete and installed.
-- Host and extension App Group access are verified; the sole installation retains the existing canonical container.
+- Phase 17 requires separate evaluation-dataset access or a held-out corpus with suitable rights and consent.
 
 ### Execution Risks
 
 - Interface membership changes, counter resets, app shutdown, sleep, and time-zone changes can leave gaps in observed totals.
 - Earlier daily usage cannot be recovered beyond the legacy saved snapshot. History omits unknown dates and does not invent allocations across ambiguous day boundaries. Reset Today preserves history; Clear History is separately confirmed.
-- Multiple active physical or virtual interfaces may have platform-specific coverage or duplicate-accounting behavior that needs target-Mac verification.
+- Multiple active physical or virtual interfaces may have platform-specific coverage or duplicate-accounting behavior that needs macOS verification.
 - App attribution remains deferred until both report handoff and app-identity resolution can be proven with documented macOS-supported behavior.
-- The verified Apple Development signature supports this local shared-container setup; public distribution requires a separately scoped signing and notarization plan.
+- Public distribution would require separately scoped signing and notarization work if it enters product scope.
 - Manual diagnostic endpoints can filter probes or omit measurements. Under-load checks transfer variable amounts of data; precise results, disclosure and cancellation are required by the PRD.
-- The ignored Xcode project is generated from tracked `project.yml`; personal signing values remain local.
+- The ignored Xcode project is generated from tracked `project.yml`; local signing configuration remains untracked.
 - Shared storage uses one writer and atomic updates; Clear History must not recover records from retained backups.
 - Extended checks must classify sleep/path/scheduler gaps separately from validated missed replies, enforce a continuous deadline and clean up children/observers.
 - CoreWLAN sentinel values and absent readings must remain unavailable; Wi-Fi identity and Location permission are outside the new feature scope.
