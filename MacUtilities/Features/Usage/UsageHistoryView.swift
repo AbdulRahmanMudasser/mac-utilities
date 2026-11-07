@@ -110,8 +110,12 @@ struct UsageHistoryView: View {
                 selectedMonths.removeAll()
             } label: {
                 Image(systemName: comparing ? "checkmark" : "arrow.left.arrow.right")
+                    .font(UtilityStyle.iconButtonFont)
+                    .frame(width: UtilityStyle.iconButtonSize,
+                           height: UtilityStyle.iconButtonSize)
             }
             .buttonStyle(.bordered)
+            .controlSize(.small)
             .accessibilityLabel(comparing ? "Done" : "Compare")
             .help(comparing ? "Done" : "Compare")
             .handPointer().disabled(!monitor.historyWritable)
@@ -196,9 +200,7 @@ struct UsageHistoryView: View {
                             .accessibilityHidden(true)
                         (difference.comparison == .orderedSame
                          ? Text("\(monthLabel(rows[1].id, showYear: showYears)) and \(monthLabel(rows[0].id, showYear: showYears)) recorded the same usage.")
-                         : Text("\(monthLabel(rows[1].id, showYear: showYears)) recorded ") +
-                           Text(formatted(difference.magnitude)).bold() +
-                           Text(" \(difference.comparison == .orderedAscending ? "less" : "more") than \(monthLabel(rows[0].id, showYear: showYears))."))
+                         : Text("\(monthLabel(rows[1].id, showYear: showYears)) recorded \(Text(formatted(difference.magnitude)).bold()) \(difference.comparison == .orderedAscending ? "less" : "more") than \(monthLabel(rows[0].id, showYear: showYears))."))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }

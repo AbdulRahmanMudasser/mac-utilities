@@ -14,7 +14,7 @@ Define the desktop implementation of the approved multi-month comparison within 
 ## 3. Current State And Implementation Delta
 
 - **Verified Current Behavior:** `UsageHistoryView.monthlyHistory` presents History and comparison from `UsageHistory.monthly`, `UsageMonitor.historyRecords` and `UsageFormatting.data`; `UsageMonthID` identifies each selection by year and month.
-- **Verified Gap:** The post-clear comparison transition remains visually unverified.
+- **Verified Gap:** None. The user confirmed the post-clear comparison transition and phase verification are complete.
 - **Desired Implementation Delta:** Extend the existing History owner to select recorded year/month identities across years and derive comparison presentation from the existing daily history and monthly aggregation; do not introduce another collector or ledger.
 - **Preserved Or Excluded Behavior:** Normal History table, other Usage ranges, inline Clear History and its confirmation, unit preference, canonical storage, widget and existing error semantics remain intact.
 
@@ -45,7 +45,7 @@ No endpoint or event. Reuse the validated local Gregorian day-key records. Selec
 
 ## 8. UX / Behavioral Expectations
 
-- The default History view stays unchanged. Provide icon-only `Compare` and `Done` controls using the `arrow.left.arrow.right` and `checkmark` SF Symbols, respectively, alongside the existing year selector using the shared heading layout; expose the action names accessibly and return to the default History view when Done is pressed.
+- The default History view stays unchanged. Provide small icon-only `Compare` and `Done` controls using the `arrow.left.arrow.right` and `checkmark` SF Symbols, respectively, alongside the existing year selector using the shared heading layout; match the shared icon-button font and frame, expose the action names accessibly and return to the default History view when Done is pressed.
 - In Compare mode, show selectable recorded months in a responsive grid. Switching years retains selections; Done clears them. Use semibold text for the current month, and show years in results when selections span or differ from the displayed year. Missing months are not selectable and recorded zeroes remain selectable.
 - With two or more selections show one table of Month, Downloaded, Uploaded and Combined in the current unit. For exactly two months show the absolute byte difference below the table; for more than two, show no pairwise difference. Do not show percentages or comparison bars.
 - Keep no-selection and single-selection states clear without fabricated results. Preserve the existing unavailable-storage message; never present missing data as zero. Totals are observed and may have gaps; do not imply that an in-progress or incomplete month is a full-month measurement.
@@ -116,8 +116,8 @@ Record test/build results and isolated preview observations; use no production h
 
 ## 14. Execution Notes
 
-- **Status:** In Progress
-- **Started At:** Not started.
-- **Completed At:** Not completed.
+- **Status:** Completed
+- **Started At:** Date not recorded.
+- **Completed At:** 2026-11-02.
 - **Blockers Encountered:** None known.
-- **Notes:** Installed Release 3.0.0 (27) includes this implementation. Isolated previews were reviewed and the full release regression suite passed 232 tests; the post-clear visual transition remains unverified.
+- **Notes:** Installed Release 3.0.0 (27) includes this implementation. Isolated previews were reviewed and the full release regression suite passed 232 tests. The user confirmed the post-clear comparison transition and remaining phase verification are complete.
