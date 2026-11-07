@@ -17,6 +17,8 @@ enum UtilityStyle {
     static let helpFont: Font = .callout
     static let metadataFont: Font = .caption
     static let emphasizedBodyFont: Font = bodyFont.weight(.semibold)
+    static let iconButtonFont: Font = .callout
+    static let iconButtonSize: CGFloat = 16
     static let menuBarFont: Font = .system(size: 11, weight: .medium)
     static let controlSize: ControlSize = .regular
     static let progressControlSize: ControlSize = .small
@@ -60,6 +62,10 @@ enum UtilityStyle {
         static let uploadColor = UsageChartPresentation.uploadColor
         static let symbolSize: CGFloat = 18
         static let axisTickCount = 5
+    }
+
+    enum Transcribe {
+        static let urduLiveTextBaselineOffset: CGFloat = 2
     }
 
     enum Stability {
@@ -112,9 +118,9 @@ enum UtilityStyle {
         static let columnSpacing: CGFloat = 8
         static let dividerWidth: CGFloat = 1
         static let dividerHeight: CGFloat = 16
-        static let iconButtonSize: CGFloat = 16
+        static let iconButtonSize: CGFloat = UtilityStyle.iconButtonSize
         static let valueFont: Font = UtilityStyle.emphasizedBodyFont.monospacedDigit()
-        static let labelFont: Font = UtilityStyle.helpFont
+        static let labelFont: Font = UtilityStyle.iconButtonFont
     }
 }
 

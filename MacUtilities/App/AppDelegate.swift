@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         didSet { deliverPendingRoute() }
     }
     weak var notificationsController: NotificationsController?
+    weak var transcribeController: TranscribeFeatureController?
 
     private enum PendingRoute {
         case usage(UsageHistoryRange)
@@ -52,10 +53,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         keepAwakeController?.shutdown()
         notificationsController?.shutdown()
         wifiQualityMonitor?.shutdown()
-        guard let diagnostics, diagnostics.isRunning else { return .terminateNow }
-        diagnostics.shutdown()
+        let runningDiagnostics = diagnostics?.isRunning == true ? diagnostics : nil
+        runningDiagnostics?.shutdown()
+        guard runningDiagnostics != nil || transcribeController != nil else { return .terminateNow }
+        let transcribe = transcribeController
         Task { [weak self] in
-            await diagnostics.waitUntilStopped()
+            await transcribe?.shutdown()
+            await runningDiagnostics?.waitUntilStopped()
             self?.replyToTermination(true)
         }
         return .terminateLater
@@ -64,6 +68,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         keepAwakeController?.shutdown()
         notificationsController?.shutdown()
+        if let transcribeController {
+            Task { await transcribeController.shutdown() }
+        }
         utilityWindow?.shutdown()
         wifiQualityMonitor?.shutdown()
         monitor?.shutdown()
@@ -91,8 +98,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             CommandLine.arguments.contains(where: { $0.hasPrefix("--settings-preview=") })
         let hasKeepAwakePreview = CommandLine.arguments.contains("--keep-awake-preview") ||
             CommandLine.arguments.contains(where: { $0.hasPrefix("--keep-awake-preview=") })
-        if hasStabilityPreview || hasUsagePreview || hasSettingsPreview || hasKeepAwakePreview || hasNotificationPreview {
-            if hasKeepAwakePreview {
+        let nativeArgument = CommandLine.arguments.first { $0.hasPrefix("--transcribe-native-check=") }
+        let hasNativeTranscribeCheck = nativeArgument.flatMap { UUID(uuidString: String($0.dropFirst("--transcribe-native-check=".count))) } != nil
+        let hasTranscribePreview = CommandLine.arguments.contains("--transcribe-preview") ||
+            CommandLine.arguments.contains(where: { $0.hasPrefix("--transcribe-preview=") }) ||
+            hasNativeTranscribeCheck
+        if hasStabilityPreview || hasUsagePreview || hasSettingsPreview || hasKeepAwakePreview || hasNotificationPreview || hasTranscribePreview {
+            if hasTranscribePreview {
+                utilityWindow?.present(.transcribe)
+            } else if hasKeepAwakePreview {
                 utilityWindow?.present(.keepAwake)
             } else if hasNotificationPreview {
                 utilityWindow?.present(.notifications)
@@ -114,6 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
+        transcribeController?.refreshMicrophonePermission()
         Task { @MainActor [weak self] in
             await self?.notificationsController?.refreshAuthorization()
         }

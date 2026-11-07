@@ -137,7 +137,7 @@ Add an opt-in macOS notification for a finite Keep Awake timer while keeping not
   - **Target Anchor:** `startupDoesNotCreateAWindow`, `presentingUtilityDismissesOnlyItsPopover`, `firstRequestSelectsRequestedSection`, `UtilitySection.allCases` and `utilitySectionsUseSequentialKeyboardShortcuts`.
   - [x] Add Notifications to the sidebar order and section switch, preserve Commands 1–3, assert Command-4 for Notifications and Command-5 for Settings, and verify a notification response arriving before readiness opens the existing utility window's Keep Awake section once.
 - [MODIFY] PRD, desktop development standards and execution workflow during implementation:
-  - [x] Reconcile notifications from the current PRD out-of-scope list into the approved product behavior, record the ownership/UI/persistence decisions in the standards, and update the current workflow register. Preserve the chronological decision and execution logs; native installed-path delivery evidence remains pending before the phase is marked completed.
+  - [x] Reconcile notifications from the current PRD out-of-scope list into the approved product behavior, record the ownership/UI/persistence decisions in the standards, and update the current workflow register. Preserve the chronological decision and execution logs; native delivery and accessibility verification are complete.
 
 ## 10. Risks And Rollback Notes
 
@@ -178,8 +178,8 @@ Add an opt-in macOS notification for a finite Keep Awake timer while keeping not
 
 ## 12. Execution Notes
 
-- **Status:** Implemented; installed Release and native notification delivery verified; final accessibility inspection pending
+- **Status:** Completed; installed Release, native notification delivery and final accessibility inspection verified
 - **Started At:** 2026-10-22
-- **Completed At:** Not completed
-- **Blockers Encountered:** No implementation blockers. Final Light/Dark accessibility inspection remains open.
-- **Notes:** The app-lifetime `NotificationsController` owns the `notifications.enabled.v1` opt-in preference, one-time legacy migration, authorization refresh, one-attempt guard, foreground delegate and response route; `UserNotificationClient` is the only UserNotifications adapter. Keep Awake remains authoritative for deadlines and assertion cleanup. Automated coverage and signed Debug/Release checks pass; the signed Release 1.7.1 (23) is installed and its embedded widget is registered. The user confirmed that native notification authorization and delivery are working; final accessibility inspection remains separate.
+- **Completed At:** 2026-11-02
+- **Blockers Encountered:** None.
+- **Notes:** The app-lifetime `NotificationsController` owns the `notifications.enabled.v1` opt-in preference, one-time legacy migration, authorization refresh, one-attempt guard, foreground delegate and response route; `UserNotificationClient` is the only UserNotifications adapter. Keep Awake remains authoritative for deadlines and assertion cleanup. Automated coverage and signed Debug/Release checks pass; the signed Release 1.7.1 (23) is installed and its embedded widget is registered. The user confirmed native notification authorization, delivery and the final accessibility inspection.
