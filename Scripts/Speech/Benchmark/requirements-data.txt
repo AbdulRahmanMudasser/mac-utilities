@@ -1,0 +1,2 @@
+# Optional dependency for bounded WAV/FLAC header inspection during preparation.
+soundfile==0.14.0

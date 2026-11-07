@@ -180,6 +180,7 @@ final class StreamingTranscriptionRecognizer: TranscriptionRecognizing {
                 }
                 await backlog.finish()
             } catch {
+                cancellation.fail(error)
                 await backlog.finish(throwing: error)
             }
         }
@@ -332,8 +333,10 @@ final class StreamingTranscriptionRecognizer: TranscriptionRecognizing {
             await reader.value
             return TranscriptionRecognitionResult(text: transcript)
         } catch {
+            cancellation.fail(error)
             reader.cancel()
-            throw error
+            await reader.value
+            throw cancellation.failure() ?? error
         }
     }
 
@@ -663,6 +666,10 @@ private actor StreamingAudioBacklog {
         guard !isFinished else { return }
         isFinished = true
         terminalError = error
+        if error != nil {
+            chunks.removeAll(keepingCapacity: false)
+            pendingSampleCount = 0
+        }
         guard chunks.isEmpty, let waiter else { return }
         self.waiter = nil
         if let error {
@@ -676,6 +683,7 @@ private actor StreamingAudioBacklog {
 nonisolated private final class StreamingTranscriptionCancellation: @unchecked Sendable {
     private let lock = NSLock()
     private var cancelled = false
+    private var terminalError: (any Error)?
     private var worker: Task<TranscriptionRecognitionResult, any Error>?
     private var reader: Task<Void, Never>?
     private var inference: Task<WhisperInferenceResult, any Error>?
@@ -714,6 +722,19 @@ nonisolated private final class StreamingTranscriptionCancellation: @unchecked S
         worker?.cancel()
         reader?.cancel()
         inference?.cancel()
+    }
+
+    func fail(_ error: any Error) {
+        lock.lock()
+        if terminalError == nil { terminalError = error }
+        lock.unlock()
+        cancel()
+    }
+
+    func failure() -> (any Error)? {
+        lock.lock()
+        defer { lock.unlock() }
+        return terminalError
     }
 
     func clearWorker() {

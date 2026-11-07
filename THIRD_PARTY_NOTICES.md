@@ -26,6 +26,12 @@ Urdu Sukhan ASR v1 is developed by Asad Shehzad and Loudness.ai. The [publisher'
 
 Attribution: *Urdu Sukhan ASR v1* by Asad Shehzad / Loudness.ai, licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). No model-weight changes are made by Mac Utilities.
 
+## Local speech benchmark tools and data
+
+The benchmark scripts use [JiWER](https://github.com/jitsi/jiwer) under Apache 2.0 for reference scoring and [python-soundfile](https://github.com/bastibe/python-soundfile) under the BSD 3-Clause license for audio preparation. These are local development dependencies and are not embedded in the application.
+
+[FLEURS](https://huggingface.co/datasets/google/fleurs), by Alexis Conneau and collaborators, and [LibriSpeech](https://www.openslr.org/12), by Vassil Panayotov and collaborators, are used under CC BY 4.0. Urdu Sukhan evaluation subsets retain their publisher-listed source licenses. Evaluation data and the publisher's optional normalization script are acquired separately for authorized local use and are not included in this repository. The [benchmark phase](hl-docs/desktop/phase-17-speech-benchmark.md) owns corpus eligibility and evaluation methodology.
+
 ## MIT license text
 
 The MIT-licensed third-party components included by this project are the whisper.cpp runtime and Silero VAD. Their upstream notices are reproduced here:
