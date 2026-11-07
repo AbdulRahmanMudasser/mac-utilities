@@ -583,6 +583,65 @@ struct StreamingTranscriptionRecognizerTests {
     }
 
     @Test
+    func inferenceFailureKeepsItsCauseWhileJoiningAnOpenCaptureStream() async throws {
+        let inference = FakeInference(results: [], failureAtCall: 1)
+        let recognizer = try testRecognizer(
+            inference: inference,
+            windowSampleCount: 4,
+            inferenceIntervalSampleCount: 1
+        )
+        let (audio, continuation) = AudioCaptureStream.makeStream(bufferingPolicy: .bufferingOldest(4))
+        defer { continuation.finish() }
+        continuation.yield(chunk(0, [0.1]))
+        do {
+            _ = try await recognizer.transcribe(
+                audio: audio,
+                language: .english,
+                generation: UUID(),
+                onEvent: { _ in Issue.record("Failed inference must not publish text.") }
+            )
+            Issue.record("Inference failure must not return a transcript.")
+        } catch let error as TestFailure {
+            #expect(error == .inferenceFailed)
+        }
+    }
+
+    @Test
+    func captureFailureAbortsAndJoinsInferenceWithoutLosingItsCause() async throws {
+        for failure in [AudioCaptureFailure.systemWillSleep, .consumerTooSlow] {
+            let inference = FakeInference(results: [], blocksUntilCancelled: true)
+            let recognizer = try testRecognizer(
+                inference: inference,
+                windowSampleCount: 4,
+                inferenceIntervalSampleCount: 1
+            )
+            let recorder = EventRecorder()
+            let (audio, continuation) = AudioCaptureStream.makeStream(bufferingPolicy: .bufferingOldest(4))
+            let recognition = Task { @MainActor in
+                try await recognizer.transcribe(
+                    audio: audio,
+                    language: .urdu,
+                    generation: UUID(),
+                    onEvent: { recorder.record($0) }
+                )
+            }
+            continuation.yield(chunk(0, [0.1]))
+            await inference.waitForFirstCall()
+            continuation.yield(chunk(1, [0.2]))
+            continuation.finish(throwing: failure)
+            do {
+                _ = try await recognition.value
+                Issue.record("Capture failure must not return a transcript.")
+            } catch let error as AudioCaptureFailure {
+                #expect(error == failure)
+            }
+            #expect(await inference.observedCancellationCount() == 1)
+            #expect(await inference.recordedCalls().count == 1)
+            #expect(recorder.events.isEmpty)
+        }
+    }
+
+    @Test
     func cancelAbortsAndJoinsInferenceWithoutFinalEvents() async throws {
         let inference = FakeInference(results: [], blocksUntilCancelled: true)
         let recognizer = try testRecognizer(

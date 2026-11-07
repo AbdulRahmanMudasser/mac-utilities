@@ -6,16 +6,6 @@ import Dispatch
 import Foundation
 import Synchronization
 
-nonisolated struct AudioCaptureChunk: Equatable, Sendable {
-    let startingSampleIndex: UInt64
-    let sampleRate: Double
-    let samples: [Float]
-
-    var channelCount: Int { 1 }
-}
-
-typealias AudioCaptureStream = AsyncThrowingStream<AudioCaptureChunk, any Error>
-
 nonisolated enum AudioCaptureFailure: Error, Equatable, LocalizedError, Sendable {
     case microphonePermissionUndetermined
     case microphonePermissionDenied
