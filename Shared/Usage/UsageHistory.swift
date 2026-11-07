@@ -53,6 +53,7 @@ nonisolated struct MonthlyUsage: Identifiable, Equatable, Sendable {
     let month: Int
     var downloaded: UInt64
     var uploaded: UInt64
+    let average: UInt64
     var id: Int { month }
     var combined: UInt64 { UsageHistory.add(downloaded, uploaded) }
 }
@@ -85,18 +86,25 @@ nonisolated enum UsageHistory {
         return Set(years + [currentYear]).sorted(by: >)
     }
 
-    static func monthly(records: [DailyUsageRecord], year: Int) -> [MonthlyUsage] {
-        var months: [Int: MonthlyUsage] = [:]
+    static func monthly(records: [DailyUsageRecord], year: Int, through now: Date,
+                        calendar: Calendar = calendar()) -> [MonthlyUsage] {
+        var recordsByMonth: [Int: [DailyUsageRecord]] = [:]
         for record in records {
             guard validKey(record.dayKey) else { continue }
             let parts = record.dayKey.split(separator: "-")
             guard Int(parts[0]) == year, let month = Int(parts[1]) else { continue }
-            var total = months[month] ?? MonthlyUsage(month: month, downloaded: 0, uploaded: 0)
-            total.downloaded = add(total.downloaded, record.downloaded)
-            total.uploaded = add(total.uploaded, record.uploaded)
-            months[month] = total
+            recordsByMonth[month, default: []].append(record)
         }
-        return months.values.sorted { $0.month < $1.month }
+        return recordsByMonth.keys.sorted().compactMap { month in
+            guard let monthRecords = recordsByMonth[month] else { return nil }
+            let totals = monthRecords.reduce(InterfaceByteCount(downloaded: 0, uploaded: 0)) { total, record in
+                InterfaceByteCount(downloaded: add(total.downloaded, record.downloaded),
+                                   uploaded: add(total.uploaded, record.uploaded))
+            }
+            let dayCount = calendarDayCount(year: year, month: month, through: now, calendar: calendar)
+            return MonthlyUsage(month: month, downloaded: totals.downloaded, uploaded: totals.uploaded,
+                                average: average(monthRecords.map(\.combined), over: dayCount) ?? 0)
+        }
     }
     nonisolated static func calendar(timeZone: TimeZone = .autoupdatingCurrent) -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
@@ -144,11 +152,29 @@ nonisolated enum UsageHistory {
     static func average(_ days: [UsageHistoryDay]) -> UInt64? {
         let records = days.compactMap(\.record)
         guard !days.isEmpty, !records.isEmpty else { return nil }
-        let count = UInt64(days.count)
+        return average(records.map(\.combined), over: days.count)
+    }
+
+    private static func average(_ combined: [UInt64], over dayCount: Int) -> UInt64? {
+        guard dayCount > 0, !combined.isEmpty else { return nil }
+        let count = UInt64(dayCount)
         // Divide before summing so even very large range totals cannot overflow.
-        let whole = records.reduce(UInt64(0)) { $0 + $1.combined / count }
-        let remainder = records.reduce(UInt64(0)) { $0 + $1.combined % count }
-        return whole + remainder / count
+        let whole = combined.reduce(UInt64(0)) { add($0, $1 / count) }
+        let remainder = combined.reduce(UInt64(0)) { add($0, $1 % count) }
+        return add(whole, remainder / count)
+    }
+
+    private static func calendarDayCount(year: Int, month: Int, through now: Date,
+                                         calendar: Calendar) -> Int {
+        guard let monthStart = calendar.date(from: DateComponents(year: year, month: month, day: 1)),
+              let daysInMonth = calendar.range(of: .day, in: .month, for: monthStart)?.count else {
+            return 0
+        }
+        if calendar.component(.year, from: now) == year,
+           calendar.component(.month, from: now) == month {
+            return calendar.component(.day, from: now)
+        }
+        return daysInMonth
     }
 
     static func totals(_ days: [UsageHistoryDay]) -> InterfaceByteCount {

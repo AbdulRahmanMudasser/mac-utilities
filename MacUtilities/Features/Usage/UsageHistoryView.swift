@@ -84,7 +84,8 @@ struct UsageHistoryView: View {
         }
         .onChange(of: monitor.historyRecords) { _, records in
             let monthsByYear = Dictionary(uniqueKeysWithValues: Set(selectedMonths.map(\.year)).map { year in
-                (year, Set(UsageHistory.monthly(records: records, year: year).map(\.month)))
+                (year, Set(UsageHistory.monthly(records: records, year: year, through: monitor.historyDate,
+                                                calendar: monitor.historyCalendar).map(\.month)))
             })
             selectedMonths.removeAll { id in
                 !(monthsByYear[id.year]?.contains(id.month) ?? false)
@@ -99,7 +100,8 @@ struct UsageHistoryView: View {
     }
 
     private var monthlyHistory: some View {
-        let months = UsageHistory.monthly(records: monitor.historyRecords, year: activeYear)
+        let months = UsageHistory.monthly(records: monitor.historyRecords, year: activeYear,
+                                          through: monitor.historyDate, calendar: monitor.historyCalendar)
         return UtilityPanel("History", action: AnyView(HStack {
             Picker("Year", selection: Binding(get: { activeYear }, set: { selectedYear = $0 })) {
                 ForEach(historyYears, id: \.self) { year in Text(String(year)).tag(year) }
@@ -136,6 +138,8 @@ struct UsageHistoryView: View {
                                 .accessibilityLabel("\(monthName(month.month)), Downloaded, \(formatted(month.downloaded))")
                             Text(formatted(month.uploaded)).monospacedDigit().frame(maxWidth: .infinity, alignment: .trailing)
                                 .accessibilityLabel("\(monthName(month.month)), Uploaded, \(formatted(month.uploaded))")
+                            Text(formatted(month.average)).monospacedDigit().frame(maxWidth: .infinity, alignment: .trailing)
+                                .accessibilityLabel("\(monthName(month.month)), Average, \(formatted(month.average))")
                             Text(formatted(month.combined)).monospacedDigit().frame(maxWidth: .infinity, alignment: .trailing)
                                 .accessibilityLabel("\(monthName(month.month)), Combined, \(formatted(month.combined))")
                         }
@@ -147,7 +151,8 @@ struct UsageHistoryView: View {
 
     private var comparisonRows: [(id: UsageMonthID, usage: MonthlyUsage)] {
         let monthsByYear = Dictionary(uniqueKeysWithValues: Set(selectedMonths.map(\.year)).map { year in
-            (year, UsageHistory.monthly(records: monitor.historyRecords, year: year))
+            (year, UsageHistory.monthly(records: monitor.historyRecords, year: year,
+                                        through: monitor.historyDate, calendar: monitor.historyCalendar))
         })
         return selectedMonths.compactMap { id in
             (monthsByYear[id.year] ?? [])
@@ -188,6 +193,7 @@ struct UsageHistoryView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Text(formatted(row.usage.downloaded)).frame(maxWidth: .infinity, alignment: .trailing)
                         Text(formatted(row.usage.uploaded)).frame(maxWidth: .infinity, alignment: .trailing)
+                        Text(formatted(row.usage.average)).frame(maxWidth: .infinity, alignment: .trailing)
                         Text(formatted(row.usage.combined)).frame(maxWidth: .infinity, alignment: .trailing)
                     }.monospacedDigit()
                 }
@@ -244,6 +250,7 @@ struct UsageHistoryView: View {
             Text("Month").frame(maxWidth: .infinity, alignment: .leading)
             Text("Downloaded").frame(maxWidth: .infinity, alignment: .trailing)
             Text("Uploaded").frame(maxWidth: .infinity, alignment: .trailing)
+            Text("Average").frame(maxWidth: .infinity, alignment: .trailing)
             Text("Combined").frame(maxWidth: .infinity, alignment: .trailing)
         }
         .font(UtilityStyle.metadataFont).foregroundStyle(.secondary)
