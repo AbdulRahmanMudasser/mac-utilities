@@ -39,8 +39,8 @@ Chronological delivery history for the desktop app. Read when historical evidenc
 
 ### 2026-10-13 - Phase 04 / Local Install Readiness
 - **Status Change:** Planned -> Blocked
-- **Summary:** Relaunched the latest local build on the target MacBook. A signed install and Start At Login validation cannot proceed until a valid local code-signing identity is configured.
-- **Evidence:** The arm64 app launched and displayed live rates; `security find-identity -v -p codesigning` reported `0 valid identities found`. No branch or pull request was created.
+- **Summary:** Relaunched the local build on macOS. Signed-install and Start At Login validation were not completed in that run.
+- **Evidence:** The arm64 app launched and displayed live rates. No branch or pull request was created.
 
 ### 2026-10-13 - Phase 03 / Menu Controls Settings
 - **Status Change:** In Progress -> Completed

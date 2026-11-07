@@ -18,7 +18,7 @@ Deliver the approved user-started latency/probe-loss and responsiveness-under-lo
 - **Downstream Tasks (Unlocks):** Not applicable; standalone approved capability.
 - **Target Git Commit Prefix:** `feat(diagnostics): ...`
 - **Project Profile(s):** Native macOS SwiftUI/AppKit desktop application (high confidence). No matching platform-specific fallback exists.
-- **Applicable Development Standards:** `/Users/abdulrahman/.codex/skills/check-implementation/references/common-baseline.md`: explicit async lifecycle, validated external results, useful failures, scoped tests. Existing SwiftUI environment objects, single AppKit window ownership, and `handPointer()` govern UI integration. No AGENTS.md or repository development standards were found.
+- **Applicable Development Standards:** [Desktop Development Standards](./development-standards.md) own async lifecycle, external-result validation, useful failures and regression coverage. Existing SwiftUI environment objects, single AppKit window ownership, and `handPointer()` govern UI integration.
 
 ## 4. Ownership And Delivery Notes
 

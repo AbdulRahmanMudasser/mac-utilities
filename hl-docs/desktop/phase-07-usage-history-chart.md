@@ -19,7 +19,7 @@ Extend the existing device-counter monitor with durable daily history and an int
 - **Downstream Tasks (Unlocks):** Not applicable; no additional phase is required for the approved feature.
 - **Target Git Commit Prefix:** `feat(usage): ...`
 - **Project Profile(s):** Native macOS SwiftUI/AppKit desktop application (high confidence).
-- **Applicable Development Standards:** `MacUtilities/UtilityStyle.swift` supplies the shared visual tokens and scroll/card helpers. Phase 06 Section 7 remains the reference for the typography, monochrome surfaces, padding, scroll placement, resizing and accessibility conventions reused by Usage; its Connection/Settings-only layout is a completed-phase snapshot. Current sidebar and Settings organization are defined in Section 7 of this document. Fallback: `/Users/abdulrahman/.codex/skills/check-implementation/references/common-baseline.md` for validation, atomic persistence, lifecycle and regression coverage. No applicable AGENTS.md or separate repository development standards document exists.
+- **Applicable Development Standards:** [Desktop Development Standards](./development-standards.md) own validation, atomic persistence, lifecycle and regression coverage. `MacUtilities/UtilityStyle.swift` supplies the shared visual tokens and scroll/card helpers. Phase 06 Section 7 remains the reference for the typography, monochrome surfaces, padding, scroll placement, resizing and accessibility conventions reused by Usage; its Connection/Settings-only layout is a completed-phase snapshot. Current sidebar and Settings organization are defined in Section 7 of this document.
 
 ## 4. Ownership And Delivery Notes
 

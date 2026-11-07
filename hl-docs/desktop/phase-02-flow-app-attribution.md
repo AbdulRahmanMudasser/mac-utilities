@@ -2,7 +2,7 @@
 
 ## 1. Phase Purpose
 
-Close the first-release feasibility gate for per-app usage on the target MacBook. This phase records which macOS APIs are available, what is needed to produce the requested live per-app rates, and the approved first-release scope. It does not implement attribution.
+Close the first-release feasibility gate for per-app usage on macOS. This phase records which macOS APIs are available, what is needed to produce the requested live per-app rates, and the approved first-release scope. It does not implement attribution.
 
 ## 2. Feature Objective
 
@@ -16,7 +16,7 @@ Close the first-release feasibility gate for per-app usage on the target MacBook
 - **Local Tracker:** [Execution Workflow Log](./execution-workflow.md)
 - **Product Source:** [Mac Utilities PRD](../mac-utilities-prd.md)
 - **Prerequisites (Blocked By):** None. The installed target SDK and current Apple documentation are available locally and online.
-- **Downstream Tasks (Unlocks):** Phases 03 and 04 do not depend on app attribution. Phase 04 still depends on Phases 01 and 03. Reopen attribution only as a separately scoped phase after an approved low-impact measurement and handoff design is proven on the target MacBook.
+- **Downstream Tasks (Unlocks):** Phases 03 and 04 do not depend on app attribution. Phase 04 still depends on Phases 01 and 03. Reopen attribution only as a separately scoped phase after an approved low-impact measurement and handoff design is proven on a supported macOS installation.
 - **Target Git Commit Prefix:** chore(desktop-scope): ...
 - **Project Profile(s):** Native macOS desktop application; macOS Network Extension feasibility research.
 - **Applicable Development Standards:** Codex fallback baseline `check-implementation/references/common-baseline.md`; no repository-specific native macOS standard was found.
@@ -53,9 +53,9 @@ Close the first-release feasibility gate for per-app usage on the target MacBook
 
 ## 8. Acceptance Criteria
 
-- Confirm relevant API availability against the target MacBook's installed SDK and Apple documentation.
+- Confirm relevant API availability against the installed macOS SDK and Apple documentation.
 - Record that flow-closed reports provide byte totals and the macOS source audit token is available, while `sourceAppIdentifier` is unavailable.
-- Record that live per-app rates require observing every inbound and outbound data chunk in a content-filter provider; returning allow verdicts preserves the bytes but puts a provider in the traffic path and its performance impact is unverified on this MacBook.
+- Record that live per-app rates require observing every inbound and outbound data chunk in a content-filter provider; returning allow verdicts preserves the bytes but puts a provider in the traffic path and its performance impact is unverified on macOS.
 - Record that a system extension runs in the global system context. A durable handoff to the user app needs a tested system-context service or equivalent supported broker; the main app cannot be assumed to receive provider reports directly.
 - Confirm the accepted first-release decision: keep device-level counters, omit attribution UI, and do not add a proxy, `nettop` estimate, or content-stream sampling.
 
@@ -69,7 +69,7 @@ Close the first-release feasibility gate for per-app usage on the target MacBook
 
 - Review the exact macOS declarations for report delivery, flow byte counts, source-app identity, and provider packaging.
 - Distinguish completed-flow byte reports from the live data callbacks required for current per-app rates.
-- Do not add the provider or a broker until the product owner approves the traffic-path and service requirements and the complete path is demonstrated on the target MacBook.
+- Do not add the provider or a broker until the product owner approves the traffic-path and service requirements and the complete path is demonstrated on a supported macOS installation.
 
 ### C. Client / UI Layer
 
@@ -82,15 +82,15 @@ Close the first-release feasibility gate for per-app usage on the target MacBook
 
 ## 10. Risks And Rollback Notes
 
-- **Implementation Risks:** Report byte totals at flow close do not satisfy live per-app rate requirements. Counting every data callback would put the provider in the traffic path; no latency or throughput proof has been performed on this MacBook.
-- **Operational Risks:** A macOS content-filter system extension requires system configuration and approval. On this MacBook, no valid code-signing identities are currently available, so an installed-provider test cannot be performed in this phase.
+- **Implementation Risks:** Report byte totals at flow close do not satisfy live per-app rate requirements. Counting every data callback would put the provider in the traffic path; no latency or throughput proof has been performed on macOS.
+- **Operational Risks:** A macOS content-filter system extension requires system configuration and approval. An installed-provider test was outside this phase's verification scope.
 - **Rollback Approach:** No filter or service is installed by this phase. If a later approved proof changes system configuration, disable/remove it and verify ordinary network access before continuing.
 
 ### Feasible Paths And Product Tradeoffs
 
 1. **Device-Level First Release (Accepted):** Keep public interface counters, omit the app-attribution UI, and preserve normal network handling. Revisit only after a low-impact live measurement and handoff path is demonstrated.
 2. **Best-Effort Process Sampling (Not Selected):** Use `nettop` process output. It is not a stable app API and can miss short-lived activity.
-3. **Content-Filter Sampling (Deferred):** Observe flow data and return allow verdicts. This could provide live byte deltas, but it places a provider in the traffic path and requires a durable system-to-user handoff. Performance and end-to-end behavior are unverified on the target MacBook.
+3. **Content-Filter Sampling (Deferred):** Observe flow data and return allow verdicts. This could provide live byte deltas, but it places a provider in the traffic path and requires a durable system-to-user handoff. Performance and end-to-end behavior are unverified on macOS.
 4. **Proxy-Based Collection (Not Selected):** Route traffic through a proxy. This changes traffic handling and conflicts with the no-proxy product decision.
 
 **Accepted Product Decision (2026-10-13):** Ship device-wide counters only. Do not use a proxy, best-effort `nettop` estimates, or content-stream sampling in the first release. Keep per-app rows and deferral copy out of the UI.

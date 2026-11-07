@@ -2,14 +2,14 @@
 
 ## 1. Phase Purpose
 
-Verify the device-only developer-installed build on the owner's target MacBook, including live rates, current-day persistence, and release-gate evidence.
+Verify the device-only developer-installed build on a supported macOS installation, including live rates, current-day persistence, and release-gate evidence.
 
 ## 2. Feature Objective
 
-- **Phase Goal:** Demonstrate that the integrated app works on the single supported MacBook and accurately reports which collection intervals are incomplete.
+- **Phase Goal:** Demonstrate that the integrated app works on the supported macOS version and accurately reports which collection intervals are incomplete.
 - **User Or System Outcome:** The owner can rely on observed current-day totals under a verified local setup and knows when device counters are unavailable or collection is interrupted.
 - **In Scope:** Target-local ad-hoc signing and launch, start-at-login and pause/resume checks, restart/midnight tests, live device-counter checks, and rollback verification.
-- **Out Of Scope:** App Store publication, general installer/distribution work, support for another Mac, production fleet deployment, and cloud services.
+- **Out Of Scope:** App Store publication, general installer/distribution work, support for other platforms, production fleet deployment, and cloud services.
 
 ## 3. Project Topology & Dependencies
 
@@ -18,7 +18,7 @@ Verify the device-only developer-installed build on the owner's target MacBook, 
 - **Prerequisites (Blocked By):** Phases 00, 01, and 03 must be Completed. Phase 02 is deferred and is not a prerequisite.
 - **Downstream Tasks (Unlocks):** Initial personal-use readiness; no further phase is currently defined.
 - **Target Git Commit Prefix:** chore(desktop-scope): ...
-- **Project Profile(s):** Native macOS local application; ad-hoc signing and installation on the named MacBook.
+- **Project Profile(s):** Native macOS local application; ad-hoc signing and installation on a supported macOS system.
 - **Applicable Development Standards:** Codex fallback baseline `check-implementation/references/common-baseline.md`; no repository-specific standards or more-specific native desktop baseline were found.
 
 ## 4. Ownership And Delivery Notes
@@ -50,11 +50,11 @@ Verify the device-only developer-installed build on the owner's target MacBook, 
 - **User-Facing Change:** No new feature surface; this phase validates setup/status and recovery behavior in the shipped local build.
 - **System Behavior Change:** Start-at-login, monitor pause/resume, and app restarts must preserve local usage state and leave network traffic operating normally.
 - **Error States To Support:** App signing or launch failure, unavailable interface counters, failed local writes, pause/resume gaps, and counter resets.
-- **Accessibility / Platform Constraints:** Only the target MacBook and its installed macOS 26.6.2 arm64 configuration are release targets.
+- **Accessibility / Platform Constraints:** The release target is macOS 26.6.2 on arm64.
 
 ## 8. Acceptance Criteria
 
-- The developer-installed app launches on the target MacBook and reports actual device-counter availability.
+- The developer-installed app launches on the supported macOS installation and reports actual device-counter availability.
 - Known inbound and outbound traffic updates device totals in the expected direction; the UI presents no per-app values and identifies its totals as device-wide.
 - App restart preserves current-day totals, and local midnight starts the next local-day counters.
 - Pausing monitoring or encountering unavailable counters changes the visible state and marks the day partial.
@@ -126,5 +126,5 @@ Verify the device-only developer-installed build on the owner's target MacBook, 
 - **Status:** Completed
 - **Started At:** 2026-10-13
 - **Completed At:** 2026-10-13
-- **Blockers Encountered:** None for the approved personal-use scope. `security find-identity -v -p codesigning` reports zero Apple code-signing identities; the local ad-hoc signature is sufficient for this installed personal build and Start At Login verification.
-- **Notes:** The arm64 ad-hoc signed build passed `codesign --verify --deep --strict`, installed and ran from `~/Applications/Mac Utilities.app`, and Start At Login registered and unregistered successfully. Current-day counters survived relaunch after preserving the legacy same-day snapshot. Local-midnight rollover passed in unit tests. HTTP 200 requests succeeded while monitoring was active and after the app was quit. This evidence applies only to this MacBook and does not imply Developer ID signing, notarization, or general distribution readiness.
+- **Blockers Encountered:** None for the approved local-install scope. Developer ID signing and notarization were not part of this phase; the local ad-hoc signature was sufficient for installation and Start At Login verification.
+- **Notes:** The arm64 ad-hoc signed build passed `codesign --verify --deep --strict`, installed and ran from the user Applications folder, and Start At Login registered and unregistered successfully. Current-day counters survived relaunch after preserving the legacy same-day snapshot. Local-midnight rollover passed in unit tests. HTTP 200 requests succeeded while monitoring was active and after the app was quit. This evidence applies to the tested macOS installation and does not imply Developer ID signing, notarization, or general distribution readiness.
