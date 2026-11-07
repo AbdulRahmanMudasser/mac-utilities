@@ -22,6 +22,7 @@ Mac Utilities is a native SwiftUI/AppKit application targeting macOS 26.6 and la
 | `MacUtilitiesWidgets/` | WidgetKit configuration, read-only timelines and family-adaptive saved-usage presentation |
 | `Shared/` | Value types, calendar/range calculations, byte formatting, bounded projection reader and chart presentation |
 | `Mac UtilitiesTests/` | Usage, Connection, Keep Awake, Notifications and Window regression suites |
+| `Scripts/Speech/` | Runtime setup and offline benchmark tooling; `Benchmark/Native/` owns the Swift runner, `Benchmark/Tools/` the Python commands, and `Benchmark/Tests/` their regression tests |
 
 Dependencies flow from app/features into platform adapters and shared values. `Shared/` must not import AppKit, ServiceManagement, collection code, process execution or canonical writers. Its presentation file may import SwiftUI; storage/model files use Foundation. Explicitly isolate pure types from the host's default MainActor and use valid Sendable value contracts. No framework/package target is needed for these local sources.
 

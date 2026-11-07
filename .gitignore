@@ -15,6 +15,11 @@ build/
 *.dmg
 *.log
 
+# Local Python tooling
+__pycache__/
+*.py[cod]
+.venv/
+
 # Signing identities, private keys, and provisioning material
 *.p12
 *.pfx
