@@ -37,7 +37,7 @@ Do not use this file for:
   - Verify schema-3 daily history compatibility, reset-independent totals, calendar ranges, missing/zero states, chart interaction, storage protection and explicit clearing using the Phase 07 protocol.
   - Keep per-app usage explicitly deferred until a supported macOS report handoff and app-identity path are proven.
   - Verify manual diagnostic tools from the signed sandboxed app, including reply permissions, real metrics, impact disclosure, cancellation and child-process cleanup; diagnostic results remain transient. Retained usage history contains daily byte aggregates only.
-  - Verify Transcribe history permissions and content-free logging as specified in [Speech Transcription Conventions](../conventions/speech-transcription.md); run Phase 17 separately for quality and resource acceptance.
+  - Verify Transcribe history permissions and content-free logging as specified in [Speech Transcription Conventions](../conventions/speech-transcription.md); run Phase 17 separately for bounded quality and responsiveness evidence.
 
 ## 4. Status Definitions
 
@@ -61,18 +61,20 @@ Every completed phase must satisfy all of the following:
 
 ## 6. Current Active Phase
 
-* **Current Phase:** 17 - Speech Quality And Resource Benchmark
-* **Status:** Planned. Phase 16 implementation and post-fix native capture are complete; benchmark results are not yet available.
+* **Current Phase:** None; Phase 17 is complete and Phase 18 is next in the planned sequence.
+* **Status:** Phase 17 completed as a bounded benchmark. Its public-corpus scores and clearly labeled synthetic diagnostics are recorded; the scoring tools support corpus timing summaries, and English/Urdu app checks are basic smoke verification. Resource profiling, natural-speech evaluation, speech-end latency and energy are outside its acceptance scope.
 * **Owner:** TBD
 * **Linked Phase Doc:** [phase-17-speech-benchmark.md](./phase-17-speech-benchmark.md)
-* **Immediate Goal:** Select an eligible evaluation corpus, then measure recognition quality, VAD/segment behavior, latency and resource use under Phase 17.
-* **Current Blockers:** The gated evaluation dataset requires separate access; an alternative corpus must have suitable rights and consent. Model access does not grant dataset access.
+* **Immediate Goal:** No active phase. Phase 18 remains Planned.
+* **Current Blockers:** None.
 
 ## 7. Ready Queue
 
-Phases 13–16 are complete based on the recorded execution evidence and user verification. Phase 17 is the next planned phase for repeatable English/Urdu recognition, latency, memory and energy evidence; no benchmark results are claimed. Its corpus must have separate dataset authorization or suitable licensing and consent. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
+Phases 13–17 are complete based on recorded implementation and verification evidence. Phase 17's completion is limited to the bounded public-corpus, synthetic, runner and basic smoke evidence in its linked document; natural-speech and gated-dataset evaluation remain optional future work. Phases 18–20 remain Planned. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
 
 ## 8. Phase Register
+
+The approved next series is Phase 18 → Phase 19 → Phase 20. All three remain Planned; each includes implementation, isolated regression coverage and signed native verification. Phase 17 is complete within its bounded scope; any future natural-speech or gated-dataset study requires a separate scope and suitable authorized data. Phase 18 must pass verified backup and migration gates before the host sandbox is removed; the widget retains sandboxing. Public binary distribution remains excluded.
 
 | Phase | Name | Status | Priority | Owner | Depends On | Linked File | Target Window |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -93,13 +95,16 @@ Phases 13–16 are complete based on the recorded execution evidence and user ve
 | 14 | Monthly History Table | Completed | TBD | TBD | Phase 08 | [phase-14-monthly-history-table.md](./phase-14-monthly-history-table.md) | Completed 2026-11-02; user confirmed verification |
 | 15 | Cross Usage Comparison | Completed | TBD | TBD | Phase 14 | [phase-15-cross-usage-comparison.md](./phase-15-cross-usage-comparison.md) | Completed 2026-11-02; user confirmed verification |
 | 16 | Local Speech Transcription | Completed | 2026-10-31 | TBD | Post-fix live capture and integration verification; benchmark is Phase 17 | [phase-16-local-speech-transcription.md](./phase-16-local-speech-transcription.md) | Completed 2026-11-02; user confirmed English and Urdu capture and finalization |
-| 17 | Speech Quality And Resource Benchmark | Planned | TBD | TBD | Phase 16 complete; evaluation data with suitable rights | [phase-17-speech-benchmark.md](./phase-17-speech-benchmark.md) | No measurements claimed; dataset has separate gated access |
+| 17 | Speech Quality And Responsiveness Benchmark | Completed | TBD | TBD | Phase 16 complete; pinned models/runtime and eligible public corpus data | [phase-17-speech-benchmark.md](./phase-17-speech-benchmark.md) | Completed 2026-11-07; bounded evidence and limitations recorded |
+| 18 | Unsandboxed Host And Safe Data Migration | Planned | TBD | TBD | Phase 16; verified storage/signing inventory and backup gate | [phase-18-host-storage-migration.md](./phase-18-host-storage-migration.md) | TBD |
+| 19 | Hold-To-Record And Floating Transcription | Planned | TBD | TBD | Phase 18 completed | [phase-19-hold-recording-panel.md](./phase-19-hold-recording-panel.md) | TBD |
+| 20 | Focused Text Delivery And Integrated Release | Planned | TBD | TBD | Phases 18 and 19 completed | [phase-20-focused-text-delivery.md](./phase-20-focused-text-delivery.md) | TBD |
 
 ## 9. Blockers And Risks
 
 ### Active Blockers
 
-- Phase 17 requires separate evaluation-dataset access or a held-out corpus with suitable rights and consent.
+None. Natural-speech and gated-dataset evaluation are optional future work outside Phase 17 and require suitable authorized data with checked references.
 
 ### Execution Risks
 

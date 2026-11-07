@@ -58,6 +58,8 @@ struct UsageHistoryTests {
 
     @Test func monthlyHistoryGroupsRecordedDaysAndSaturatesTotals() {
         let timestamp = date("2026-01-01T00:00:00Z")
+        let calendar = UsageHistory.calendar(timeZone: TimeZone(secondsFromGMT: 0)!)
+        let through = date("2027-01-01T00:00:00Z")
         func record(_ key: String, _ download: UInt64, _ upload: UInt64) -> DailyUsageRecord {
             DailyUsageRecord(dayKey: key, downloaded: download, uploaded: upload,
                              firstObservedAt: timestamp, lastObservedAt: timestamp, isIncomplete: false)
@@ -65,17 +67,34 @@ struct UsageHistoryTests {
         let records = [record("2026-07-01", 0, 0), record("2025-01-01", 4, 2),
                        record("2026-01-01", .max, 2), record("2026-01-02", 1, 3)]
         #expect(UsageHistory.years(records: records, currentYear: 2027) == [2027, 2026, 2025])
-        let months = UsageHistory.monthly(records: records, year: 2026)
+        let months = UsageHistory.monthly(records: records, year: 2026, through: through, calendar: calendar)
         #expect(months.map(\.month) == [1, 7])
         #expect(months[0].downloaded == .max)
         #expect(months[0].uploaded == 5)
         #expect(months[0].combined == .max)
+        #expect(months[0].average == UsageHistory.add(.max / 31, 4 / 31))
         #expect(months[1].combined == 0)
-        #expect(UsageHistory.monthly(records: records, year: 2025) == [
-            MonthlyUsage(month: 1, downloaded: 4, uploaded: 2)
+        #expect(UsageHistory.monthly(records: records, year: 2025, through: through, calendar: calendar) == [
+            MonthlyUsage(month: 1, downloaded: 4, uploaded: 2, average: 6 / 31)
         ])
-        #expect(UsageHistory.monthly(records: records, year: 2027).isEmpty)
+        #expect(UsageHistory.monthly(records: records, year: 2027, through: through, calendar: calendar).isEmpty)
         #expect(UsageHistory.years(records: [], currentYear: 2027) == [2027])
+    }
+
+    @Test func monthlyAverageUsesFullAndCurrentCalendarSpans() {
+        let calendar = UsageHistory.calendar(timeZone: TimeZone(secondsFromGMT: 0)!)
+        let at = date("2026-11-05T12:00:00Z")
+        func record(_ key: String, _ download: UInt64, _ upload: UInt64) -> DailyUsageRecord {
+            DailyUsageRecord(dayKey: key, downloaded: download, uploaded: upload,
+                             firstObservedAt: at, lastObservedAt: at, isIncomplete: false)
+        }
+        let records = [record("2026-10-01", 30, 10), record("2026-10-31", 60, 0),
+                       record("2026-11-01", 20, 0), record("2026-11-02", 0, 0)]
+        let months = UsageHistory.monthly(records: records, year: 2026, through: at, calendar: calendar)
+
+        #expect(months.map(\.month) == [10, 11])
+        #expect(months[0].average == 100 / 31)
+        #expect(months[1].average == 20 / 5)
     }
 
     @Test(arguments: [1, 2, 3])

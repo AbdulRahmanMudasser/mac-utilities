@@ -49,7 +49,7 @@ Establish and run the native macOS app from the repository root. Keep app source
 - **User-Facing Change:** At this phase's completion, the running app showed device rates and labeled app attribution unavailable. The later product decision deferred per-app usage from the first release.
 - **System Behavior Change:** No change specific to the root-project foundation beyond confirming that the existing project builds and launches on the target Mac.
 - **Error States To Support:** Record Xcode setup, build, and app-launch errors found during local verification. Device-counter availability is the first-release monitoring status.
-- **Accessibility / Platform Constraints:** Target the owner's MacBook and installed macOS version/architecture. Do not add cross-Mac compatibility requirements.
+- **Accessibility / Platform Constraints:** Target the supported macOS version and architecture. Do not add cross-platform compatibility requirements.
 
 ## 8. Acceptance Criteria
 
@@ -89,7 +89,7 @@ Establish and run the native macOS app from the repository root. Keep app source
 ## 10. Risks And Rollback Notes
 
 - **Implementation Risks:** Incorrect project-relative paths can break Xcode indexing or the build; all app project files are expected at the repository root.
-- **Operational Risks:** This phase's local ad-hoc build does not establish that the complete app has been functionally verified on the target MacBook.
+- **Operational Risks:** This phase's local ad-hoc build does not establish that the complete app has been functionally verified on the supported macOS environment.
 - **Rollback Approach:** Revert only the configuration changes that prevent the root-level project from building; retain verified signing and capability findings in the workflow blocker record.
 
 ## 11. Verification Protocol (Definition of Done)
