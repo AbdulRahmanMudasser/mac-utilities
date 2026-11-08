@@ -95,7 +95,7 @@ nonisolated enum UsageHistory {
             guard Int(parts[0]) == year, let month = Int(parts[1]) else { continue }
             recordsByMonth[month, default: []].append(record)
         }
-        return recordsByMonth.keys.sorted().compactMap { month in
+        return recordsByMonth.keys.sorted(by: >).compactMap { month in
             guard let monthRecords = recordsByMonth[month] else { return nil }
             let totals = monthRecords.reduce(InterfaceByteCount(downloaded: 0, uploaded: 0)) { total, record in
                 InterfaceByteCount(downloaded: add(total.downloaded, record.downloaded),
