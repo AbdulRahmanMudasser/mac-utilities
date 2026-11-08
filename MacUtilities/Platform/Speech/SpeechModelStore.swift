@@ -187,6 +187,12 @@ actor SpeechModelStore {
     }
 }
 
+nonisolated enum SpeechModelValidation {
+    static func matches(_ url: URL, metadata: SpeechModelMetadata) throws -> Bool {
+        try SpeechModelFileSystem.matches(url, metadata: metadata)
+    }
+}
+
 nonisolated private enum SpeechModelFileSystem {
     private static let copyBufferSize = 1024 * 1024
 

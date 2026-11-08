@@ -114,10 +114,12 @@ final class UsageStateStore {
 
     init(
         stateURL: URL,
-        acquireLease: Bool = true
+        acquireLease: Bool = true,
+        existingLease: UsageWriterLease? = nil
     ) {
         self.stateURL = stateURL
         self.acquireLease = acquireLease
+        self.lease = existingLease
     }
 
     func load() throws -> PersistedUsage? {
