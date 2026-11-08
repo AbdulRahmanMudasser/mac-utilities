@@ -68,12 +68,12 @@ struct UsageHistoryTests {
                        record("2026-01-01", .max, 2), record("2026-01-02", 1, 3)]
         #expect(UsageHistory.years(records: records, currentYear: 2027) == [2027, 2026, 2025])
         let months = UsageHistory.monthly(records: records, year: 2026, through: through, calendar: calendar)
-        #expect(months.map(\.month) == [1, 7])
-        #expect(months[0].downloaded == .max)
-        #expect(months[0].uploaded == 5)
-        #expect(months[0].combined == .max)
-        #expect(months[0].average == UsageHistory.add(.max / 31, 4 / 31))
-        #expect(months[1].combined == 0)
+        #expect(months.map(\.month) == [7, 1])
+        #expect(months[0].combined == 0)
+        #expect(months[1].downloaded == .max)
+        #expect(months[1].uploaded == 5)
+        #expect(months[1].combined == .max)
+        #expect(months[1].average == UsageHistory.add(.max / 31, 4 / 31))
         #expect(UsageHistory.monthly(records: records, year: 2025, through: through, calendar: calendar) == [
             MonthlyUsage(month: 1, downloaded: 4, uploaded: 2, average: 6 / 31)
         ])
@@ -92,9 +92,9 @@ struct UsageHistoryTests {
                        record("2026-11-01", 20, 0), record("2026-11-02", 0, 0)]
         let months = UsageHistory.monthly(records: records, year: 2026, through: at, calendar: calendar)
 
-        #expect(months.map(\.month) == [10, 11])
-        #expect(months[0].average == 100 / 31)
-        #expect(months[1].average == 20 / 5)
+        #expect(months.map(\.month) == [11, 10])
+        #expect(months[0].average == 20 / 5)
+        #expect(months[1].average == 100 / 31)
     }
 
     @Test(arguments: [1, 2, 3])
