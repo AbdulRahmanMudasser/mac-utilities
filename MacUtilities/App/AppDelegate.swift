@@ -15,6 +15,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var pendingRoute: PendingRoute?
     private var windowRoutingReady = false
+    private var didFinishLaunching = false
+    var cancelStartup: (() -> Void)?
+    var waitForStartup: (() async -> Void)?
+
+    func completeStartup() {
+        markWindowRoutingReady()
+        if didFinishLaunching { presentRequestedPreview() }
+    }
 
     func markWindowRoutingReady() {
         windowRoutingReady = true
@@ -50,14 +58,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var replyToTermination: @MainActor (Bool) -> Void = { NSApp.reply(toApplicationShouldTerminate: $0) }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        cancelStartup?()
         keepAwakeController?.shutdown()
         notificationsController?.shutdown()
         wifiQualityMonitor?.shutdown()
         let runningDiagnostics = diagnostics?.isRunning == true ? diagnostics : nil
         runningDiagnostics?.shutdown()
-        guard runningDiagnostics != nil || transcribeController != nil else { return .terminateNow }
+        guard runningDiagnostics != nil || transcribeController != nil || waitForStartup != nil else { return .terminateNow }
         let transcribe = transcribeController
+        let startup = waitForStartup
         Task { [weak self] in
+            await startup?()
             await transcribe?.shutdown()
             await runningDiagnostics?.waitUntilStopped()
             self?.replyToTermination(true)
@@ -86,7 +97,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.applicationIconImage = AppBrand.icon
         NSApp.setActivationPolicy(.accessory)
-        markWindowRoutingReady()
+        didFinishLaunching = true
+        if windowRoutingReady { presentRequestedPreview() }
+    }
+
+    private func presentRequestedPreview() {
         #if DEBUG
         let hasNotificationPreview = CommandLine.arguments.contains("--notification-preview") ||
             CommandLine.arguments.contains(where: { $0.hasPrefix("--notification-preview=") })

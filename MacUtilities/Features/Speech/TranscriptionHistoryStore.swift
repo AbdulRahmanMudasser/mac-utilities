@@ -130,6 +130,10 @@ final class TranscriptionHistoryStore {
         try preparePrivateDirectory(at: url.deletingLastPathComponent())
         guard let data = try readProtectedFile(at: url) else { return [] }
 
+        return try validatedEntries(in: data)
+    }
+
+    nonisolated static func validatedEntries(in data: Data) throws -> [TranscriptionHistoryEntry] {
         let document: TranscriptionHistoryDocument
         do {
             document = try JSONDecoder().decode(TranscriptionHistoryDocument.self, from: data)
