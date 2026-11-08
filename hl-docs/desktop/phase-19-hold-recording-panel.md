@@ -30,7 +30,7 @@ Control implementation of this substantial delivery boundary. This document is a
 ## 5. Ownership And Delivery Notes
 
 - **Owner / Priority / Target Window:** TBD.
-- **Related PRD Section:** [FR-19 Local Speech Transcription](../mac-utilities-prd.md#fr-19-local-speech-transcription) defines the current transcription baseline; these phases specify the approved storage migration and global dictation extensions.
+- **Related PRD Section:** [FR-19 Local Speech Transcription](../mac-utilities-prd.md#fr-19-local-speech-transcription) is baseline context; the approved shortcut/unsandboxing extension is specified by this series. PRD edits are outside this documentation request.
 - **Related Build Plan Section:** Not applicable; no separate build plan is maintained for this scope.
 
 ## 6. Infrastructure & Environment Requirements
