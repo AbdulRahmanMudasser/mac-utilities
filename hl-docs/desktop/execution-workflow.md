@@ -61,20 +61,20 @@ Every completed phase must satisfy all of the following:
 
 ## 6. Current Active Phase
 
-* **Current Phase:** None; Phase 17 is complete and Phase 18 is next in the planned sequence.
-* **Status:** Phase 17 completed as a bounded benchmark. Its public-corpus scores and clearly labeled synthetic diagnostics are recorded; the scoring tools support corpus timing summaries, and English/Urdu app checks are basic smoke verification. Resource profiling, natural-speech evaluation, speech-end latency and energy are outside its acceptance scope.
+* **Current Phase:** None; Phase 18 is complete. Phases 19 and 20 have not started.
+* **Status:** Phase 18 completed with verified backup/restore, migration regressions, signed installation, data/settings preservation and native widget interoperability. The final gallery recheck passed after the last hosted test run.
 * **Owner:** TBD
-* **Linked Phase Doc:** [phase-17-speech-benchmark.md](./phase-17-speech-benchmark.md)
-* **Immediate Goal:** No active phase. Phase 18 remains Planned.
+* **Linked Phase Doc:** [phase-18-host-storage-migration.md](./phase-18-host-storage-migration.md)
+* **Immediate Goal:** Phase 18 scope is complete; no downstream implementation is active.
 * **Current Blockers:** None.
 
 ## 7. Ready Queue
 
-Phases 13–17 are complete based on recorded implementation and verification evidence. Phase 17's completion is limited to the bounded public-corpus, synthetic, runner and basic smoke evidence in its linked document; natural-speech and gated-dataset evaluation remain optional future work. Phases 18–20 remain Planned. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
+Phases 13–18 are complete based on recorded implementation and verification evidence. Phase 17's completion is limited to the bounded public-corpus, synthetic, runner and basic smoke evidence in its linked document; natural-speech and gated-dataset evaluation remain optional future work. Phases 19 and 20 remain Planned. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
 
 ## 8. Phase Register
 
-The approved next series is Phase 18 → Phase 19 → Phase 20. All three remain Planned; each includes implementation, isolated regression coverage and signed native verification. Phase 17 is complete within its bounded scope; any future natural-speech or gated-dataset study requires a separate scope and suitable authorized data. Phase 18 must pass verified backup and migration gates before the host sandbox is removed; the widget retains sandboxing. Public binary distribution remains excluded.
+The approved series is Phase 18 → Phase 19 → Phase 20. Phase 18 is complete; Phases 19 and 20 remain Planned. Each includes implementation, isolated regression coverage and signed native verification. Phase 17 is complete within its bounded scope; any future natural-speech or gated-dataset study requires a separate scope and suitable authorized data. Phase 18 passed its backup and migration gates before the signed host cutover; the host is unsandboxed and the widget retains sandboxing. Public binary distribution remains excluded.
 
 | Phase | Name | Status | Priority | Owner | Depends On | Linked File | Target Window |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -96,7 +96,7 @@ The approved next series is Phase 18 → Phase 19 → Phase 20. All three remain
 | 15 | Cross Usage Comparison | Completed | TBD | TBD | Phase 14 | [phase-15-cross-usage-comparison.md](./phase-15-cross-usage-comparison.md) | Completed 2026-11-02; user confirmed verification |
 | 16 | Local Speech Transcription | Completed | 2026-10-31 | TBD | Post-fix live capture and integration verification; benchmark is Phase 17 | [phase-16-local-speech-transcription.md](./phase-16-local-speech-transcription.md) | Completed 2026-11-02; user confirmed English and Urdu capture and finalization |
 | 17 | Speech Quality And Responsiveness Benchmark | Completed | TBD | TBD | Phase 16 complete; pinned models/runtime and eligible public corpus data | [phase-17-speech-benchmark.md](./phase-17-speech-benchmark.md) | Completed 2026-11-07; bounded evidence and limitations recorded |
-| 18 | Unsandboxed Host And Safe Data Migration | Planned | TBD | TBD | Phase 16; verified storage/signing inventory and backup gate | [phase-18-host-storage-migration.md](./phase-18-host-storage-migration.md) | TBD |
+| 18 | Unsandboxed Host And Safe Data Migration | Completed | TBD | TBD | Phase 16; verified storage/signing inventory and backup gate | [phase-18-host-storage-migration.md](./phase-18-host-storage-migration.md) | Completed 2026-11-08; final native gallery recheck passed |
 | 19 | Hold-To-Record And Floating Transcription | Planned | TBD | TBD | Phase 18 completed | [phase-19-hold-recording-panel.md](./phase-19-hold-recording-panel.md) | TBD |
 | 20 | Focused Text Delivery And Integrated Release | Planned | TBD | TBD | Phases 18 and 19 completed | [phase-20-focused-text-delivery.md](./phase-20-focused-text-delivery.md) | TBD |
 
