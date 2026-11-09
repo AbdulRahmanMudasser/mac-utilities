@@ -52,4 +52,29 @@ struct UtilityCapabilityCardTests {
             #expect(narrow.height > wide.height)
         }
     }
+
+    @Test func allowedNetworkNamePermissionStaysOneLineWhileOfflineOrNameUnavailable() {
+        let path = PreviewNetworkPathReader(snapshot: NetworkPathSnapshot(status: .unavailable))
+        let wifi = WiFiQualityMonitor(reader: ImmediateWiFiQualityReader([WiFiQualitySnapshot()]),
+            pathReader: path, permission: PreviewNetworkNamePermission(state: .authorized))
+        defer { wifi.shutdown() }
+        wifi.setVisible(true, for: .connection)
+        for state in [NetworkPathSnapshot(status: .unavailable),
+                      NetworkPathSnapshot(status: .available, usedTypes: [.wifi], wifiInterfaces: ["fixture"])] {
+            path.emit(state)
+            for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+                for width: CGFloat in [400, 640, 880] {
+                    let host = NSHostingView(rootView: NetworkNameCapabilityView()
+                        .environmentObject(wifi).font(UtilityStyle.bodyFont)
+                        .controlSize(UtilityStyle.controlSize).frame(width: width))
+                    host.appearance = NSAppearance(named: appearance)
+                    host.layoutSubtreeIfNeeded()
+                    let titleOnly = fittedSize(title: "Wi-Fi Name Access Allowed", detail: nil,
+                        width: width, appearance: appearance)
+                    #expect(abs(host.fittingSize.height - titleOnly.height) < 1)
+                    #expect(wifi.permissionState == .authorized)
+                }
+            }
+        }
+    }
 }
