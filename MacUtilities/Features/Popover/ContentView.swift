@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var monitor: UsageMonitor
+    @EnvironmentObject private var wifiQuality: WiFiQualityMonitor
     @EnvironmentObject private var utilityWindow: UtilityWindowCoordinator
     @State private var confirmReset = false
 
@@ -60,8 +61,19 @@ struct ContentView: View {
 
     private var ratesSection: some View {
         VStack(alignment: .leading, spacing: UtilityStyle.Popover.sectionContentSpacing) {
-            Text("Current Speed")
-                .font(UtilityStyle.headingFont)
+            Label {
+                Text(wifiQuality.networkLabel.title)
+                    .font(UtilityStyle.headingFont.weight(.regular))
+            } icon: {
+                Image(systemName: wifiQuality.networkLabel.symbol)
+                    .font(UtilityStyle.headingFont)
+            }
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .help(wifiQuality.networkLabel.accessibilityValue + ". Speeds include device-wide traffic.")
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Connection")
+            .accessibilityValue(wifiQuality.networkLabel.accessibilityValue)
 
             HStack(spacing: UtilityStyle.contentSpacing) {
                 SpeedValue(title: "Download", value: monitor.formattedDownloadRate)

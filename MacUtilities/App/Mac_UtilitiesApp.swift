@@ -10,6 +10,7 @@ struct Mac_UtilitiesApp: App {
         MenuBarExtra {
             if let runtime = startup.runtime {
                 ContentView()
+                    .environmentObject(runtime.wifiQualityMonitor)
                     .environmentObject(runtime.monitor)
                     .environmentObject(runtime.keepAwakeController)
                     .environmentObject(runtime.notificationsController)

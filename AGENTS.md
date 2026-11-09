@@ -27,7 +27,7 @@ Resolve conflicts using explicit user decisions and current verified evidence. C
 - Reuse existing shared components and match neighboring sections. Consult Standards §4 for Title Case labels, spacing, timestamps, chart behavior and description cards. Descriptions use the shared two-line overflow behavior with right-aligned Read More / Read Less; warnings and confirmations remain fully visible.
 - Keep one usage collector/writer, one diagnostic controller and one transient Wi-Fi monitor. Respect shutdown, cancellation, visibility and stale-result guards. See Standards §§2–3 before changing ownership or persistence.
 - Preserve personal usage history and the canonical App Group contract. Tests and previews use isolated storage. Never change login settings or point tests at production data.
-- Keep CoreWLAN reads passive and transient: no Location request, SSID/BSSID collection, scans, association or Wi-Fi configuration. Wi-Fi sampling follows Connection visibility and stays outside usage storage.
+- Keep CoreWLAN reads passive and transient. Optional SSID display may request When In Use Location authorization only from the explicit Connection action; do not request coordinates, Always access, BSSID, scans, association or Wi-Fi configuration. One Wi-Fi monitor samples while Connection or the popover is visible; network identity never enters storage or logs.
 
 ## Build, Preview And Verification
 
