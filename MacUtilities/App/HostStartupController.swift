@@ -74,6 +74,9 @@ final class HostStartupController: ObservableObject {
 
     nonisolated private static func bootstrap() throws -> HostStartupStorage? {
         let testing = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil || NSClassFromString("XCTestCase") != nil
+        #if DEBUG
+        _ = try NetworkLabelLaunchMode.parse(CommandLine.arguments)
+        #endif
         if testing { return nil }
         #if DEBUG
         if CommandLine.arguments.contains(where: { $0.contains("-preview") || $0.hasPrefix("--transcribe-native-check=") }),

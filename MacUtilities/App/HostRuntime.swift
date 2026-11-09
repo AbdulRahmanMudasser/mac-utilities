@@ -58,7 +58,20 @@ final class HostRuntime: ObservableObject {
             #endif
         }
         let diagnostics = ConnectionDiagnostics()
-        let wifiQualityMonitor = WiFiQualityMonitor()
+        let wifiQualityMonitor: WiFiQualityMonitor
+        #if DEBUG
+        let networkMode = (try? NetworkLabelLaunchMode.parse(CommandLine.arguments)) ?? .ordinary
+        if case .fixture(let state) = networkMode, !testing {
+            wifiQualityMonitor = Self.networkLabelFixture(state)
+        } else if testing || (previewMode && networkMode != .nativeCheck) {
+            wifiQualityMonitor = WiFiQualityMonitor(pathReader: PreviewNetworkPathReader(),
+                permission: PreviewNetworkNamePermission(), isSimulated: true)
+        } else {
+            wifiQualityMonitor = WiFiQualityMonitor(pathReader: NetworkPathReader(), permission: NetworkNamePermissionClient())
+        }
+        #else
+        wifiQualityMonitor = WiFiQualityMonitor(pathReader: NetworkPathReader(), permission: NetworkNamePermissionClient())
+        #endif
         let notificationsController: NotificationsController
         #if DEBUG
         if let notificationPreview {
@@ -252,6 +265,34 @@ final class HostRuntime: ObservableObject {
     }
 
     #if DEBUG
+    private static func networkLabelFixture(_ state: NetworkLabelPreviewState) -> WiFiQualityMonitor {
+        var path = NetworkPathSnapshot(status: .available, usedTypes: [.wifi], wifiInterfaces: ["preview-wifi"])
+        switch state {
+        case .checking: path = NetworkPathSnapshot()
+        case .offline: path.status = .unavailable
+        case .ethernet: path.usedTypes = [.ethernet]
+        case .network: path.usedTypes = [.other]
+        default: break
+        }
+        let permission: NetworkNamePermissionState
+        switch state {
+        case .denied: permission = .denied
+        case .requesting: permission = .requesting
+        case .wifi: permission = .notDetermined
+        default: permission = .authorized
+        }
+        let name: String?
+        switch state {
+        case .named: name = "Home Network"
+        case .longName: name = "Home Network — Upstairs Office — مہمانوں کا نیٹ ورک — Extended Wireless"
+        default: name = nil
+        }
+        return WiFiQualityMonitor(reader: PreviewWiFiQualityReader(snapshot: WiFiQualitySnapshot(
+            interfaceName: "preview-wifi", networkName: name, signalDBm: -48, noiseDBm: -90,
+            channelNumber: 36, transmitRateMbps: 866.7)), pathReader: PreviewNetworkPathReader(snapshot: path),
+            permission: PreviewNetworkNamePermission(state: permission), isSimulated: true)
+    }
+
     private static func previewMonitor(verificationOnly: Bool = false,
                                        state previewState: UsagePreviewState = .history) -> UsageMonitor {
         let directory = (verificationOnly ? "stability-check-preview" : "usage-history-preview")
