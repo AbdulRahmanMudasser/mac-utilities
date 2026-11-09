@@ -22,6 +22,7 @@ targets:
     platform: macOS
     dependencies:
       - sdk: CoreWLAN.framework
+      - sdk: CoreLocation.framework
       - sdk: IOKit.framework
       - framework: build/speech-runtime/whisper.xcframework
         link: true

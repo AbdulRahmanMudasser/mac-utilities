@@ -9,6 +9,8 @@
     </dict></array>
     <key>MacUtilitiesAppGroupIdentifier</key>
     <string>$(MACUTILITIES_APP_GROUP_IDENTIFIER)</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Mac Utilities uses Location permission to show your Wi-Fi network name. It does not request your coordinates or save the network name.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Mac Utilities uses the microphone to transcribe your speech on this Mac.</string>
 #if DEBUG
