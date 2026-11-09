@@ -3,12 +3,19 @@ import Foundation
 
 nonisolated protocol WiFiQualityReading: Sendable {
     func read() async -> WiFiQualitySnapshot
+    func read(allowNetworkName: Bool) async -> WiFiQualitySnapshot
+}
+
+extension WiFiQualityReading {
+    func read(allowNetworkName: Bool) async -> WiFiQualitySnapshot { await read() }
 }
 
 actor CoreWLANWiFiQualityReader: WiFiQualityReading {
     private var client: CWWiFiClient?
 
-    func read() async -> WiFiQualitySnapshot {
+    func read() async -> WiFiQualitySnapshot { await read(allowNetworkName: false) }
+
+    func read(allowNetworkName: Bool) async -> WiFiQualitySnapshot {
         let client = self.client ?? CWWiFiClient.shared()
         self.client = client
 
@@ -26,6 +33,7 @@ actor CoreWLANWiFiQualityReader: WiFiQualityReading {
         return WiFiQualitySnapshot(
             sampledAt: Date(),
             interfaceName: interface.interfaceName,
+            networkName: allowNetworkName ? interface.ssid() : nil,
             signalDBm: interface.rssiValue(),
             noiseDBm: interface.noiseMeasurement(),
             channelNumber: channel.map { Int($0.channelNumber) },
@@ -56,3 +64,11 @@ actor CoreWLANWiFiQualityReader: WiFiQualityReading {
         }
     }
 }
+
+#if DEBUG
+actor PreviewWiFiQualityReader: WiFiQualityReading {
+    let snapshot: WiFiQualitySnapshot
+    init(snapshot: WiFiQualitySnapshot) { self.snapshot = snapshot }
+    func read() async -> WiFiQualitySnapshot { snapshot }
+}
+#endif

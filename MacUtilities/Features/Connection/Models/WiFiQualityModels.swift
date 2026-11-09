@@ -59,6 +59,7 @@ nonisolated enum WiFiChannelWidth: Equatable, Sendable {
 nonisolated struct WiFiQualitySnapshot: Equatable, Sendable {
     let sampledAt: Date
     let interfaceName: String?
+    let networkName: String?
     let signalDBm: Int?
     let noiseDBm: Int?
     let channelNumber: Int?
@@ -70,6 +71,7 @@ nonisolated struct WiFiQualitySnapshot: Equatable, Sendable {
     init(
         sampledAt: Date = Date(),
         interfaceName: String? = nil,
+        networkName: String? = nil,
         signalDBm: Int? = nil,
         noiseDBm: Int? = nil,
         channelNumber: Int? = nil,
@@ -80,6 +82,7 @@ nonisolated struct WiFiQualitySnapshot: Equatable, Sendable {
     ) {
         self.sampledAt = sampledAt
         self.interfaceName = interfaceName
+        self.networkName = networkName
         self.signalDBm = signalDBm.flatMap { $0 < 0 ? $0 : nil }
         self.noiseDBm = noiseDBm.flatMap { $0 < 0 ? $0 : nil }
         self.channelNumber = channelNumber.flatMap { $0 > 0 ? $0 : nil }
