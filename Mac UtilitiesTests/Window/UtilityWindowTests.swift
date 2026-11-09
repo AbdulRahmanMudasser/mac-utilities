@@ -640,4 +640,155 @@ struct UtilityWindowTests {
             }
         }
     }
+    @Test func popoverReplacementAndDetachmentReleaseOnlyTheirConsumer() async {
+        let reader = ImmediateWiFiQualityReader([sampleWiFiSnapshot()])
+        let wifi = WiFiQualityMonitor(reader: reader)
+        let subject = UtilityWindowCoordinator(diagnostics: ConnectionDiagnostics(), wifiQualityMonitor: wifi,
+            setActivationPolicy: { _ in }, activateApplication: {}, isApplicationHidden: { false },
+            isWindowDisplayable: { $0.isVisible }) { _ in AnyView(Text("Test")) }
+        let first = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 390, height: 300), styleMask: .borderless, backing: .buffered, defer: false)
+        let second = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 390, height: 300), styleMask: .borderless, backing: .buffered, defer: false)
+        defer { first.orderOut(nil); second.orderOut(nil); subject.shutdown() }
+        first.orderFront(nil)
+        subject.registerPopoverWindow(first)
+        await waitForWiFiReads(1, from: reader)
+        #expect(wifi.isVisible)
+        second.orderFront(nil)
+        subject.registerPopoverWindow(second)
+        subject.unregisterPopoverWindow(first)
+        #expect(subject.menuBarPopoverWindow === second)
+        #expect(wifi.isVisible)
+        subject.present(.connection)
+        #expect(wifi.isVisible)
+        subject.unregisterPopoverWindow(second)
+        #expect(wifi.isVisible)
+        subject.window?.close()
+        #expect(!wifi.isVisible)
+        #expect(wifi.snapshot == nil)
+    }
+
+    @Test func popoverAccessorDetachUnregistersItsWindow() {
+        let subject = coordinator()
+        defer { subject.shutdown() }
+        let popover = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 390, height: 300), styleMask: .borderless, backing: .buffered, defer: false)
+        let view = MenuBarPopoverWindowAccessor.PopoverWindowView(frame: .zero)
+        view.coordinator = subject
+        popover.contentView = view
+        #expect(subject.menuBarPopoverWindow === popover)
+        view.removeFromSuperview()
+        #expect(subject.menuBarPopoverWindow == nil)
+    }
+
+    @Test func networkLabelsKeepPopoverWidthAndHeightInBothAppearances() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("network-layout-\(UUID().uuidString)")
+        let preferencesName = "MacUtilities.NetworkLayout.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: preferencesName))
+        let usage = UsageMonitor(stateURL: directory.appendingPathComponent("usage.json"), startAutomatically: false, readCounters: { [:] })
+        let keepAwake = KeepAwakeController(power: UtilityWindowPowerAssertions(), preferences: preferences)
+        let coordinator = coordinator()
+        defer {
+            usage.shutdown(); keepAwake.shutdown(); coordinator.shutdown()
+            preferences.removePersistentDomain(forName: preferencesName)
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let output = FileManager.default.temporaryDirectory.appendingPathComponent("mac-utilities-network-label-layout")
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        let states: [(String, NetworkPathSnapshot, String?)] = [
+            ("checking", NetworkPathSnapshot(), nil),
+            ("long-name", NetworkPathSnapshot(status: .available, usedTypes: [.wifi], wifiInterfaces: ["fixture"]), "Home Network — Upstairs Office — مہمانوں کا نیٹ ورک — Extended Wireless"),
+            ("wifi", NetworkPathSnapshot(status: .available, usedTypes: [.wifi], wifiInterfaces: ["fixture"]), nil),
+            ("ethernet", NetworkPathSnapshot(status: .available, usedTypes: [.ethernet]), nil),
+            ("network", NetworkPathSnapshot(status: .available, usedTypes: [.other]), nil),
+            ("offline", NetworkPathSnapshot(status: .unavailable), nil)
+        ]
+        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+            var baselineHeight: CGFloat?
+            for (name, path, networkName) in states {
+                let sample = WiFiQualitySnapshot(interfaceName: "fixture", networkName: networkName)
+                let wifi = WiFiQualityMonitor(reader: ImmediateWiFiQualityReader([sample]),
+                    pathReader: PreviewNetworkPathReader(snapshot: path), permission: PreviewNetworkNamePermission(state: .authorized))
+                wifi.setVisible(true)
+                await waitForWiFiSnapshot(sample, from: wifi)
+                let host = NSHostingView(rootView: ContentView().environmentObject(usage).environmentObject(keepAwake)
+                    .environmentObject(wifi).environmentObject(coordinator)
+                    .environment(\.colorScheme, appearance == .aqua ? .light : .dark)
+                    .background(Color(nsColor: .windowBackgroundColor)))
+                host.appearance = NSAppearance(named: appearance)
+                let size = host.fittingSize
+                host.frame = NSRect(origin: .zero, size: size)
+                let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: .borderless, backing: .buffered, defer: false)
+                window.isReleasedWhenClosed = false
+                window.appearance = NSAppearance(named: appearance)
+                window.contentView = host
+                window.orderFront(nil)
+                host.layoutSubtreeIfNeeded()
+                try await Task.sleep(for: .milliseconds(60))
+                host.displayIfNeeded()
+                #expect(abs(size.width - UtilityStyle.Popover.width) < 1)
+                if let baselineHeight { #expect(abs(size.height - baselineHeight) < 1) }
+                else { baselineHeight = size.height }
+                let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+                host.cacheDisplay(in: host.bounds, to: bitmap)
+                let png = try #require(bitmap.representation(using: .png, properties: [:]))
+                try png.write(to: output.appendingPathComponent("\(name)-\(appearance == .aqua ? "light" : "dark").png"))
+                window.orderOut(nil)
+                window.contentView = nil
+                wifi.shutdown()
+            }
+        }
+    }
+
+    @Test func workspaceSleepAndWakePreserveTheRemainingPopoverConsumer() async {
+        let reader = DeferredWiFiQualityReader()
+        let path = PreviewNetworkPathReader(snapshot: NetworkPathSnapshot(status: .available, usedTypes: [.wifi], wifiInterfaces: ["en0"]))
+        let wifi = WiFiQualityMonitor(reader: reader, pathReader: path)
+        let subject = UtilityWindowCoordinator(diagnostics: ConnectionDiagnostics(), wifiQualityMonitor: wifi,
+            setActivationPolicy: { _ in }, activateApplication: {}, isApplicationHidden: { false },
+            isWindowDisplayable: { $0.isVisible }) { _ in AnyView(Text("Fixture")) }
+        let popover = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 390, height: 300), styleMask: .borderless, backing: .buffered, defer: false)
+        defer { popover.orderOut(nil); subject.shutdown() }
+        subject.present(.connection)
+        await waitForWiFiReads(1, from: reader)
+        popover.orderFront(nil)
+        subject.registerPopoverWindow(popover)
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.willSleepNotification, object: nil)
+        #expect(wifi.snapshot == nil)
+        #expect(path.stopCount == 1)
+        subject.window?.close()
+        #expect(wifi.isVisible)
+        await reader.resolveNext(with: sampleWiFiSnapshot(signal: -40))
+        for _ in 0..<20 { await Task.yield() }
+        #expect(wifi.snapshot == nil)
+        #expect(await reader.readCount() == 1)
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.didWakeNotification, object: nil)
+        await waitForWiFiReads(2, from: reader)
+        let fresh = sampleWiFiSnapshot(signal: -59)
+        await reader.resolveNext(with: fresh)
+        await waitForWiFiSnapshot(fresh, from: wifi)
+        #expect(path.startCount == 2)
+        #expect(await reader.maximumConcurrentReads() == 1)
+        popover.orderOut(nil)
+        NotificationCenter.default.post(name: NSWindow.didChangeOcclusionStateNotification, object: popover)
+        #expect(!wifi.isVisible)
+        #expect(wifi.snapshot == nil)
+    }
+
+    @Test func immediateTerminationRejectsThePendingNetworkRead() async {
+        let reader = DeferredWiFiQualityReader()
+        let path = PreviewNetworkPathReader()
+        let wifi = WiFiQualityMonitor(reader: reader, pathReader: path)
+        wifi.setVisible(true, for: .popover)
+        await waitForWiFiReads(1, from: reader)
+        let delegate = AppDelegate()
+        delegate.wifiQualityMonitor = wifi
+        #expect(delegate.applicationShouldTerminate(NSApp) == .terminateNow)
+        #expect(!wifi.isVisible)
+        #expect(path.stopCount == 1)
+        await reader.resolveNext(with: sampleWiFiSnapshot())
+        for _ in 0..<20 { await Task.yield() }
+        #expect(wifi.snapshot == nil)
+        delegate.applicationWillTerminate(Notification(name: NSApplication.willTerminateNotification))
+        #expect(path.stopCount == 1)
+    }
+
 }
