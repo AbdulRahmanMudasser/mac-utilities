@@ -34,15 +34,29 @@ struct MenuBarPopoverWindowAccessor: NSViewRepresentable {
 
     func updateNSView(_ view: PopoverWindowView, context: Context) {
         view.coordinator = coordinator
-        if let window = view.window { coordinator.menuBarPopoverWindow = window }
+        if let window = view.window { coordinator.registerPopoverWindow(window) }
+    }
+
+    static func dismantleNSView(_ view: PopoverWindowView, coordinator: ()) {
+        view.detachWindow()
     }
 
     final class PopoverWindowView: NSView {
+        private weak var registeredWindow: NSWindow?
+
+        func detachWindow() {
+            if let registeredWindow { coordinator?.unregisterPopoverWindow(registeredWindow) }
+            registeredWindow = nil
+        }
         weak var coordinator: UtilityWindowCoordinator?
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            if let window { coordinator?.menuBarPopoverWindow = window }
+            if registeredWindow !== window { detachWindow() }
+            if let window {
+                registeredWindow = window
+                coordinator?.registerPopoverWindow(window)
+            }
         }
     }
 }
@@ -75,7 +89,36 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
         return NSApp.isActive && !isApplicationHidden() && isWindowDisplayable(window)
     }
 
-    weak var menuBarPopoverWindow: NSWindow?
+    weak var menuBarPopoverWindow: NSWindow? {
+        didSet {
+            guard oldValue !== menuBarPopoverWindow else { return }
+            for token in popoverObservers { NotificationCenter.default.removeObserver(token) }
+            popoverObservers.removeAll()
+            if let target = menuBarPopoverWindow {
+                for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.willCloseNotification] {
+                    popoverObservers.append(NotificationCenter.default.addObserver(forName: name, object: target, queue: .main) { [weak self] note in
+                        MainActor.assumeIsolated {
+                            guard let self, note.object as? NSWindow === self.menuBarPopoverWindow else { return }
+                            if note.name == NSWindow.willCloseNotification {
+                                self.wifiQualityMonitor?.setVisible(false, for: .popover)
+                            } else { self.updateWiFiVisibility() }
+                        }
+                    })
+                }
+            }
+            updateWiFiVisibility()
+        }
+    }
+    private var popoverObservers: [NSObjectProtocol] = []
+    func registerPopoverWindow(_ target: NSWindow) {
+        guard !hasShutDown else { return }
+        menuBarPopoverWindow = target
+        updateWiFiVisibility()
+    }
+    func unregisterPopoverWindow(_ target: NSWindow) {
+        guard menuBarPopoverWindow === target else { return }
+        menuBarPopoverWindow = nil
+    }
     private(set) var window: NSWindow?
     private let diagnostics: ConnectionDiagnostics
     private let wifiQualityMonitor: WiFiQualityMonitor?
@@ -85,6 +128,7 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
     private let isWindowDisplayable: @MainActor (NSWindow) -> Bool
     private let content: (UtilityWindowCoordinator) -> AnyView
     private var wakeObserver: NSObjectProtocol?
+    private var sleepObserver: NSObjectProtocol?
     private var hasShutDown = false
 
     init(diagnostics: ConnectionDiagnostics,
@@ -108,6 +152,11 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
             name: NSApplication.didHideNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(applicationVisibilityDidChange(_:)),
             name: NSApplication.didUnhideNotification, object: nil)
+        sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.wifiQualityMonitor?.prepareForSleep() }
+        }
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: nil
         ) { [weak self] _ in
@@ -117,6 +166,7 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
 
     func present(_ section: UtilitySection) {
         menuBarPopoverWindow?.orderOut(nil)
+        wifiQualityMonitor?.setVisible(false, for: .popover)
         selection = section
         let target: NSWindow
         if let window {
@@ -236,7 +286,7 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
     func windowWillClose(_ notification: Notification) {
         guard let closing = notification.object as? NSWindow, closing === window else { return }
         diagnostics.cancel()
-        wifiQualityMonitor?.setVisible(false)
+        wifiQualityMonitor?.setVisible(false, for: .connection)
         // Rebuild transient view state on reopen; measurement results remain in the controller.
         closing.contentViewController = nil
         setActivationPolicy(.accessory)
@@ -262,7 +312,9 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
     }
 
     private func updateWiFiVisibility() {
-        wifiQualityMonitor?.setVisible(isConnectionSurfaceVisible)
+        wifiQualityMonitor?.setVisible(isConnectionSurfaceVisible, for: .connection)
+        let popoverVisible = !hasShutDown && !isApplicationHidden() && menuBarPopoverWindow.map(isWindowDisplayable) == true
+        wifiQualityMonitor?.setVisible(popoverVisible, for: .popover)
     }
 
     private var isConnectionSurfaceVisible: Bool {
@@ -282,7 +334,8 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
 
     private func refreshAfterWake() {
         guard !hasShutDown else { return }
-        wifiQualityMonitor?.refreshAfterWake(isVisible: isConnectionSurfaceVisible)
+        updateWiFiVisibility()
+        wifiQualityMonitor?.refreshAfterWake()
     }
 
     func shutdown() {
@@ -294,6 +347,9 @@ final class UtilityWindowCoordinator: NSObject, ObservableObject, NSWindowDelega
             NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
         }
         wakeObserver = nil
+        if let sleepObserver { NSWorkspace.shared.notificationCenter.removeObserver(sleepObserver) }
+        sleepObserver = nil
+        menuBarPopoverWindow = nil
         diagnostics.shutdown()
         window?.delegate = nil
         window?.orderOut(nil)
