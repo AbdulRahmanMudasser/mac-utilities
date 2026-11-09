@@ -61,20 +61,20 @@ Every completed phase must satisfy all of the following:
 
 ## 6. Current Active Phase
 
-* **Current Phase:** None; Phase 18 is complete. Phases 19 and 20 have not started.
-* **Status:** Phase 18 completed with verified backup/restore, migration regressions, signed installation, data/settings preservation and native widget interoperability. The final gallery recheck passed after the last hosted test run.
+* **Current Phase:** None; Phase 21 is complete. Phases 19 and 20 have not started.
+* **Status:** Phase 21 is complete with network-name/fallback presentation, top-of-module permission/recovery controls, isolated regressions and signed native checks. The current installed Release is 4.3.3 (41), with regular-weight network text at the original heading size and the emphasized icon preserved. Physical Ethernet switching remains an explicitly recorded hardware verification limitation.
 * **Owner:** TBD
-* **Linked Phase Doc:** [phase-18-host-storage-migration.md](./phase-18-host-storage-migration.md)
-* **Immediate Goal:** Phase 18 scope is complete; no downstream implementation is active.
+* **Linked Phase Doc:** [phase-21-connected-network-label.md](./phase-21-connected-network-label.md)
+* **Immediate Goal:** No implementation is active. Preserve the independent Planned speech sequence for Phases 19 and 20.
 * **Current Blockers:** None.
 
 ## 7. Ready Queue
 
-Phases 13–18 are complete based on recorded implementation and verification evidence. Phase 17's completion is limited to the bounded public-corpus, synthetic, runner and basic smoke evidence in its linked document; natural-speech and gated-dataset evaluation remain optional future work. Phases 19 and 20 remain Planned. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
+Phases 13–18 are complete based on recorded implementation and verification evidence. Phase 17's completion is limited to the bounded public-corpus, synthetic, runner and basic smoke evidence in its linked document; natural-speech and gated-dataset evaluation remain optional future work. Phases 19 and 20 remain Planned. [Phase 21 Connected Network Label](./phase-21-connected-network-label.md) is Completed independently of that speech sequence; its current delivery evidence and physical Ethernet limitation are recorded in the linked phase document. Closed-lid overrides, automatic triggers, schedules, remote push, notification helpers and active-session restoration remain out of scope.
 
 ## 8. Phase Register
 
-The approved series is Phase 18 → Phase 19 → Phase 20. Phase 18 is complete; Phases 19 and 20 remain Planned. Each includes implementation, isolated regression coverage and signed native verification. Phase 17 is complete within its bounded scope; any future natural-speech or gated-dataset study requires a separate scope and suitable authorized data. Phase 18 passed its backup and migration gates before the signed host cutover; the host is unsandboxed and the widget retains sandboxing. Public binary distribution remains excluded.
+The approved speech series is Phase 18 → Phase 19 → Phase 20. Phase 21 is a Completed independent connection-label phase with no dependency on Phases 19–20. Phase 18 is complete; Phases 19 and 20 remain Planned. Each includes implementation, isolated regression coverage and signed native verification. Phase 17 is complete within its bounded scope; any future natural-speech or gated-dataset study requires a separate scope and suitable authorized data. Phase 18 passed its backup and migration gates before the signed host cutover; the host is unsandboxed and the widget retains sandboxing. Public binary distribution remains excluded.
 
 | Phase | Name | Status | Priority | Owner | Depends On | Linked File | Target Window |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -99,6 +99,7 @@ The approved series is Phase 18 → Phase 19 → Phase 20. Phase 18 is complete;
 | 18 | Unsandboxed Host And Safe Data Migration | Completed | TBD | TBD | Phase 16; verified storage/signing inventory and backup gate | [phase-18-host-storage-migration.md](./phase-18-host-storage-migration.md) | Completed 2026-11-08; final native gallery recheck passed |
 | 19 | Hold-To-Record And Floating Transcription | Planned | TBD | TBD | Phase 18 completed | [phase-19-hold-recording-panel.md](./phase-19-hold-recording-panel.md) | TBD |
 | 20 | Focused Text Delivery And Integrated Release | Planned | TBD | TBD | Phases 18 and 19 completed | [phase-20-focused-text-delivery.md](./phase-20-focused-text-delivery.md) | TBD |
+| 21 | Connected Network Label | Completed | TBD | TBD | Phases 06, 08, 10 and 18 completed; independent of Phases 19–20 | [phase-21-connected-network-label.md](./phase-21-connected-network-label.md) | Completed 2026-11-09; Release 4.3.3 (41), hardware limitation recorded in phase |
 
 ## 9. Blockers And Risks
 
@@ -117,7 +118,7 @@ None. Natural-speech and gated-dataset evaluation are optional future work outsi
 - The ignored Xcode project is generated from tracked `project.yml`; local signing configuration remains untracked.
 - Shared storage uses one writer and atomic updates; Clear History must not recover records from retained backups.
 - Extended checks must classify sleep/path/scheduler gaps separately from validated missed replies, enforce a continuous deadline and clean up children/observers.
-- CoreWLAN sentinel values and absent readings must remain unavailable; Wi-Fi identity and Location permission are outside the new feature scope.
+- CoreWLAN sentinel values and absent readings must remain unavailable; Wi-Fi identity and Location permission remain excluded from historical Phase 10; Phase 21 narrowly adds optional transient SSID display and explicit authorization, with signed native verification required.
 - WidgetKit schedules refreshes. The widget shows timestamped saved usage and must not start a second collector or imply live data while the host is closed.
 
 ## 10. Decision Log
