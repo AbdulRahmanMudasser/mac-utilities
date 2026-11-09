@@ -143,6 +143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
+        wifiQualityMonitor?.refreshAuthorization()
         transcribeController?.refreshMicrophonePermission()
         Task { @MainActor [weak self] in
             await self?.notificationsController?.refreshAuthorization()
