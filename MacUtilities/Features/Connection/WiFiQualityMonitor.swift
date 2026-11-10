@@ -49,7 +49,8 @@ final class WiFiQualityMonitor: ObservableObject {
 
     var networkLabel: ConnectedNetworkLabel {
         ConnectedNetworkLabel.resolve(path: path, name: snapshot?.networkName,
-            interface: snapshot?.interfaceName, authorized: permissionState == .authorized)
+            interface: snapshot?.interfaceName, authorized: permissionState == .authorized,
+            initialWiFiSamplePending: snapshot == nil && isRefreshing)
     }
 
     var associatedName: String? {

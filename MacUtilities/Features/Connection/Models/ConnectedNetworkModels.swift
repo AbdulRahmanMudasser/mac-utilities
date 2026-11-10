@@ -16,6 +16,10 @@ nonisolated struct ConnectedNetworkLabel: Equatable, Sendable {
     let symbol: String
     let accessibilityValue: String
 
+    private static let checking = Self(
+        title: "Checking…", symbol: "network", accessibilityValue: "Checking Connection"
+    )
+
     static func sanitizedName(_ value: String?) -> String? {
         guard let value else { return nil }
         let sanitized = String(value.unicodeScalars.map {
@@ -26,13 +30,20 @@ nonisolated struct ConnectedNetworkLabel: Equatable, Sendable {
         return display.isEmpty ? nil : display
     }
 
-    static func resolve(path: NetworkPathSnapshot, name: String?, interface: String?, authorized: Bool) -> Self {
+    static func resolve(
+        path: NetworkPathSnapshot,
+        name: String?,
+        interface: String?,
+        authorized: Bool,
+        initialWiFiSamplePending: Bool = false
+    ) -> Self {
         switch path.status {
-        case .pending: return Self(title: "Checking…", symbol: "network", accessibilityValue: "Checking Connection")
+        case .pending: return checking
         case .unavailable: return Self(title: "Offline", symbol: "wifi.slash", accessibilityValue: "No Network Connection")
         case .available: break
         }
         if path.usedTypes == [.wifi] {
+            if authorized, initialWiFiSamplePending { return checking }
             let matched = path.wifiInterfaces.count == 1 && path.wifiInterfaces.first == interface
             if authorized, matched, let name = sanitizedName(name) {
                 return Self(title: name, symbol: "wifi", accessibilityValue: "Wi-Fi, \(name)")

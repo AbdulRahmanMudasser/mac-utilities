@@ -110,6 +110,23 @@ struct ConnectedNetworkPresentationTests {
         #expect(ConnectedNetworkLabel.sanitizedName(" \n\u{202E} ") == nil)
         #expect(ConnectedNetworkLabel.sanitizedName("東京 · Café") == "東京 · Café")
     }
+
+    @Test func authorizedWiFiWaitsForItsInitialNameSampleBeforeShowingFallback() {
+        let path = connectedPath([.wifi], wifiInterfaces: ["en0"])
+        let checking = ConnectedNetworkLabel(
+            title: "Checking…", symbol: "network", accessibilityValue: "Checking Connection"
+        )
+
+        #expect(ConnectedNetworkLabel.resolve(
+            path: path, name: nil, interface: nil, authorized: true, initialWiFiSamplePending: true
+        ) == checking)
+        #expect(ConnectedNetworkLabel.resolve(
+            path: path, name: nil, interface: nil, authorized: true
+        ).title == "Wi-Fi")
+        #expect(ConnectedNetworkLabel.resolve(
+            path: path, name: nil, interface: nil, authorized: false, initialWiFiSamplePending: true
+        ).title == "Wi-Fi")
+    }
 }
 
 #if DEBUG
@@ -272,6 +289,41 @@ private func waitForConnectedNetworkSnapshot(
 @Suite(.serialized)
 @MainActor
 struct ConnectedNetworkMonitorTests {
+    @Test func authorizedWiFiShowsCheckingUntilTheInitialSampleResolves() async {
+        let result = WiFiQualitySnapshot(
+            sampledAt: Date(timeIntervalSince1970: 1_797_000_100),
+            interfaceName: "en0", networkName: "Studio", signalDBm: -48
+        )
+        let reader = DeferredConnectedNetworkReader()
+        let pathReader = PreviewNetworkPathReader(snapshot: connectedPath([.wifi], wifiInterfaces: ["en0"]))
+        let permission = ConnectedNetworkTestPermission(state: .authorized)
+        let monitor = WiFiQualityMonitor(
+            reader: reader, pathReader: pathReader, permission: permission, refreshInterval: .zero
+        )
+        defer { monitor.shutdown() }
+
+        monitor.setVisible(true, for: .popover)
+        await waitForConnectedNetworkReads(1, from: reader)
+
+        #expect(monitor.path == connectedPath([.wifi], wifiInterfaces: ["en0"]))
+        #expect(monitor.snapshot == nil)
+        #expect(monitor.networkLabel.title == "Checking…")
+
+        await reader.resolveNext(with: result)
+        await waitForConnectedNetworkSnapshot(result, from: monitor)
+        #expect(monitor.networkLabel.title == "Studio")
+
+        await waitForConnectedNetworkReads(2, from: reader)
+        #expect(monitor.isRefreshing)
+        #expect(monitor.snapshot == result)
+        #expect(monitor.networkLabel.title == "Studio")
+
+        monitor.shutdown()
+        await reader.resolveNext(with: result)
+        await Task.yield()
+        #expect(monitor.snapshot == nil)
+    }
+
     @Test func consumersShareSamplingAndPathObservationUntilBothHide() async {
         let result = WiFiQualitySnapshot(
             sampledAt: Date(timeIntervalSince1970: 1_797_000_101),
