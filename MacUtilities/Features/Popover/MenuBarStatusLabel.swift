@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct MenuBarStatusLabel: View {
-    let text: String
-    let status: String
+    @EnvironmentObject private var monitor: UsageMonitor
     @EnvironmentObject private var utilityWindow: UtilityWindowCoordinator
     @EnvironmentObject private var keepAwakeController: KeepAwakeController
     @State private var presentedDebugWindow = false
@@ -12,10 +11,10 @@ struct MenuBarStatusLabel: View {
     }
 
     var body: some View {
-        Text(Self.displayedText(rateText: text, keepAwakePrefix: keepAwakeController.menuBarPrefix))
+        Text(Self.displayedText(rateText: monitor.menuBarText, keepAwakePrefix: keepAwakeController.menuBarPrefix))
             .monospacedDigit()
             .font(UtilityStyle.menuBarFont)
-            .help(status)
+            .help(monitor.collectionStatus)
             .onAppear {
                 #if DEBUG
                 if !presentedDebugWindow && CommandLine.arguments.contains("--connection-check") {

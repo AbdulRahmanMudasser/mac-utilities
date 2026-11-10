@@ -21,7 +21,8 @@ struct Mac_UtilitiesApp: App {
             }
         } label: {
             if let runtime = startup.runtime {
-                MenuBarStatusLabel(text: runtime.monitor.menuBarText, status: runtime.monitor.collectionStatus)
+                MenuBarStatusLabel()
+                    .environmentObject(runtime.monitor)
                     .environmentObject(runtime.keepAwakeController)
                     .environmentObject(runtime.utilityWindow)
             } else {
