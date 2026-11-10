@@ -62,7 +62,7 @@ Every completed phase must satisfy all of the following:
 ## 6. Current Active Phase
 
 * **Current Phase:** None; Phase 21 is complete. Phases 19 and 20 have not started.
-* **Status:** Phase 21 is complete with network-name/fallback presentation, top-of-module permission/recovery controls, isolated regressions and signed native checks. The current installed Release is 4.3.3 (41), with regular-weight network text at the original heading size and the emphasized icon preserved. Physical Ethernet switching remains an explicitly recorded hardware verification limitation.
+* **Status:** Phase 21 is complete with network-name/fallback presentation, top-of-module permission/recovery controls, isolated regressions and signed native checks. The current installed Release is 4.3.4 (42), with live menu-bar rates, regular-weight network text at the original heading size and the emphasized icon preserved. Physical Ethernet switching remains an explicitly recorded hardware verification limitation.
 * **Owner:** TBD
 * **Linked Phase Doc:** [phase-21-connected-network-label.md](./phase-21-connected-network-label.md)
 * **Immediate Goal:** No implementation is active. Preserve the independent Planned speech sequence for Phases 19 and 20.

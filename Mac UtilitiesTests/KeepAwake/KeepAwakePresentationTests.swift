@@ -26,6 +26,62 @@ struct KeepAwakePresentationTests {
         #expect(!MenuBarStatusLabel.displayedText(rateText: rate, keepAwakePrefix: "☾ 30 Min\u{2003}").contains("·"))
     }
 
+    @Test func menuBarStatusLabelTracksUsageMonitorUpdates() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("menu-bar-status-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let suiteName = "MacUtilities.MenuBarStatusLabelTests.\(UUID().uuidString)"
+        let preferences = UserDefaults(suiteName: suiteName)!
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let initialCounters = ["en0": InterfaceByteCount(downloaded: 0, uploaded: 0)]
+        let updatedCounters = ["en0": InterfaceByteCount(downloaded: 8_000_000, uploaded: 2_000_000)]
+        var readCount = 0
+        let monitor = UsageMonitor(
+            stateURL: directory.appendingPathComponent("today-usage.json"),
+            startAutomatically: false,
+            preferences: preferences,
+            readCounters: {
+                defer { readCount += 1 }
+                return readCount == 0 ? initialCounters : updatedCounters
+            }
+        )
+        defer { monitor.shutdown() }
+
+        let keepAwakePreferencesName = "MacUtilities.MenuBarStatusLabelKeepAwakeTests.\(UUID().uuidString)"
+        let keepAwakePreferences = UserDefaults(suiteName: keepAwakePreferencesName)!
+        defer { keepAwakePreferences.removePersistentDomain(forName: keepAwakePreferencesName) }
+        let keepAwake = KeepAwakeController(power: PresentationPowerAssertions(), preferences: keepAwakePreferences)
+        defer { keepAwake.shutdown() }
+
+        let utilityWindow = UtilityWindowCoordinator(
+            diagnostics: ConnectionDiagnostics(),
+            setActivationPolicy: { _ in },
+            activateApplication: {}
+        ) { _ in AnyView(Text("Fixture")) }
+        defer { utilityWindow.shutdown() }
+
+        let host = NSHostingView(rootView: MenuBarStatusLabel()
+            .environmentObject(monitor)
+            .environmentObject(keepAwake)
+            .environmentObject(utilityWindow))
+        host.frame = NSRect(x: 0, y: 0, width: 360, height: 40)
+        host.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(30))
+
+        let initialRateText = monitor.menuBarText
+        let initialRenderedLabel = try renderedImage(for: host)
+        #expect(initialRateText == "↓ 0.0 / ↑ 0.0 Mbps")
+
+        monitor.sample()
+        try await Task.sleep(for: .milliseconds(30))
+        host.layoutSubtreeIfNeeded()
+
+        #expect(monitor.menuBarText != initialRateText)
+        #expect(try renderedImage(for: host) != initialRenderedLabel)
+    }
+
     @Test func enabledPresentationSupportsTwoThreeAndFourOrderedPresets() throws {
         let four = KeepAwakePresetConfiguration.defaults
         let three = try four.settingEnabled(false, for: .timedThree)
@@ -78,6 +134,12 @@ struct KeepAwakePresentationTests {
                 #expect(host.bounds.size == size)
             }
         }
+    }
+
+    private func renderedImage(for view: NSView) throws -> Data {
+        let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        return try #require(bitmap.representation(using: .png, properties: [:]))
     }
 
 }
